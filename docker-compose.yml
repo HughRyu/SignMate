@@ -25,3 +25,6 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - WEB_PORT=6668
+      - SIGNMATE_AUTH_USERNAME=${SIGNMATE_AUTH_USERNAME:-admin}
+      - SIGNMATE_AUTH_PASSWORD=${SIGNMATE_AUTH_PASSWORD:-}
+      - SIGNMATE_AUTH_DISABLED=${SIGNMATE_AUTH_DISABLED:-false}

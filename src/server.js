@@ -6,7 +6,7 @@
 
 import express from "express";
 import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
-import { join, basename } from "node:path";
+import { join, basename, extname } from "node:path";
 import { parse, stringify } from "yaml";
 import logger from "./utils/logger.js";
 import { loadConfig, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState } from "./runner.js";
@@ -15,6 +15,7 @@ import * as store from "./store.js";
 import { applySiteProxyMode, getGlobalProxy, setGlobalProxy, siteProxyMode, testDirect, testProxy, normalizeProxyUrl, testProxyPool, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
 import { ProxyAgent, fetch as undiciFetch } from "undici";
 import CryptoJS from "crypto-js";
+import { timingSafeEqual, randomBytes } from "node:crypto";
 import BUILTIN_SITES from "./builtin-sites.js";
 
 const PORT = parseInt(process.env.WEB_PORT || "9999", 10);
@@ -27,6 +28,8 @@ const NOTIFY_PATH = join(CONFIG_DIR, "notify.yaml");
 const SITES_PATH = join(CONFIG_DIR, "sites.yaml");
 const DATA_DIR = join(import.meta.dirname, "..", "data");
 const MAINTENANCE_STATE_PATH = join(DATA_DIR, "maintenance-state.json");
+const BRANDING_PATH = join(CONFIG_DIR, "branding.json");
+const ASSETS_DIR = join(DATA_DIR, "assets");
 const DRIVERS_DIR = join(import.meta.dirname, "drivers");
 const DEFAULT_SITE_CATEGORIES = [
   { key: "forum", label: "论坛", emoji: "💬" },
@@ -262,6 +265,7 @@ function readEnvRaw() {
   const runtimeLines = [];
   for (const key of [
     "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TZ", "LOG_LEVEL", "RUN_ON_START", "HTTP_TIMEOUT", "WEB_PORT",
+    "SIGNMATE_AUTH_USERNAME", "SIGNMATE_AUTH_PASSWORD", "SIGNMATE_AUTH_DISABLED",
     "COOKIECLOUD_ENABLED", "COOKIECLOUD_HOST", "COOKIECLOUD_UUID", "COOKIECLOUD_PASSWORD", "COOKIECLOUD_AUTO_SYNC", "COOKIECLOUD_INCLUDE_DISABLED", "COOKIECLOUD_AUTO_INTERVAL_MINUTES",
     "WEBDAV_ENABLED", "WEBDAV_URL", "WEBDAV_USERNAME", "WEBDAV_PASSWORD", "WEBDAV_AUTO_BACKUP", "WEBDAV_AUTO_INTERVAL_MINUTES",
   ]) {
@@ -321,6 +325,78 @@ function getTelegramProxyUrl(tg = {}) {
   } catch {
     return "";
   }
+}
+
+
+function safeEqualString(a = "", b = "") {
+  const aa = Buffer.from(String(a));
+  const bb = Buffer.from(String(b));
+  return aa.length === bb.length && timingSafeEqual(aa, bb);
+}
+
+function authSettings() {
+  const env = parseEnvText(readEnvRaw());
+  return {
+    username: env.SIGNMATE_AUTH_USERNAME || process.env.SIGNMATE_AUTH_USERNAME || "admin",
+    passwordSet: Boolean(env.SIGNMATE_AUTH_PASSWORD || process.env.SIGNMATE_AUTH_PASSWORD),
+    password: env.SIGNMATE_AUTH_PASSWORD || process.env.SIGNMATE_AUTH_PASSWORD || "",
+    disabled: String(env.SIGNMATE_AUTH_DISABLED || process.env.SIGNMATE_AUTH_DISABLED || "false").toLowerCase() === "true",
+  };
+}
+
+function publicAuthSettings() {
+  const s = authSettings();
+  return { enabled: !s.disabled && s.passwordSet, disabled: s.disabled, username: s.username, passwordSet: s.passwordSet };
+}
+
+function isLoopbackAddress(ip = "") {
+  const value = String(ip || "").replace(/^::ffff:/, "");
+  return value === "127.0.0.1" || value === "::1" || value === "localhost";
+}
+
+function requireBasicAuth(req, res, next) {
+  const settings = authSettings();
+  if (settings.disabled) return next();
+  if (!settings.passwordSet) {
+    if (isLoopbackAddress(req.ip) || isLoopbackAddress(req.socket?.remoteAddress)) return next();
+    res.setHeader("WWW-Authenticate", 'Basic realm="SignMate", charset="UTF-8"');
+    return res.status(401).send("SignMate authentication is not configured. Set SIGNMATE_AUTH_USERNAME and SIGNMATE_AUTH_PASSWORD.");
+  }
+  const header = String(req.headers.authorization || "");
+  const match = header.match(/^Basic\s+(.+)$/i);
+  if (match) {
+    const decoded = Buffer.from(match[1], "base64").toString("utf-8");
+    const idx = decoded.indexOf(":");
+    const user = idx >= 0 ? decoded.slice(0, idx) : decoded;
+    const pass = idx >= 0 ? decoded.slice(idx + 1) : "";
+    if (safeEqualString(user, settings.username) && safeEqualString(pass, settings.password)) return next();
+  }
+  res.setHeader("WWW-Authenticate", 'Basic realm="SignMate", charset="UTF-8"');
+  return res.status(401).send("Authentication required");
+}
+
+function readBranding() {
+  return readJsonFileSafe(BRANDING_PATH, { title: "SignMate", logoUrl: "" });
+}
+
+function writeBranding(value = {}) {
+  mkdirSync(CONFIG_DIR, { recursive: true });
+  writeFileSync(BRANDING_PATH, JSON.stringify({ title: String(value.title || "SignMate").trim() || "SignMate", logoUrl: String(value.logoUrl || "") }, null, 2), "utf-8");
+}
+
+function sanitizeLogoDataUrl(value = "") {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const match = text.match(/^data:(image\/(?:png|jpeg|jpg|webp|gif|svg\+xml));base64,([A-Za-z0-9+/=]+)$/i);
+  if (!match) throw new Error("仅支持 png/jpeg/webp/gif/svg 图片 data URL");
+  const bytes = Buffer.from(match[2], "base64");
+  if (bytes.length > 1024 * 1024) throw new Error("Logo 图片不能超过 1MB");
+  const mime = match[1].toLowerCase().replace("jpg", "jpeg");
+  const ext = mime.includes("png") ? ".png" : mime.includes("webp") ? ".webp" : mime.includes("gif") ? ".gif" : mime.includes("svg") ? ".svg" : ".jpg";
+  mkdirSync(ASSETS_DIR, { recursive: true });
+  const file = `logo-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
+  writeFileSync(join(ASSETS_DIR, file), bytes);
+  return `/assets/${file}`;
 }
 
 function eventsFromConfig(channel = {}) {
@@ -785,9 +861,13 @@ export async function startServer() {
   const app = express();
 
   // 解析 JSON body
-  app.use(express.json());
+  app.use(express.json({ limit: "2mb" }));
+
+  // 登录认证：默认启用；未配置密码时仅允许本机访问，避免公开部署裸奔。
+  app.use(requireBasicAuth);
 
   // 静态文件
+  app.use("/assets", express.static(ASSETS_DIR));
   app.use(express.static(WEB_DIR));
   app.get("/", (_req, res) => res.sendFile(join(WEB_DIR, "index.html")));
 
@@ -829,6 +909,35 @@ export async function startServer() {
       if (isWebDavBackupDue(readWebDavConfig())) await runWebDavAutoBackupOnce("interval-due");
     }, Math.min(intervalMs, 60 * 60 * 1000));
   })();
+
+
+  app.get("/api/app-settings", (_req, res) => {
+    res.json({ ok: true, data: { auth: publicAuthSettings(), branding: readBranding() } });
+  });
+
+  app.post("/api/app-settings/auth", (req, res) => {
+    try {
+      const username = String(req.body?.username || "admin").trim() || "admin";
+      const password = String(req.body?.password || "");
+      const disabled = req.body?.disabled === true;
+      if (!disabled && password && password.length < 8) throw new Error("管理员密码至少 8 位");
+      const values = { SIGNMATE_AUTH_USERNAME: username, SIGNMATE_AUTH_DISABLED: disabled ? "true" : "false" };
+      if (password) values.SIGNMATE_AUTH_PASSWORD = password;
+      upsertEnvValues(values);
+      res.json({ ok: true, data: publicAuthSettings() });
+    } catch (err) { res.status(400).json({ ok: false, error: err.message }); }
+  });
+
+  app.post("/api/app-settings/branding", (req, res) => {
+    try {
+      const current = readBranding();
+      const title = String(req.body?.title || current.title || "SignMate").trim() || "SignMate";
+      let logoUrl = req.body?.clearLogo === true ? "" : (current.logoUrl || "");
+      if (req.body?.logoDataUrl) logoUrl = sanitizeLogoDataUrl(req.body.logoDataUrl);
+      writeBranding({ title, logoUrl });
+      res.json({ ok: true, data: readBranding() });
+    } catch (err) { res.status(400).json({ ok: false, error: err.message }); }
+  });
 
   // ========================================
   // API: 站点列表 & 状态
