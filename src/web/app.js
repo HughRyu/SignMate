@@ -1867,7 +1867,7 @@ async function openAddSiteModal(kind = "signin") {
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.id = "addSiteModal";
-  modal.innerHTML = `<div class="modal-card add-site-modal-card" role="dialog" aria-modal="true"><div class="modal-header"><div><h2>${kind === "visit" ? "添加保活站点" : "添加站点"}</h2><p>${kind === "visit" ? "新增需要保活的站点" : "选择已维护 Driver 或手动添加网站"}</p></div><button class="modal-close" type="button" id="addSiteClose">×</button></div><div id="addSiteBox" class="add-site-box"><div class="empty-cell"><span class="spinner"></span>读取系统已维护站点…</div></div></div>`;
+  modal.innerHTML = `<div class="modal-card add-site-modal-card" role="dialog" aria-modal="true"><div class="modal-header"><div><h2>${kind === "visit" ? "添加保活站点" : "添加站点"}</h2><p>从 SignMate 已适配站点列表中选择添加</p></div><button class="modal-close" type="button" id="addSiteClose">×</button></div><div id="addSiteBox" class="add-site-box"><div class="empty-cell"><span class="spinner"></span>读取已适配站点列表…</div></div></div>`;
   document.body.appendChild(modal);
   document.getElementById("addSiteClose")?.addEventListener("click", () => modal.remove());
   modal.addEventListener("click", event => { if (event.target === modal) modal.remove(); });
@@ -1876,15 +1876,14 @@ async function openAddSiteModal(kind = "signin") {
   try {
     await loadCategories();
     const { data } = await api("/api/available-sites");
-    const pending = kind === "visit" ? [] : data.filter(item => !item.added && item.driver !== "template" && item.driver !== "website" && item.driver !== "visit");
+    const pending = (data || []).filter(item => !item.added && (kind === "visit" ? item.kind === "visit" : item.kind !== "visit"));
     box.innerHTML = `
-      ${kind === "visit" ? "" : `
       <div class="available-site-list">
         ${pending.length ? pending.map(item => `
           <div class="available-site-row">
             <div>
               <strong>${esc(displaySiteName(item.name))}</strong>
-              <small>Driver: ${esc(item.driver)} · ${esc(item.baseUrl || "未配置 URL")}</small>
+              <small>${esc(item.kind === "visit" ? "保活" : "签到")} · Driver: ${esc(item.driver)} · ${esc(item.baseUrl || "未配置 URL")}</small>
             </div>
             <div class="available-site-actions">
               ${timePairHtml("09:00", { kind: "available", driver: item.driver })}
@@ -1897,63 +1896,10 @@ async function openAddSiteModal(kind = "signin") {
                 data-signin-mode="${escAttr(item.signinMode || "")}" data-category="${escAttr(item.category || "forum")}">添加</button>
             </div>
           </div>
-        `).join("") : `<div class="empty-cell">暂无待添加站点。需要先在后台维护 Driver 脚本。</div>`}
+        `).join("") : `<div class="empty-cell">暂无可添加的${kind === "visit" ? "保活" : "签到"}站点。</div>`}
       </div>
-      <div class="field-help">这里只显示系统里已经有 Driver、但还没添加到配置的站点。</div>`}
-      <div class="manual-website-box">
-        <h3>${kind === "visit" ? "添加保活站点" : "手动添加网站"}</h3>
-        <form id="manualWebsiteForm" class="credential-form">
-          <div class="form-grid-2">
-            <label><span class="field-label">显示名称</span><input class="field-input" name="note" placeholder="例如 我的站点" required></label>
-            <label><span class="field-label">站点 URL</span><input class="field-input" name="baseUrl" placeholder="https://example.com" required></label>
-          </div>
-          <div class="form-grid-2">
-            <label><span class="field-label">分类</span><select class="field-input" name="category">${categoryOptionHtml(kind === "visit" ? "website" : "website")}</select></label>
-            <label><span class="field-label">执行时间</span><div class="inline-time-choice"><label><input type="checkbox" name="autoTime" checked> 自动</label>${timePairHtml(kind === "visit" ? "09:30" : "09:00", { kind: "manual", name: "time", disabled: true })}</div></label>
-          </div>
-          <label><span class="field-label">登录关键字（可选）</span><input class="field-input" name="loginKeyword" placeholder="页面中能证明登录成功的文字"></label>
-          <div class="credential-actions"><button class="btn btn-primary" type="submit">${kind === "visit" ? "添加保活" : "添加网站"}</button></div>
-          <div class="field-help">${kind === "visit" ? "保活不会执行签到，只通过 Cookie 打开页面用于账号保活。" : "这类站点不会执行签到动作，只验证 Cookie 能否打开站点；添加后到卡片里Cookie。"}</div>
-        </form>
-      </div>
+      <div class="field-help">这里只显示 SignMate 已适配且尚未添加的站点；如需支持新站点，需要先新增 Driver 适配。</div>
     `;
-
-    box.querySelector("#manualWebsiteForm input[name='autoTime']")?.addEventListener("change", (event) => {
-      setTimePairDisabled(box, "manual", event.currentTarget.checked);
-    });
-
-    box.querySelector("#manualWebsiteForm")?.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const baseUrl = form.elements.baseUrl.value.trim();
-      const key = new URL(baseUrl).hostname.replace(/^www\./, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
-      const [hour, minute] = getTimePairValue(form, "manual").split(":").map(v => parseInt(v, 10));
-      const schedule = form.elements.autoTime?.checked ? "auto" : `${Number.isFinite(minute) ? minute : 0} ${Number.isFinite(hour) ? hour : 9} * * *`;
-      try {
-        await api("/api/sites", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            key,
-            note: form.elements.note.value,
-            driver: kind === "visit" ? "visit" : "website",
-            kind: kind === "visit" ? "visit" : "signin",
-            baseUrl,
-            schedule,
-            proxyMode: "auto",
-            signinMode: "playwright",
-            category: form.elements.category.value,
-            loginKeyword: form.elements.loginKeyword.value,
-          }),
-        });
-        showToast(kind === "visit" ? "✅ 保活站点已添加，请Cookie" : "✅ 网站检查已添加，请Cookie", "success");
-        await loadSites(true);
-        document.getElementById("addSiteModal")?.remove();
-        await openSiteManageModal(kind, { sort: manageSort, kindFilter: manageKindFilter });
-      } catch (err) {
-        showToast(`添加失败: ${err.message}`, "error");
-      }
-    });
 
     box.querySelectorAll(".add-maintained-site").forEach(btn => {
       btn.addEventListener("click", async () => {

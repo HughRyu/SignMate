@@ -283,20 +283,21 @@ export function registerDriver(name, driverClass) {
  * 加载所有配置
  */
 export function loadConfig() {
-  // 加载 sites.yaml（可选）。公开 Docker 镜像内置站点目录，
-  // 全新部署只挂载空 config 目录时也应能启动；用户覆盖配置再写入 sites.yaml。
+  // 加载 sites.yaml（可选）。全新部署没有 sites.yaml 时应能启动，
+  // 但站点列表保持为空；内置站点只作为后续“添加站点/模板”和已有配置 merge 的来源。
   const sitesPath = new URL("../config/sites.yaml", import.meta.url).pathname;
+  const hasSitesConfig = existsSync(sitesPath);
   let sitesRaw = {};
-  if (existsSync(sitesPath)) {
+  if (hasSitesConfig) {
     sitesRaw = parse(readFileSync(sitesPath, "utf-8")) || {};
   } else {
-    logger.warn(`[配置] 未找到 sites.yaml，使用内置站点默认配置启动: ${sitesPath}`);
+    logger.warn(`[配置] 未找到 sites.yaml，按全新部署空站点启动: ${sitesPath}`);
   }
   const proxy = getGlobalProxy(sitesRaw);
   const overrideSites = sitesRaw.sites || {};
+  const siteKeys = hasSitesConfig ? [...new Set([...Object.keys(BUILTIN_SITES), ...Object.keys(overrideSites)])] : [];
   const mergedSites = Object.fromEntries(
-    [...new Set([...Object.keys(BUILTIN_SITES), ...Object.keys(overrideSites)])]
-      .map(key => [key, { ...(BUILTIN_SITES[key] || {}), ...(overrideSites[key] || {}) }])
+    siteKeys.map(key => [key, { ...(BUILTIN_SITES[key] || {}), ...(overrideSites[key] || {}) }])
   );
   const sites = Object.entries(mergedSites).filter(([, site]) => site.hidden !== true).map(([key, site]) => {
     const rawProxyMode = siteProxyMode(site);

@@ -10,7 +10,7 @@
 
 ```text
 ghcr.io/hughryu/signmate:latest
-# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.1
+# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.2
 ```
 
 创建目录与配置文件：
@@ -43,7 +43,7 @@ chmod 600 config/secrets.yaml
 ```yaml
 services:
   signmate:
-    image: ghcr.io/hughryu/signmate:v0.1.1
+    image: ghcr.io/hughryu/signmate:v0.1.2
     container_name: signmate
     restart: unless-stopped
     ports:
@@ -70,7 +70,7 @@ docker compose up -d
 docker compose logs -f
 ```
 
-首次启动会使用镜像内置站点目录；如果还没有 `config/sites.yaml`，面板仍可正常打开，后续在网页里维护站点、Cookie、代理和通知配置即可。默认 `RUN_ON_START=false`，避免全新部署尚未维护 Cookie 时自动执行全站签到。
+首次启动如果还没有 `config/sites.yaml`，面板会以空站点列表正常打开；后续在网页里手动添加站点、维护 Cookie、代理和通知配置即可。默认 `RUN_ON_START=false`，避免全新部署尚未维护 Cookie 时自动执行签到。
 
 更新：
 

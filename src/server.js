@@ -174,7 +174,13 @@ async function runWebDavAutoBackupOnce(reason = "auto") {
 // ---- Cookie / secrets helpers ----
 
 function readSitesRaw() {
-  return parse(readFileSync(SITES_PATH, "utf-8")) || { sites: {} };
+  try {
+    if (!existsSync(SITES_PATH)) return { sites: {} };
+    return parse(readFileSync(SITES_PATH, "utf-8")) || { sites: {} };
+  } catch (err) {
+    if (err?.code === "ENOENT") return { sites: {} };
+    throw err;
+  }
 }
 
 function writeSitesRaw(sitesRaw) {
@@ -199,10 +205,17 @@ function normalizeClockTime(value, fallback = "09:00") {
 }
 
 function mergeSiteCatalog(sites = {}) {
+  // 只返回用户已经添加/配置的站点；内置站点目录用于“添加站点”候选列表，
+  // 不应在全新部署或未添加时自动出现在首页卡片里。
   return Object.fromEntries(
-    [...new Set([...Object.keys(BUILTIN_SITES), ...Object.keys(sites || {})])]
+    Object.keys(sites || {})
       .map(key => [key, { ...(BUILTIN_SITES[key] || {}), ...((sites || {})[key] || {}) }])
   );
+}
+
+function builtinAvailableSites(sites = {}) {
+  const existing = new Set(Object.keys(sites || {}));
+  return Object.entries(BUILTIN_SITES).map(([key, site]) => ({ key, site, added: existing.has(key) }));
 }
 
 function mergedSitesRaw(sitesRaw = readSitesRaw()) {
@@ -1079,41 +1092,42 @@ export async function startServer() {
       }
 
       const sitesRaw = readSitesRaw();
-      const sitesObj = mergeSiteCatalog(sitesRaw.sites || {});
-      if (sitesObj[key]) {
+      sitesRaw.sites = sitesRaw.sites || {};
+      if (sitesRaw.sites[key]) {
         return res.status(409).json({ ok: false, error: `站点 "${key}" 已存在` });
       }
 
-      const driver = normalizeSiteKey(body.driver || key);
+      const builtin = BUILTIN_SITES[key] || null;
+      const driver = normalizeSiteKey(body.driver || builtin?.driver || key);
       if (!driver) {
         return res.status(400).json({ ok: false, error: "driver 不能为空" });
       }
-      const baseUrl = String(body.baseUrl || "").trim();
+      const baseUrl = String(body.baseUrl || builtin?.base_url || "").trim();
       if (!baseUrl) {
         return res.status(400).json({ ok: false, error: "基础 URL 不能为空" });
       }
 
-      sitesRaw.sites = sitesRaw.sites || {};
-      sitesRaw.sites[key] = {
+      const siteConfig = {
+        ...(builtin || {}),
         enabled: body.enabled !== false,
         driver,
-        schedule: String(body.schedule || "0 9 * * *").trim(),
-        schedule_mode: body.scheduleMode === "independent" ? "independent" : (body.scheduleMode === "random" ? "random" : "fixed"),
-        random_start: normalizeClockTime(body.randomStart, "02:00"),
-        random_end: normalizeClockTime(body.randomEnd, "22:00"),
-        note: String(body.note || body.name || key).trim(),
+        schedule: String(body.schedule || builtin?.schedule || "auto").trim(),
+        schedule_mode: body.scheduleMode === "independent" ? "independent" : (body.scheduleMode === "random" ? "random" : (builtin?.schedule_mode || "fixed")),
+        random_start: normalizeClockTime(body.randomStart ?? builtin?.random_start, "02:00"),
+        random_end: normalizeClockTime(body.randomEnd ?? builtin?.random_end, "22:00"),
+        note: String(body.note || body.name || builtin?.note || key).trim(),
         notify: body.notify !== false,
-        retry: Number.isFinite(Number(body.retry)) ? Number(body.retry) : 2,
-        retry_delay_ms: Number.isFinite(Number(body.retryDelayMs)) ? Number(body.retryDelayMs) : 10000,
-        timeout: Number.isFinite(Number(body.timeout)) ? Number(body.timeout) : 30000,
+        retry: Number.isFinite(Number(body.retry)) ? Number(body.retry) : (builtin?.retry ?? 2),
+        retry_delay_ms: Number.isFinite(Number(body.retryDelayMs)) ? Number(body.retryDelayMs) : (builtin?.retry_delay_ms ?? 10000),
+        timeout: Number.isFinite(Number(body.timeout)) ? Number(body.timeout) : (builtin?.timeout ?? 30000),
         base_url: baseUrl,
-        category: body.category || "forum",
-        kind: body.kind === "visit" ? "visit" : "signin",
+        category: body.category || builtin?.category || "forum",
+        kind: body.kind === "visit" ? "visit" : (body.kind === "signin" ? "signin" : (builtin?.kind || "signin")),
         ...(body.loginKeyword ? { login_keyword: String(body.loginKeyword).trim() } : {}),
       };
-
-      applySiteProxyMode(sitesRaw.sites[key], ["auto", "on", "off"].includes(body.proxyMode) ? body.proxyMode : "auto");
-      if (body.signinMode) sitesRaw.sites[key].signin_mode = String(body.signinMode).trim();
+      applySiteProxyMode(siteConfig, ["auto", "on", "off"].includes(body.proxyMode) ? body.proxyMode : siteProxyMode(siteConfig));
+      if (body.signinMode) siteConfig.signin_mode = String(body.signinMode).trim();
+      sitesRaw.sites[key] = siteConfig;
 
       writeSitesRaw(sitesRaw);
       res.json({ ok: true, data: { site: key, config: { ...BUILTIN_SITES[key], ...sitesRaw.sites[key] } } });
@@ -1485,35 +1499,24 @@ export async function startServer() {
   app.get("/api/available-sites", (_req, res) => {
     try {
       const sitesRaw = readSitesRaw();
-      const existing = new Set(Object.keys(sitesRaw.sites || {}));
-      const files = readdirSync(DRIVERS_DIR)
-        .filter(file => file.endsWith(".js") && !["base.js"].includes(file))
-        .map(file => file.replace(/\.js$/, ""));
-      const defaults = {
-        nodeseek: { key: "nodeseek", name: "NodeSeek 每日签到", baseUrl: "https://www.nodeseek.com", signinMode: "playwright", category: "forum" },
-        v2ex: { key: "v2ex", name: "V2EX 每日签到", baseUrl: "https://www.v2ex.com", signinMode: "playwright", category: "forum" },
-        naixi: { key: "naixi", name: "奶昔论坛每日签到", baseUrl: "https://forum.naixi.net", signinMode: "playwright", category: "forum" },
-        right: { key: "right", name: "恩山无线论坛每日签到", baseUrl: "https://www.right.com.cn/forum", signinMode: "playwright", category: "forum" },
-        pojie52: { key: "pojie52", name: "吾爱破解每日签到", baseUrl: "https://www.52pojie.cn", signinMode: "playwright", category: "forum" },
-        nodeloc: { key: "nodeloc", name: "NodeLoc 每日访问", baseUrl: "https://www.nodeloc.com", signinMode: "playwright", category: "forum" },
-        pceva: { key: "pceva", name: "PCEVA 每日签到", baseUrl: "https://www.pceva.com.cn", signinMode: "playwright", category: "forum" },
-        website: { key: "website", name: "网站 Cookie 检查", baseUrl: "", signinMode: "playwright", category: "website" },
-        template: { key: "template", name: "模板站点", baseUrl: "https://example.com", signinMode: "", category: "website" },
-      };
-      const data = files.map(driver => ({
-        driver,
-        key: defaults[driver]?.key || driver,
-        name: defaults[driver]?.name || driver,
-        baseUrl: defaults[driver]?.baseUrl || "",
-        signinMode: defaults[driver]?.signinMode || "",
-        category: defaults[driver]?.category || "website",
-        added: existing.has(defaults[driver]?.key || driver) || Object.values(sitesRaw.sites || {}).some(site => site.driver === driver),
-      }));
+      const data = builtinAvailableSites(sitesRaw.sites || {})
+        .sort((a, b) => String(a.site.category || "").localeCompare(String(b.site.category || "")) || String(a.site.note || a.key).localeCompare(String(b.site.note || b.key)))
+        .map(({ key, site, added }) => ({
+          key,
+          driver: site.driver || key,
+          name: site.note || key,
+          baseUrl: site.base_url || "",
+          signinMode: site.signin_mode || "",
+          category: site.category || "forum",
+          kind: site.kind === "visit" ? "visit" : "signin",
+          added,
+        }));
       res.json({ ok: true, data });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
     }
   });
+
 
 
 
