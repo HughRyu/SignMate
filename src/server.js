@@ -15,7 +15,7 @@ import * as store from "./store.js";
 import { applySiteProxyMode, getGlobalProxy, setGlobalProxy, siteProxyMode, testDirect, testProxy, normalizeProxyUrl, testProxyPool, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
 import { ProxyAgent, fetch as undiciFetch } from "undici";
 import CryptoJS from "crypto-js";
-import { timingSafeEqual, randomBytes } from "node:crypto";
+import { timingSafeEqual, randomBytes, createHmac } from "node:crypto";
 import BUILTIN_SITES from "./builtin-sites.js";
 
 const PORT = parseInt(process.env.WEB_PORT || "9999", 10);
@@ -354,25 +354,61 @@ function isLoopbackAddress(ip = "") {
   return value === "127.0.0.1" || value === "::1" || value === "localhost";
 }
 
-function requireBasicAuth(req, res, next) {
+function parseCookies(req) {
+  const out = {};
+  String(req.headers.cookie || "").split(";").forEach(part => {
+    const idx = part.indexOf("=");
+    if (idx < 0) return;
+    out[decodeURIComponent(part.slice(0, idx).trim())] = decodeURIComponent(part.slice(idx + 1).trim());
+  });
+  return out;
+}
+
+function authSecret(settings = authSettings()) {
+  return settings.password || process.env.SIGNMATE_SESSION_SECRET || "signmate-local-dev";
+}
+
+function signSession(payload, settings = authSettings()) {
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = createHmac("sha256", authSecret(settings)).update(body).digest("base64url");
+  return `${body}.${sig}`;
+}
+
+function verifySession(token = "", settings = authSettings()) {
+  const [body, sig] = String(token || "").split(".");
+  if (!body || !sig) return false;
+  const expected = createHmac("sha256", authSecret(settings)).update(body).digest("base64url");
+  if (!safeEqualString(sig, expected)) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf-8"));
+    return payload.user === settings.username && Number(payload.exp || 0) > Date.now();
+  } catch { return false; }
+}
+
+function wantsJson(req) {
+  return req.path.startsWith("/api/") || String(req.headers.accept || "").includes("application/json");
+}
+
+function isAuthenticated(req) {
   const settings = authSettings();
-  if (settings.disabled) return next();
-  if (!settings.passwordSet) {
-    if (isLoopbackAddress(req.ip) || isLoopbackAddress(req.socket?.remoteAddress)) return next();
-    res.setHeader("WWW-Authenticate", 'Basic realm="SignMate", charset="UTF-8"');
-    return res.status(401).send("SignMate authentication is not configured. Set SIGNMATE_AUTH_USERNAME and SIGNMATE_AUTH_PASSWORD.");
-  }
-  const header = String(req.headers.authorization || "");
-  const match = header.match(/^Basic\s+(.+)$/i);
-  if (match) {
-    const decoded = Buffer.from(match[1], "base64").toString("utf-8");
-    const idx = decoded.indexOf(":");
-    const user = idx >= 0 ? decoded.slice(0, idx) : decoded;
-    const pass = idx >= 0 ? decoded.slice(idx + 1) : "";
-    if (safeEqualString(user, settings.username) && safeEqualString(pass, settings.password)) return next();
-  }
-  res.setHeader("WWW-Authenticate", 'Basic realm="SignMate", charset="UTF-8"');
-  return res.status(401).send("Authentication required");
+  if (settings.disabled) return true;
+  if (!settings.passwordSet) return isLoopbackAddress(req.ip) || isLoopbackAddress(req.socket?.remoteAddress);
+  const token = parseCookies(req).signmate_session;
+  return verifySession(token, settings);
+}
+
+function requireAuth(req, res, next) {
+  if (isAuthenticated(req)) return next();
+  if (wantsJson(req)) return res.status(401).json({ ok: false, error: "请先登录 SignMate" });
+  return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl || "/")}`);
+}
+
+function loginPageHtml({ error = "", branding = readBranding() } = {}) {
+  const title = String(branding.title || "SignMate");
+  const logo = branding.logoUrl ? `<img src="${branding.logoUrl}" alt="${title}">` : `<span>✓</span>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · 登录</title><style>
+    :root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at top left,#dbeafe,transparent 32%),linear-gradient(135deg,#f8fafc,#e2e8f0);color:#0f172a}.login-card{width:min(420px,calc(100vw - 32px));padding:34px;border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 24px 80px rgba(15,23,42,.18);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.72)}.brand{display:flex;align-items:center;gap:14px;margin-bottom:26px}.logo{width:52px;height:52px;border-radius:16px;background:#0071e3;color:#fff;display:grid;place-items:center;font-size:28px;font-weight:800;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover}.brand h1{font-size:28px;margin:0}.brand p{margin:3px 0 0;color:#64748b}.field{display:grid;gap:8px;margin:16px 0}.field label{font-size:13px;font-weight:700;color:#475569}.field input{height:46px;border-radius:14px;border:1px solid #cbd5e1;padding:0 14px;font-size:15px;background:#fff;color:#0f172a;outline:none}.field input:focus{border-color:#0071e3;box-shadow:0 0 0 4px rgba(0,113,227,.14)}button{width:100%;height:48px;border:0;border-radius:16px;background:#0071e3;color:#fff;font-weight:800;font-size:15px;cursor:pointer;margin-top:8px}.error{padding:10px 12px;border-radius:12px;background:#fee2e2;color:#991b1b;font-size:13px;margin-bottom:10px}.hint{font-size:12px;color:#64748b;margin-top:16px;text-align:center}@media (prefers-color-scheme:dark){body{background:radial-gradient(circle at top left,#1e3a8a,transparent 32%),linear-gradient(135deg,#020617,#0f172a);color:#e5e7eb}.login-card{background:rgba(15,23,42,.78);border-color:rgba(148,163,184,.22)}.brand p,.field label,.hint{color:#94a3b8}.field input{background:#020617;border-color:#334155;color:#e5e7eb}.error{background:#450a0a;color:#fecaca}}
+  </style></head><body><main class="login-card"><div class="brand"><div class="logo">${logo}</div><div><h1>${title}</h1><p>登录自动签到中心</p></div></div>${error ? `<div class="error">${error}</div>` : ""}<form method="post" action="/login"><input type="hidden" name="next" value="/"><div class="field"><label>管理员用户名</label><input name="username" autocomplete="username" autofocus required></div><div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div><button type="submit">登录</button></form><div class="hint">SignMate · Self-hosted dashboard</div></main></body></html>`;
 }
 
 function readBranding() {
@@ -860,14 +896,36 @@ export async function startServer() {
 
   const app = express();
 
-  // 解析 JSON body
+  // 解析 JSON / 表单 body
   app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ extended: false }));
+
+  app.use("/assets", express.static(ASSETS_DIR));
+  app.get("/login", (req, res) => {
+    if (isAuthenticated(req)) return res.redirect(String(req.query.next || "/"));
+    res.send(loginPageHtml({ branding: readBranding() }));
+  });
+  app.post("/login", (req, res) => {
+    const settings = authSettings();
+    const username = String(req.body?.username || "");
+    const password = String(req.body?.password || "");
+    if (!settings.passwordSet) return res.status(401).send(loginPageHtml({ error: "管理员密码尚未配置", branding: readBranding() }));
+    if (safeEqualString(username, settings.username) && safeEqualString(password, settings.password)) {
+      const token = signSession({ user: settings.username, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }, settings);
+      res.cookie("signmate_session", token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 7 * 24 * 60 * 60 * 1000 });
+      return res.redirect(String(req.body?.next || req.query.next || "/"));
+    }
+    return res.status(401).send(loginPageHtml({ error: "用户名或密码不正确", branding: readBranding() }));
+  });
+  app.post("/logout", (_req, res) => {
+    res.clearCookie("signmate_session", { path: "/" });
+    res.json({ ok: true });
+  });
 
   // 登录认证：默认启用；未配置密码时仅允许本机访问，避免公开部署裸奔。
-  app.use(requireBasicAuth);
+  app.use(requireAuth);
 
   // 静态文件
-  app.use("/assets", express.static(ASSETS_DIR));
   app.use(express.static(WEB_DIR));
   app.get("/", (_req, res) => res.sendFile(join(WEB_DIR, "index.html")));
 
