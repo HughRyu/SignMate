@@ -10,7 +10,7 @@
 
 ```text
 ghcr.io/hughryu/signmate:latest
-# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.8
+# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.9
 ```
 
 创建目录与配置文件：
@@ -38,7 +38,7 @@ echo "SignMate 初始管理员密码：${ADMIN_PASSWORD}"
 ```yaml
 services:
   signmate:
-    image: ghcr.io/hughryu/signmate:v0.1.8
+    image: ghcr.io/hughryu/signmate:v0.1.9
     container_name: signmate
     restart: unless-stopped
     ports:

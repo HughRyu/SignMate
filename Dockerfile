@@ -14,6 +14,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY . .
+RUN npm run check:browser
 COPY docker-entrypoint.sh /usr/local/bin/signmate-entrypoint
 RUN chmod +x /usr/local/bin/signmate-entrypoint && mkdir -p /app/config /app/data /app/logs && chown -R pwuser:pwuser /app
 
