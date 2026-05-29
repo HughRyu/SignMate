@@ -10,6 +10,7 @@
 
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
+import { resolveChromiumExecutablePath } from "../utils/browser.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -161,7 +162,7 @@ export default class V2EXDriver extends BaseDriver {
       base_url = "https://www.v2ex.com",
       timeout = 60_000,
       proxy_url,
-      chromium_executable_path = process.env.CHROMIUM_PATH || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || "/ms-playwright/chromium-1200/chrome-linux64/chrome",
+      chromium_executable_path = await resolveChromiumExecutablePath(chromium),
     } = this.siteConfig;
 
     const cookie = this.getCookie();

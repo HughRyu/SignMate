@@ -8,8 +8,7 @@ WORKDIR /app
 
 ENV TZ=Asia/Shanghai \
     NODE_ENV=production \
-    WEB_PORT=9999 \
-    CHROMIUM_PATH=/ms-playwright/chromium-1200/chrome-linux64/chrome
+    WEB_PORT=9999
 
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev && npm cache clean --force

@@ -9,6 +9,7 @@
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
 import { ProxyAgent } from "undici";
+import { resolveChromiumExecutablePath } from "../utils/browser.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -94,7 +95,7 @@ export default class NodeLocDriver extends BaseDriver {
       base_url = "https://www.nodeloc.com",
       timeout = 60_000,
       proxy_url,
-      chromium_executable_path = process.env.CHROMIUM_PATH || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || "/ms-playwright/chromium-1200/chrome-linux64/chrome",
+      chromium_executable_path = await resolveChromiumExecutablePath(chromium),
     } = this.siteConfig;
 
     const cookie = this.getCookie();
