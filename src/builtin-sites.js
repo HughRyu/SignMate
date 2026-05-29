@@ -80,7 +80,7 @@ export const BUILTIN_SITES = {
     "enabled": true,
     "driver": "nodeloc",
     "schedule": "auto",
-    "note": "NodeLoc 每日访问",
+    "note": "NodeLoc 每日签到",
     "notify": true,
     "retry": 1,
     "retry_delay_ms": 10000,

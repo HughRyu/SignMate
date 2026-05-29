@@ -283,12 +283,15 @@ export function registerDriver(name, driverClass) {
  * 加载所有配置
  */
 export function loadConfig() {
-  // 加载 sites.yaml
+  // 加载 sites.yaml（可选）。公开 Docker 镜像内置站点目录，
+  // 全新部署只挂载空 config 目录时也应能启动；用户覆盖配置再写入 sites.yaml。
   const sitesPath = new URL("../config/sites.yaml", import.meta.url).pathname;
-  if (!existsSync(sitesPath)) {
-    throw new Error(`配置文件不存在: ${sitesPath}`);
+  let sitesRaw = {};
+  if (existsSync(sitesPath)) {
+    sitesRaw = parse(readFileSync(sitesPath, "utf-8")) || {};
+  } else {
+    logger.warn(`[配置] 未找到 sites.yaml，使用内置站点默认配置启动: ${sitesPath}`);
   }
-  const sitesRaw = parse(readFileSync(sitesPath, "utf-8")) || {};
   const proxy = getGlobalProxy(sitesRaw);
   const overrideSites = sitesRaw.sites || {};
   const mergedSites = Object.fromEntries(

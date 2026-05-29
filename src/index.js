@@ -131,9 +131,10 @@ async function main() {
   // 启动 Web 管理面板
   const server = await startServer();
 
-  // 启动时立刻执行一次签到
-  if (process.env.RUN_ON_START !== "false") {
-    logger.info("[启动] 立即执行首次签到...");
+  // 启动时默认不立刻执行签到，避免全新部署尚未维护 Cookie 时自动跑全站。
+  // 只有显式设置 RUN_ON_START=true 才执行。
+  if (String(process.env.RUN_ON_START || "").toLowerCase() === "true") {
+    logger.info("[启动] RUN_ON_START=true，立即执行首次签到...");
     try {
       const results = await runAll();
       for (const r of results) await store.addEntry(r.site, r);
