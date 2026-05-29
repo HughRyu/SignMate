@@ -1,6 +1,6 @@
 {
   "name": "signmate",
-  "version": "0.1.9",
+  "version": "0.1.11",
   "private": true,
   "description": "SignMate 签伴 - 多站点签到与保活管理",
   "type": "module",

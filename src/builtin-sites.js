@@ -279,10 +279,11 @@ export const BUILTIN_SITES = {
     "timeout": 30000,
     "base_url": "https://hdsky.me/",
     "category": "pt",
-    "kind": "signin",
+    "kind": "visit",
+    "enforced_kind": "visit",
     "login_keyword": "HDSky",
     "proxy": "auto",
-    "signin_mode": "playwright"
+    "signin_mode": "visit"
   },
   "open-cd": {
     "enabled": true,

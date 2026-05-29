@@ -494,10 +494,12 @@ function displaySiteName(name = "") {
 
 
 function siteKindOf(site = {}) {
+  if (site.enforced_kind === "visit" || site.enforcedKind === "visit") return "visit";
   return site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
 }
 
 function adaptedKindOf(site = {}) {
+  if (site.enforced_kind === "visit" || site.enforcedKind === "visit") return "visit";
   if (site.adaptedKind) return site.adaptedKind;
   if (site.kind === "visit") return "visit";
   if (site.driver === "website" || site.driver === "visit") return "visit";
@@ -794,9 +796,10 @@ function statusBadgeFor(site, details = {}) {
   if (details?.verificationBlocked && site.hasCookie) return `<span class="warning-badge" title="Cookie 有效，但签到需要验证">◐</span>`;
   const action = String(details?.checkinAction || "");
   const externalAlreadySigned = action === "already_signed_before_run" || (details?.alreadySigned === true && details?.clickedSignIn !== true);
-  if (site.lastSuccess === true && externalAlreadySigned) return `<span class="success-badge success-badge-external" title="运行时已是签到状态（非 SignMate 本次完成）">✓</span>`;
-  if (site.lastSuccess === true) return `<span class="success-badge" title="最近签到成功">✓</span>`;
-  if (site.lastSuccess === false) return `<span class="fail-badge" title="最近签到失败">×</span>`;
+  const actionLabel = siteKindOf(site) === "visit" ? "保活" : "签到";
+  if (site.lastSuccess === true && externalAlreadySigned) return `<span class="success-badge success-badge-external" title="运行时已是${actionLabel}状态（非 SignMate 本次完成）">✓</span>`;
+  if (site.lastSuccess === true) return `<span class="success-badge" title="最近${actionLabel}成功">✓</span>`;
+  if (site.lastSuccess === false) return `<span class="fail-badge" title="最近${actionLabel}失败">×</span>`;
   return "";
 }
 
@@ -945,9 +948,12 @@ function buildSiteCard(site) {
   const dotClass = verificationBlocked ? "dot-warning" : (hasStatus
     ? (site.lastSuccess ? "dot-success" : "dot-error")
     : "dot-pending");
+  const siteKind = siteKindOf(site);
+  const isVisit = siteKind === "visit";
+  const actionText = isVisit ? "保活" : "签到";
   const statusText = verificationBlocked ? "需要验证" : (hasStatus
-    ? (site.lastSuccess ? "最近签到成功" : "最近签到失败")
-    : "尚未签到");
+    ? (site.lastSuccess ? `最近${actionText}成功` : `最近${actionText}失败`)
+    : `尚未${actionText}`);
   const tagClass = site.enabled ? "tag-active" : "tag-disabled";
   const tagText = site.enabled ? "启用" : "停用";
   const steps = Array.isArray(site.steps) ? site.steps : [];
@@ -956,8 +962,6 @@ function buildSiteCard(site) {
   const cardMessage = formatStatusMessageLines(cleanDailyMessage(site.lastMessage || statusText, site.key));
   const cardMessageTitle = cleanCardMessage(site.lastMessage || statusText);
   const displayName = displaySiteName(site.name);
-  const siteKind = site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
-  const isVisit = siteKind === "visit";
   const isPtSite = ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "hddolby-com", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net"].includes(site.key);
   const categoryKey = site.category || "forum";
   const isRunning = !!site._running;
@@ -965,7 +969,7 @@ function buildSiteCard(site) {
   const verificationLock = verificationLockHtml(site, details);
   const recentLabel = isVisit ? "最近保活" : "最近签到";
   const lastRunTime = site.lastTime ? new Date(site.lastTime).toLocaleString("zh-CN", { hour12: false }) : "";
-  const timeLineText = lastRunTime || "暂无签到记录";
+  const timeLineText = lastRunTime || `暂无${actionText}记录`;
 
   const showStatusBand = (!isVisit || isRunning) && (!isPtSite || verificationBlocked);
   const ptStatusClass = isPtSite && showStatusBand ? "has-pt-status" : "";
@@ -1365,7 +1369,9 @@ function showSiteManageModal(sites, proxy, kind = "signin", batch = {}, options 
           const timeValue = timeMatch ? `${String(timeMatch[2]).padStart(2, "0")}:${String(timeMatch[1]).padStart(2, "0")}` : (kind === "visit" ? "09:30" : "09:00");
           const siteRandomStart = batchMode === "random" ? normalizeTime(randomStart || "02:00", "02:00") : normalizeTime(site.randomStart || site.random_start || randomStart || "02:00", "02:00");
           const siteRandomEnd = batchMode === "random" ? normalizeTime(randomEnd || "22:00", "22:00") : normalizeTime(site.randomEnd || site.random_end || randomEnd || "22:00", "22:00");
-          const effectiveKind = site.enabled ? (site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin")) : "disabled";
+          const fixedKind = siteKindOf(site);
+          const effectiveKind = site.enabled ? fixedKind : "disabled";
+          const lockedVisit = site.enforced_kind === "visit" || site.enforcedKind === "visit";
           const manageTwoFaBadge = twoFaCornerHtml(site, site.details || {});
           return `
             <div class="site-manage-row site-manage-grid-row mode-${escAttr(effectiveKind)}" data-site="${escAttr(site.key)}" data-kind="${escAttr(effectiveKind)}" data-category="${escAttr(site.category || 'forum')}">
@@ -1375,8 +1381,8 @@ function showSiteManageModal(sites, proxy, kind = "signin", batch = {}, options 
                 <small class="manage-site-summary" aria-hidden="true"></small>
               </div>
               <span class="mobile-field-label">执行方式</span>
-              <select class="field-input manage-mode" data-site="${escAttr(site.key)}" data-fixed-kind="${escAttr(siteKindOf(site))}" data-current-mode="${escAttr(effectiveKind)}" data-site-name="${escAttr(displaySiteName(site.name))}" title="执行方式">
-                <option value="${escAttr(siteKindOf(site))}" ${site.enabled ? "selected" : ""}>${siteKindOf(site) === "visit" ? "🌤️" : "✅"} ${esc(kindLabel(siteKindOf(site)))}</option>
+              <select class="field-input manage-mode" data-site="${escAttr(site.key)}" data-fixed-kind="${escAttr(fixedKind)}" data-current-mode="${escAttr(effectiveKind)}" data-site-name="${escAttr(displaySiteName(site.name))}" title="${lockedVisit ? "该站点已适配为保活，不支持切回签到" : "执行方式"}">
+                <option value="${escAttr(fixedKind)}" ${site.enabled ? "selected" : ""}>${fixedKind === "visit" ? "🌤️" : "✅"} ${esc(kindLabel(fixedKind))}${lockedVisit ? "（固定）" : ""}</option>
                 <option value="disabled" ${!site.enabled ? "selected" : ""}>⛔ 禁用</option>
               </select>
               <span class="mobile-field-label">分类</span>
@@ -2674,8 +2680,10 @@ function openProcessModal(site) {
   const details = site.details || {};
   const reward = buildMetricBadges(site, details);
   const rawStats = details.rawStatsText ? `<div class="process-raw-stats">${esc(details.rawStatsText)}</div>` : "";
-  const processKind = site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
-  const processTitle = processKind === "visit" ? `${displaySiteName(site.name || site.key)} 保活` : displaySiteName(site.name || site.key);
+  const processKind = siteKindOf(site);
+  const processAction = processKind === "visit" ? "保活" : "签到";
+  const baseProcessTitle = displaySiteName(site.name || site.key);
+  const processTitle = processKind === "visit" ? `${baseProcessTitle} 保活` : baseProcessTitle;
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.id = "processModal";
@@ -2684,7 +2692,7 @@ function openProcessModal(site) {
       <div class="modal-header">
         <div>
           <h3>${esc(processTitle)} · 执行过程</h3>
-          <small>签到时间：${esc(lastTime)}</small>
+          <small>${esc(processAction)}时间：${esc(lastTime)}</small>
         </div>
         <button class="modal-close" type="button" id="processModalClose">×</button>
       </div>
@@ -2822,7 +2830,7 @@ async function loadProxySettings() {
     const { data } = await api("/api/proxy");
     if (form.elements.enabled) form.elements.enabled.checked = data.enabled === true;
     form.elements.url.value = (data.urls && data.urls.length ? data.urls : [data.url || ""]).filter(Boolean).join("\n");
-    form.elements.testUrl.value = (data.testUrls && data.testUrls.length ? data.testUrls : [data.testUrl || "https://www.nodeseek.com/"]).filter(Boolean).join("\n");
+    form.elements.testUrl.value = (data.testUrls && data.testUrls.length ? data.testUrls : [data.testUrl || "https://www.youtube.com"]).filter(Boolean).join("\n");
     form.elements.autoFallback.checked = data.autoFallback !== false;
     if (form.elements.telegramNotifyProxy) form.elements.telegramNotifyProxy.checked = data.telegramNotifyProxy !== false;
 
@@ -3249,8 +3257,9 @@ async function triggerSingle(key, name, kind = "signin") {
 
   setSiteProgress(key, "读取站点配置与代理策略…", 10);
   const stopLogProgress = startSiteLogProgress(key, name, startedAt);
-  if (batchRunState?.active && batchRunState.currentKey === key) setBatchNotice(`${displaySiteName(name)}：开始签到`, "info");
-  else showToast(kind === "visit" ? `正在保活 ${name}…` : `正在签到 ${name}…`);
+  const actionText = kind === "visit" ? "保活" : "签到";
+  if (batchRunState?.active && batchRunState.currentKey === key) setBatchNotice(`${displaySiteName(name)}：开始${actionText}`, "info");
+  else showToast(`正在${actionText} ${name}…`);
 
   try {
     const { data } = await api(`/api/signin/${key}`, { method: "POST" });
@@ -3274,12 +3283,12 @@ async function triggerSingle(key, name, kind = "signin") {
     try {
       if (resultFilterWasActive) activeSiteResultFilter = "all";
       await loadSites(true);
-      const toastText = isFetchBreak ? "请求连接中断，但已刷新后端最新状态；如果状态已更新则签到已完成。" : `签到失败: ${err.message}`;
+      const toastText = isFetchBreak ? `请求连接中断，但已刷新后端最新状态；如果状态已更新则${actionText}已完成。` : `${actionText}失败: ${err.message}`;
       if (batchRunState?.active && batchRunState.currentKey === key) setBatchNotice(`${displaySiteName(name)}：${toastText}`, isFetchBreak ? "info" : "error");
       else showToast(toastText, isFetchBreak ? "" : "error");
     } catch {
-      if (batchRunState?.active && batchRunState.currentKey === key) setBatchNotice(`${displaySiteName(name)}：签到失败 ${err.message}`, "error");
-      else showToast(`签到失败: ${err.message}`, "error");
+      if (batchRunState?.active && batchRunState.currentKey === key) setBatchNotice(`${displaySiteName(name)}：${actionText}失败 ${err.message}`, "error");
+      else showToast(`${actionText}失败: ${err.message}`, "error");
     }
   } finally {
     stopLogProgress();
@@ -3420,11 +3429,11 @@ async function triggerAll() {
     showToast(batchRunState.notice, batchRunState.failed ? "error" : "success");
   } catch (err) {
     batchRunState.active = false;
-    batchRunState.summary = `批量签到中断：${err.message}`;
+    batchRunState.summary = `批量任务中断：${err.message}`;
     batchRunState.notice = `${batchRunState.summary}；后端会在重启后检测并发送中断告警`;
     batchRunState.noticeType = "error";
     renderBatchProgress(latestAllSites);
-    showToast(`全部签到失败: ${err.message}`, "error");
+    showToast(`全部任务失败: ${err.message}`, "error");
     await loadSites(true).catch(() => {});
   } finally {
     isLoading = false;

@@ -43,6 +43,26 @@ function siteCategory(siteConfig = {}) {
   return normalizeCategoryKey(siteConfig.category || (siteConfig.kind === "visit" ? "pt" : "forum")) || "forum";
 }
 
+function stripUserCapabilityFields(sitesRaw = {}) {
+  let changed = false;
+  const sites = sitesRaw.sites || {};
+  for (const site of Object.values(sites)) {
+    if (!site || typeof site !== "object") continue;
+    for (const field of ["kind", "signin_mode", "enforced_kind"]) {
+      if (Object.prototype.hasOwnProperty.call(site, field)) {
+        delete site[field];
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
+function mergeSiteWithBuiltin(key, override = {}) {
+  const { kind: _kind, signin_mode: _signinMode, enforced_kind: _enforcedKind, ...userConfig } = override || {};
+  return { ...(BUILTIN_SITES[key] || {}), ...userConfig };
+}
+
 function firstNonEmpty(...values) {
   return values.map(v => String(v ?? "").trim()).find(Boolean) || "";
 }
@@ -301,6 +321,10 @@ export function loadConfig() {
   let sitesRaw = {};
   if (hasSitesConfig) {
     sitesRaw = parse(readFileSync(sitesPath, "utf-8")) || {};
+    if (stripUserCapabilityFields(sitesRaw)) {
+      writeFileSync(sitesPath, stringify(sitesRaw), "utf-8");
+      logger.info("[配置] 已清理用户配置中的站点能力字段");
+    }
   } else {
     logger.warn(`[配置] 未找到 sites.yaml，按全新部署空站点启动: ${sitesPath}`);
   }
@@ -310,7 +334,7 @@ export function loadConfig() {
   // BUILTIN_SITES 只用于给已添加站点补默认字段，不能因为 sites.yaml 存在就自动展开全部内置站点。
   const siteKeys = Object.keys(overrideSites);
   const mergedSites = Object.fromEntries(
-    siteKeys.map(key => [key, { ...(BUILTIN_SITES[key] || {}), ...(overrideSites[key] || {}) }])
+    siteKeys.map(key => [key, mergeSiteWithBuiltin(key, overrideSites[key])])
   );
   const sites = Object.entries(mergedSites).filter(([, site]) => site.hidden !== true).map(([key, site]) => {
     const rawProxyMode = siteProxyMode(site);
@@ -443,7 +467,7 @@ export async function runSingle(siteConfig, secrets) {
 }
 
 /**
- * 执行所有已启用的站点签到
+ * 执行所有已启用的站点任务（签到或保活）
  */
 export async function runAll(options = {}) {
   assertNoActiveBatchRun();

@@ -171,19 +171,41 @@ async function runWebDavAutoBackupOnce(reason = "auto") {
 
 // ---- Cookie / secrets helpers ----
 
+function writeSitesRaw(sitesRaw) {
+  mkdirSync(CONFIG_DIR, { recursive: true });
+  writeFileSync(SITES_PATH, stringify(sitesRaw), "utf-8");
+}
+
+function stripUserCapabilityFields(sitesRaw = {}) {
+  let changed = false;
+  const sites = sitesRaw.sites || {};
+  for (const site of Object.values(sites)) {
+    if (!site || typeof site !== "object") continue;
+    for (const field of ["kind", "signin_mode", "enforced_kind"]) {
+      if (Object.prototype.hasOwnProperty.call(site, field)) {
+        delete site[field];
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
+function mergeSiteWithBuiltin(key, override = {}) {
+  const { kind: _kind, signin_mode: _signinMode, enforced_kind: _enforcedKind, ...userConfig } = override || {};
+  return { ...(BUILTIN_SITES[key] || {}), ...userConfig };
+}
+
 function readSitesRaw() {
   try {
     if (!existsSync(SITES_PATH)) return { sites: {} };
-    return parse(readFileSync(SITES_PATH, "utf-8")) || { sites: {} };
+    const raw = parse(readFileSync(SITES_PATH, "utf-8")) || { sites: {} };
+    if (stripUserCapabilityFields(raw)) writeSitesRaw(raw);
+    return raw;
   } catch (err) {
     if (err?.code === "ENOENT") return { sites: {} };
     throw err;
   }
-}
-
-function writeSitesRaw(sitesRaw) {
-  mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(SITES_PATH, stringify(sitesRaw), "utf-8");
 }
 
 function normalizeClockTime(value, fallback = "09:00") {
@@ -207,7 +229,7 @@ function mergeSiteCatalog(sites = {}) {
   // 不应在全新部署或未添加时自动出现在首页卡片里。
   return Object.fromEntries(
     Object.keys(sites || {})
-      .map(key => [key, { ...(BUILTIN_SITES[key] || {}), ...((sites || {})[key] || {}) }])
+      .map(key => [key, mergeSiteWithBuiltin(key, (sites || {})[key])])
   );
 }
 
@@ -1160,11 +1182,9 @@ export async function startServer() {
         timeout: Number.isFinite(Number(body.timeout)) ? Number(body.timeout) : (builtin?.timeout ?? 30000),
         base_url: baseUrl,
         category: body.category || builtin?.category || "forum",
-        kind: body.kind === "visit" ? "visit" : (body.kind === "signin" ? "signin" : (builtin?.kind || "signin")),
         ...(body.loginKeyword ? { login_keyword: String(body.loginKeyword).trim() } : {}),
       };
       applySiteProxyMode(siteConfig, ["auto", "on", "off"].includes(body.proxyMode) ? body.proxyMode : siteProxyMode(siteConfig));
-      if (body.signinMode) siteConfig.signin_mode = String(body.signinMode).trim();
       sitesRaw.sites[key] = siteConfig;
 
       writeSitesRaw(sitesRaw);
@@ -1195,9 +1215,10 @@ export async function startServer() {
       if (Object.prototype.hasOwnProperty.call(body, "baseUrl")) site.base_url = String(body.baseUrl || "").trim();
       if (Object.prototype.hasOwnProperty.call(body, "timeout")) site.timeout = Number(body.timeout) || site.timeout || 30000;
       if (Object.prototype.hasOwnProperty.call(body, "retry")) site.retry = Number(body.retry) || 0;
-      if (Object.prototype.hasOwnProperty.call(body, "signinMode")) site.signin_mode = String(body.signinMode || "").trim();
       if (Object.prototype.hasOwnProperty.call(body, "category")) site.category = String(body.category || "forum").trim();
-      if (Object.prototype.hasOwnProperty.call(body, "kind")) site.kind = body.kind === "visit" ? "visit" : "signin";
+      delete site.kind;
+      delete site.signin_mode;
+      delete site.enforced_kind;
       if (Object.prototype.hasOwnProperty.call(body, "loginKeyword")) site.login_keyword = String(body.loginKeyword || "").trim();
       if (body.proxyMode && ["auto", "on", "off"].includes(body.proxyMode)) applySiteProxyMode(site, body.proxyMode);
 
@@ -2030,7 +2051,8 @@ export async function startServer() {
           : (sliderDiagnostic ? { ...site, ...explicitFlags, captcha_slider_diagnostic_only: true, captcha_ai_save_samples: saveSamples, captcha_slider_diagnostic_fraction: req.body?.diagnosticFraction }
             : (sliderFullDiagnostic ? { ...site, ...explicitFlags, captcha_slider_full_diagnostic: true, captcha_slider_solver_enabled: true, captcha_ai_save_samples: saveSamples, captcha_slider_slow_trajectory: req.body?.slowTrajectory !== false, tcaptcha_stealth_diagnostic: !!req.body?.stealthDiagnostic }
               : (enableSliderSolver ? { ...site, ...explicitFlags, captcha_slider_solver_enabled: true, captcha_ai_save_samples: saveSamples, tcaptcha_stealth_diagnostic: !!req.body?.stealthDiagnostic, captcha_block_geetest_autoclick: req.body?.blockGeetestAutoclick !== false } : { ...site, ...explicitFlags })));
-        logger.info(`[手动] 开始${dryRun ? "AI干跑" : "签到"}: ${site.note || siteName}`);
+        const actionLabel = dryRun ? "AI干跑" : (site.kind === "visit" ? "保活" : "签到");
+        logger.info(`[手动] 开始${actionLabel}: ${site.note || siteName}`);
         const result = await runSingle(runSite, secrets);
         const diagnosticOnlyResult = sliderDiagnostic || sliderFullDiagnostic || result.details?.checkinAction === "tcaptcha_partial_diagnostic" || result.details?.checkinAction === "tcaptcha_full_diagnostic_failed" || result.details?.checkinAction === "tcaptcha_full_diagnostic_solved" || result.details?.tcaptchaDragResult?.diagnosticOnly === true;
         if (!dryRun && !diagnosticOnlyResult && result.details?.dryRun !== true) await store.addEntry(site.note || siteName, result);

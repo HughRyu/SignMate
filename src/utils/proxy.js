@@ -4,7 +4,17 @@
 
 import { request as undiciRequest, ProxyAgent } from "undici";
 
-const DEFAULT_CONNECTIVITY_URL = "https://www.nodeseek.com/";
+export const DEFAULT_CONNECTIVITY_URLS = [
+  "https://www.youtube.com",
+  "https://www.bbc.com",
+  "https://bloomberg.com",
+  "https://core.telegram.org",
+  "https://api.openai.com",
+  "https://www.whatsapp.com",
+  "https://www.x.com",
+];
+
+const DEFAULT_CONNECTIVITY_URL = DEFAULT_CONNECTIVITY_URLS[0];
 
 export function normalizeProxyUrl(value = "") {
   const text = String(value || "").trim();
@@ -22,7 +32,7 @@ export function splitLines(value = "") {
 export function getGlobalProxy(sitesRaw = {}) {
   const proxy = sitesRaw.proxy || sitesRaw.global_proxy || {};
   const urls = splitLines(proxy.urls || proxy.url || proxy.http || proxy.https).map(normalizeProxyUrl).filter(Boolean);
-  const testUrls = splitLines(proxy.test_urls || proxy.test_url || DEFAULT_CONNECTIVITY_URL);
+  const testUrls = splitLines(proxy.test_urls || proxy.test_url || DEFAULT_CONNECTIVITY_URLS);
   return {
     enabled: urls.length > 0,
     url: urls[0] || "",
@@ -37,7 +47,7 @@ export function getGlobalProxy(sitesRaw = {}) {
 export function setGlobalProxy(sitesRaw, settings = {}) {
   const current = sitesRaw.proxy || {};
   const urls = splitLines(settings.urls ?? settings.url ?? current.urls ?? current.url).map(normalizeProxyUrl).filter(Boolean);
-  const testUrls = splitLines(settings.testUrls ?? settings.testUrl ?? current.test_urls ?? current.test_url ?? DEFAULT_CONNECTIVITY_URL);
+  const testUrls = splitLines(settings.testUrls ?? settings.testUrl ?? current.test_urls ?? current.test_url ?? DEFAULT_CONNECTIVITY_URLS);
   sitesRaw.proxy = {
     ...current,
     enabled: urls.length > 0,
@@ -66,7 +76,7 @@ export function applySiteProxyMode(site, mode = "auto") {
 }
 
 
-export async function testProxyPool(proxyUrls = [], testUrls = [DEFAULT_CONNECTIVITY_URL], timeoutMs = 10000) {
+export async function testProxyPool(proxyUrls = [], testUrls = DEFAULT_CONNECTIVITY_URLS, timeoutMs = 10000) {
   const urls = splitLines(proxyUrls).map(normalizeProxyUrl).filter(Boolean);
   const targets = splitLines(testUrls).length ? splitLines(testUrls) : [DEFAULT_CONNECTIVITY_URL];
   // 多测试 URL 中至少一个通过即可认为该代理地址可用，避免目标站点差异导致整条代理被误判失效。
