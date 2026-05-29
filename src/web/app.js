@@ -16,14 +16,12 @@ const dismissedInterruptedBatchIds = new Set(JSON.parse(localStorage.getItem("di
 const DEFAULT_CATEGORIES = [
   { key: "forum", label: "论坛", emoji: "💬" },
   { key: "pt", label: "PT站点", emoji: "📀" },
-  { key: "website", label: "网站", emoji: "🌐" },
-  { key: "game", label: "游戏", emoji: "🎮" },
 ];
 let siteCategories = [...DEFAULT_CATEGORIES];
 let appSettings = { auth: {}, branding: { title: "SignMate" } };
 
 function orderedCategories() {
-  const homeOrder = ["forum", "pt", "website", "game"];
+  const homeOrder = ["forum", "pt"];
   const idx = key => {
     const i = homeOrder.indexOf(key);
     return i === -1 ? Number.MAX_SAFE_INTEGER : i;
@@ -575,7 +573,7 @@ async function loadCategories() {
 
 function categoryAbbr(category = "forum") {
   const raw = String(category || "forum").trim();
-  const map = { forum: "FORUM", pt: "PT", website: "WEB", game: "GAME" };
+  const map = { forum: "FORUM", pt: "PT" };
   return map[raw] || raw.replace(/[^a-z0-9]+/gi, "").slice(0, 6).toUpperCase() || "CAT";
 }
 
@@ -1337,7 +1335,6 @@ function showSiteManageModal(sites, proxy, kind = "signin", batch = {}, options 
           <span id="batchRandomRangeWrap" class="batch-time-mode-wrap ${batchMode === "random" ? "" : "is-hidden"}">${randomRangeHtml(randomStart, randomEnd, { kind: "batch-random", disabled: false })}</span>
         </div>
         <div class="site-category-actions site-manage-category-actions">
-          <div class="site-manage-kind-group" id="siteKindTabs">${siteKindTabsHtml(manageKindFilter)}</div>
           <div class="site-manage-category-group" id="siteCategoryTabs">${categoryTabsHtml("all").replace(/category-tab/g, "category-pill")}</div>
         </div>
         <div class="site-manage-toolbar-actions">
@@ -1867,7 +1864,7 @@ async function openAddSiteModal(kind = "signin") {
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.id = "addSiteModal";
-  modal.innerHTML = `<div class="modal-card add-site-modal-card" role="dialog" aria-modal="true"><div class="modal-header"><div><h2>${kind === "visit" ? "添加保活站点" : "添加站点"}</h2><p>从 SignMate 已适配站点列表中选择添加</p></div><button class="modal-close" type="button" id="addSiteClose">×</button></div><div id="addSiteBox" class="add-site-box"><div class="empty-cell"><span class="spinner"></span>读取已适配站点列表…</div></div></div>`;
+  modal.innerHTML = `<div class="modal-card add-site-modal-card" role="dialog" aria-modal="true"><div class="modal-header"><div><h2>添加站点</h2><p>从 SignMate 已适配站点列表中选择添加</p></div><button class="modal-close" type="button" id="addSiteClose">×</button></div><div id="addSiteBox" class="add-site-box"><div class="empty-cell"><span class="spinner"></span>读取已适配站点列表…</div></div></div>`;
   document.body.appendChild(modal);
   document.getElementById("addSiteClose")?.addEventListener("click", () => modal.remove());
   modal.addEventListener("click", event => { if (event.target === modal) modal.remove(); });
@@ -1876,7 +1873,7 @@ async function openAddSiteModal(kind = "signin") {
   try {
     await loadCategories();
     const { data } = await api("/api/available-sites");
-    const pending = (data || []).filter(item => !item.added && (kind === "visit" ? item.kind === "visit" : item.kind !== "visit"));
+    const pending = (data || []).filter(item => !item.added);
     box.innerHTML = `
       <div class="available-site-list">
         ${pending.length ? pending.map(item => `
@@ -1896,7 +1893,7 @@ async function openAddSiteModal(kind = "signin") {
                 data-signin-mode="${escAttr(item.signinMode || "")}" data-category="${escAttr(item.category || "forum")}">添加</button>
             </div>
           </div>
-        `).join("") : `<div class="empty-cell">暂无可添加的${kind === "visit" ? "保活" : "签到"}站点。</div>`}
+        `).join("") : `<div class="empty-cell">暂无可添加站点。</div>`}
       </div>
       <div class="field-help">这里只显示 SignMate 已适配且尚未添加的站点；如需支持新站点，需要先新增 Driver 适配。</div>
     `;

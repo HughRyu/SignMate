@@ -295,7 +295,9 @@ export function loadConfig() {
   }
   const proxy = getGlobalProxy(sitesRaw);
   const overrideSites = sitesRaw.sites || {};
-  const siteKeys = hasSitesConfig ? [...new Set([...Object.keys(BUILTIN_SITES), ...Object.keys(overrideSites)])] : [];
+  // 只运行/展示用户已经添加到 sites.yaml 的站点。
+  // BUILTIN_SITES 只用于给已添加站点补默认字段，不能因为 sites.yaml 存在就自动展开全部内置站点。
+  const siteKeys = Object.keys(overrideSites);
   const mergedSites = Object.fromEntries(
     siteKeys.map(key => [key, { ...(BUILTIN_SITES[key] || {}), ...(overrideSites[key] || {}) }])
   );

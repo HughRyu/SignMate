@@ -1029,7 +1029,8 @@ export async function startServer() {
           name,
           note: site.note || "",
           driver: site.driver || "",
-          adaptedKind: site.adapted_kind || site.adaptedKind || (site.driver === "website" || site.driver === "visit" ? "visit" : (/保活|访问|每日访问|Cookie\s*检查/i.test(`${site.note || ""} ${name || ""}`) ? "visit" : (site.kind === "visit" ? "visit" : "signin"))),
+          // 明确配置的 kind 优先；不要因为历史 note 里含“访问/每日访问”把 NodeLoc 这类签到站点误判为保活。
+          adaptedKind: site.adapted_kind || site.adaptedKind || (site.kind === "visit" ? "visit" : (site.kind === "signin" ? "signin" : (site.driver === "website" || site.driver === "visit" ? "visit" : (/保活|Cookie\s*检查/i.test(`${site.note || ""} ${name || ""}`) ? "visit" : "signin")))),
           enabled: site.enabled !== false,
           schedule: site.schedule || "",
           scheduleMode: site.schedule_mode || site.scheduleMode || (["random", "independent"].includes((readSitesRaw().batch || {}).mode) ? (readSitesRaw().batch || {}).mode : "fixed"),

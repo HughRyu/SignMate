@@ -10,7 +10,7 @@
 
 ```text
 ghcr.io/hughryu/signmate:latest
-# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.2
+# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.3
 ```
 
 创建目录与配置文件：
@@ -43,7 +43,7 @@ chmod 600 config/secrets.yaml
 ```yaml
 services:
   signmate:
-    image: ghcr.io/hughryu/signmate:v0.1.2
+    image: ghcr.io/hughryu/signmate:v0.1.3
     container_name: signmate
     restart: unless-stopped
     ports:
