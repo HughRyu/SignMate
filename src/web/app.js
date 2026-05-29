@@ -44,6 +44,10 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(updateClock, 1000);
   setInterval(refreshNavTimeTooltip, 60000);
 
+  document.querySelector(".nav-brand")?.addEventListener("dblclick", () => {
+    window.open("https://github.com/HughRyu/SignMate", "_blank", "noopener,noreferrer");
+  });
+
   // Tab switching
   document.querySelectorAll(".nav-btn[data-tab]").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));

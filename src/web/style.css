@@ -9990,3 +9990,5 @@ input.is-saved-field:focus {
 .app-settings-card .card-title-row { align-items: center; }
 
 .app-settings-card .credential-actions { margin-top: 10px; }
+
+.nav-brand { cursor: pointer; }
