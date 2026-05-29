@@ -18,6 +18,18 @@ function parseUserInfo(raw = "") {
   try { return JSON.parse(decoded); } catch { return null; }
 }
 
+function cookieValue(rawCookie = "", name = "") {
+  const target = String(name || "").trim();
+  if (!target) return "";
+  for (const part of String(rawCookie || "").split(/;|\r?\n/)) {
+    const index = part.indexOf("=");
+    if (index <= 0) continue;
+    const key = part.slice(0, index).trim();
+    if (key === target) return part.slice(index + 1).trim();
+  }
+  return "";
+}
+
 function asInt(value) {
   const n = Number.parseInt(String(value ?? "").replace(/[^0-9-]/g, ""), 10);
   return Number.isFinite(n) ? n : null;
@@ -82,8 +94,12 @@ export default class FengDriver extends BaseDriver {
   getAccount() {
     const key = this.siteConfig.key || "feng-com";
     const siteSecrets = this.secrets?.[key] || this.secrets?.feng || {};
-    const rawUserInfo = siteSecrets.userInfo || siteSecrets.userinfo || siteSecrets["userInfo"] || "";
-    const rawShared = siteSecrets.userInfoShared || siteSecrets["userInfo-shared"] || "";
+    const rawCookie = siteSecrets.cookie || "";
+    // 威锋登录态在浏览器里通常是 userInfo / userInfo-shared 两个 Cookie；
+    // 面板手动粘贴完整 Cookie、CookieCloud 同步都只会写入 cookie 字段。
+    // 因此 Driver 不能只读取拆出来的 userInfo 字段，否则新部署用户会提示未配置。
+    const rawUserInfo = siteSecrets.userInfo || siteSecrets.userinfo || siteSecrets["userInfo"] || cookieValue(rawCookie, "userInfo") || "";
+    const rawShared = siteSecrets.userInfoShared || siteSecrets["userInfo-shared"] || cookieValue(rawCookie, "userInfo-shared") || "";
     const parsed = parseUserInfo(rawUserInfo) || parseUserInfo(rawShared);
     const token = String(parsed?.accessToken || siteSecrets.accessToken || "").trim();
     if (!token || token.includes("<YOUR_")) return null;
