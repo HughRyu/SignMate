@@ -40,6 +40,7 @@ import NexusPhpDriver from "./drivers/nexusphp.js";
 import QianmojuDriver from "./drivers/qianmoju.js";
 import KafanDriver from "./drivers/kafan.js";
 import FengDriver from "./drivers/feng.js";
+import TiebaDriver from "./drivers/tieba.js";
 
 registerDriver("nodeseek", NodeSeekDriver);
 registerDriver("template", TemplateDriver);
@@ -56,6 +57,7 @@ registerDriver("nexusphp", NexusPhpDriver);
 registerDriver("qianmoju", QianmojuDriver);
 registerDriver("kafan", KafanDriver);
 registerDriver("feng", FengDriver);
+registerDriver("tieba", TiebaDriver);
 
 function loadNotifyConfig() {
   const path = join(import.meta.dirname, "..", "config", "notify.yaml");
