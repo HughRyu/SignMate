@@ -7,6 +7,9 @@
   "scripts": {
     "start": "node src/index.js",
     "start:dev": "node --watch src/index.js",
+    "check": "node --check src/server.js && node --check src/runner.js && node --check src/scheduler.js && node --check src/index.js && node --check src/web/app.js",
+    "audit:prod": "npm audit --omit=dev --audit-level=moderate",
+    "test": "npm run check && npm run audit:prod",
     "test:nodeseek": "node src/drivers/nodeseek.js"
   },
   "dependencies": {

@@ -2994,7 +2994,8 @@ function renderStepProgress(steps = []) {
     </div>`).join("")}</div>`;
 }
 
-function setSiteProgressHtml(key, html, text = "") {
+function setTrustedSiteProgressHtml(key, html, text = "") {
+  // Only pass HTML produced by local renderers that escape API/user-controlled fields.
   const state = runningSites.get(key);
   if (state && typeof state === "object") state.text = text || "执行中…";
   const status = document.getElementById(`status-${key}`);
@@ -3258,7 +3259,7 @@ async function triggerSingle(key, name, kind = "signin") {
     const finalMessage = conciseResultMessage(data);
     const finalStatusText = data.success ? `${kind === "visit" ? "访问" : "签到"}完成：${finalMessage}` : `${kind === "visit" ? "访问" : "签到"}失败：${data.message}`;
     const stepHtml = renderStepProgress(data.steps || []);
-    if (stepHtml) setSiteProgressHtml(key, stepHtml, finalStatusText);
+    if (stepHtml) setTrustedSiteProgressHtml(key, stepHtml, finalStatusText);
     else setSiteProgress(key, finalStatusText, 100);
     const toastText = `${icon} ${displaySiteName(name)}：${finalMessage}`;
     if (batchRunState?.active && batchRunState.currentKey === key) setBatchNotice(toastText, data.success ? "success" : (verificationBlocked ? "warning" : "error"));
