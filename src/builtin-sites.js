@@ -167,7 +167,7 @@ export const BUILTIN_SITES = {
     "timeout": 30000,
     "base_url": "https://pt.btschool.club/torrents.php",
     "category": "pt",
-    "kind": "signin",
+    "kind": "visit",
     "login_keyword": "BTSCHOOL",
     "proxy": "auto",
     "signin_mode": "playwright"
@@ -295,10 +295,10 @@ export const BUILTIN_SITES = {
     "timeout": 30000,
     "base_url": "https://open.cd/",
     "category": "pt",
-    "kind": "signin",
+    "kind": "visit",
     "login_keyword": "OpenCD",
     "proxy": "auto",
-    "signin_mode": "playwright"
+    "signin_mode": "visit"
   },
   "ourbits-club": {
     "enabled": true,

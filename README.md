@@ -23,6 +23,9 @@ TZ=Asia/Shanghai
 LOG_LEVEL=info
 RUN_ON_START=false
 HTTP_TIMEOUT=30000
+SIGNMATE_AUTH_USERNAME=admin
+SIGNMATE_AUTH_PASSWORD=change-this-password
+SIGNMATE_AUTH_DISABLED=false
 EOF
 
 cat > config/secrets.yaml <<EOF
@@ -49,6 +52,9 @@ services:
     environment:
       - TZ=Asia/Shanghai
       - WEB_PORT=6668
+      - SIGNMATE_AUTH_USERNAME=${SIGNMATE_AUTH_USERNAME:-admin}
+      - SIGNMATE_AUTH_PASSWORD=${SIGNMATE_AUTH_PASSWORD:-}
+      - SIGNMATE_AUTH_DISABLED=${SIGNMATE_AUTH_DISABLED:-false}
     volumes:
       - ./config:/app/config
       - ./data:/app/data
@@ -116,6 +122,48 @@ nodeseek:
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
 TELEGRAM_CHAT_ID=123456789
 ```
+
+
+## 支持站点
+
+SignMate 内置以下站点 Driver / 站点模板。站点凭据仍需在本地维护，公开镜像不包含任何 Cookie、Token 或账号信息。
+
+### 论坛 / 社区
+
+| 站点 | Key | Driver | 类型 |
+|------|-----|--------|------|
+| 威锋论坛 | `feng-com` | `feng` | 签到 |
+| NodeSeek | `nodeseek` | `nodeseek` | 签到 |
+| V2EX | `v2ex` | `v2ex` | 签到 |
+| 奶昔论坛 | `naixi` | `naixi` | 签到 |
+| 吾爱破解 | `pojie52` | `pojie52` | 签到 |
+| NodeLoc | `nodeloc` | `nodeloc` | 签到 / 每日访问 |
+| PCEVA | `pceva` | `pceva` | 签到 |
+| Chiphell | `chiphell-com` | `chiphell` | 保活 |
+| 恩山无线论坛 | `right` | `right` | 签到 |
+| 卡饭论坛 | `kafan` | `kafan` | 签到 |
+| 阡陌居 | `qianmoju` | `qianmoju` | 签到 |
+
+### PT / NexusPHP
+
+以下站点使用通用 `nexusphp` Driver，并按站点配置区分“签到”或“保活”。
+
+| 站点 | Key | 类型 |
+|------|-----|------|
+| Audiences | `audiences-me` | 保活 |
+| BTSCHOOL | `pt-btschool-club` | 保活 |
+| CarPT | `carpt-net` | 签到 |
+| FARMM / 0ff | `pt-0ff-cc` | 签到 |
+| HHanClub | `hhanclub-net` | 签到 |
+| HDDolby | `hddolby-com` | 签到 |
+| HDFans | `hdfans-org` | 签到 |
+| HDHome | `hdhome-org` | 签到 |
+| HDSky | `hdsky-me` | 签到 |
+| OpenCD | `open-cd` | 保活 |
+| OurBits | `ourbits-club` | 签到 |
+| Piggo | `piggo-me` | 保活 |
+| PTTime | `pttime-org` | 保活 |
+| PterClub | `pterclub-net` | 签到 |
 
 ## 添加新论坛
 

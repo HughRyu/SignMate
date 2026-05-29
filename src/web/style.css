@@ -9992,3 +9992,7 @@ input.is-saved-field:focus {
 .app-settings-card .credential-actions { margin-top: 10px; }
 
 .nav-brand { cursor: pointer; }
+
+/* local: prevent brand text selection */
+.nav-brand, .nav-brand * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none; }
+.nav-brand { cursor: pointer; }
