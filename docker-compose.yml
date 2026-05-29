@@ -1,0 +1,27 @@
+# ============================================================
+# signmate — docker-compose 部署配置
+# 使用方式：
+#   cp .env.example .env    # 编辑环境变量
+#   cp config/secrets.yaml.example config/secrets.yaml  # 编辑凭据
+#   docker compose up -d
+# ============================================================
+
+services:
+  signmate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: signmate
+    restart: unless-stopped
+    # config/data/logs 需要可写；容器启动时会自动修正挂载目录权限
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "9999:6668"
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Shanghai
+      - WEB_PORT=6668

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SignMate · 自动签到中心</title>
+  <link rel="stylesheet" href="/style.css?v=20260529-1255">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect rx='8' width='32' height='32' fill='%230071e3'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='white' font-family='system-ui'>✓</text></svg>">
+</head>
+<body>
+  <!-- ===== 导航栏 ===== -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <span class="nav-logo">✓</span>
+        <span class="nav-title">SignMate</span>
+      </div>
+      <div class="nav-links">
+        <button class="nav-btn active" data-tab="sites">✅ 站点</button>
+        <button class="nav-btn" data-tab="proxy">🌐 代理</button>
+        <button class="nav-btn" data-tab="notify">🔔 通知</button>
+        <button class="nav-btn" data-tab="history">📜 记录</button>
+        <button class="nav-btn" data-tab="logs">🧾 日志</button>
+        <button class="nav-btn" data-tab="maintenance" type="button">🧰 维护</button>
+      </div>
+      <div class="nav-info">
+        <span class="nav-time" id="navTime"></span>
+      </div>
+    </div>
+  </nav>
+  <div class="nav-stats-strip" aria-label="站点与执行统计">
+    <span class="nav-stat-pill"><span class="nav-stat-label">站点总数</span><strong id="navSiteTotal">--</strong></span>
+    <span class="nav-stat-pill"><span class="nav-stat-label">站点启用</span><strong id="navSiteEnabled">--</strong></span>
+    <button class="nav-stat-pill nav-kind-filter" id="navSigninFilter" type="button" data-kind="signin" title="点击查看签到站点；再次点击取消"><span class="nav-stat-label">签到站点</span><strong id="navSigninTotal">--</strong></button>
+    <button class="nav-stat-pill nav-kind-filter" id="navVisitFilter" type="button" data-kind="visit" title="点击查看保活站点；再次点击取消"><span class="nav-stat-label">保活站点</span><strong id="navVisitTotal">--</strong></button>
+    <button class="nav-stat-pill nav-stat-success nav-success-filter" id="navSuccessFilter" type="button" title="点击查看成功站点"><span class="nav-stat-label">成功</span><strong id="navSuccessCount">--</strong></button>
+    <button class="nav-stat-pill nav-stat-failed nav-failed-filter" id="navFailedFilter" type="button" title="点击查看失败站点"><span class="nav-stat-label">失败</span><strong id="navFailedCount">--</strong></button>
+  </div>
+  <!-- ===== 主内容区 ===== -->
+  <main class="main">
+    <!-- Tab: 站点 -->
+    <section class="tab-content active" id="tab-sites">
+      <div class="page-header site-page-header">
+        <div>
+          <h1 class="sr-only">站点</h1>
+          <p class="subtitle" id="sitesSummary" aria-hidden="true"></p>
+        </div>
+      </div>
+
+      <div class="home-site-search-bar" aria-label="站点操作与搜索">
+        <div class="header-actions site-header-actions">
+          <div class="site-category-actions" aria-label="站点分类"></div>
+          <button class="btn btn-secondary" id="btnManageSites" type="button">⚙️ 站点配置</button>
+          <button class="btn btn-primary" id="btnRunAll" disabled>
+            <span class="btn-icon">🔁</span> 全部签到
+          </button>
+        </div>
+        <label class="home-site-search-wrap" title="搜索站点名称、Key 或分类">
+          <span>🔎</span>
+          <input class="field-input home-site-search" id="homeSiteSearch" type="search" placeholder="搜索站点">
+        </label>
+      </div>
+
+      <div class="batch-progress hidden" id="batchProgress" aria-live="polite"></div>
+
+      <div class="sites-grid" id="sitesGrid">
+        <!-- 动态渲染 -->
+      </div>
+    </section>
+
+    <!-- Tab: 记录 -->
+    <section class="tab-content" id="tab-history">
+      <div class="page-header">
+        <div>
+          <h1>签到记录</h1>
+          <p class="subtitle">最近 50 条签到历史</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-danger" id="btnClearHistory" type="button">清除</button>
+          <button class="btn btn-secondary" id="btnRefreshHistory" type="button">刷新</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table" id="historyTable">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>站点</th>
+                <th>状态</th>
+                <th>消息</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="4" class="empty-cell">暂无记录</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- Tab: 代理 -->
+    <section class="tab-content" id="tab-proxy">
+      <div class="page-header">
+        <div>
+          <h1>代理设置</h1>
+          <p class="subtitle">站点直连失败时可自动走代理</p>
+        </div>
+        <button class="btn btn-secondary" id="btnTestProxy">测试代理</button>
+      </div>
+      <div class="card settings-card">
+        <form id="proxyForm" class="credential-form">
+          <div class="proxy-config-columns">
+            <div>
+              <label class="field-label" for="proxyUrl">代理地址</label>
+              <textarea id="proxyUrl" class="field-input" name="url" rows="7" placeholder="每行一个代理地址，例如 http://host:port"></textarea>
+              <div class="field-help">每行一个代理地址；只填 host:port 会按 HTTP 代理保存。Telegram 通知/测试会优先使用健康检查可用的代理。</div>
+            </div>
+            <div>
+              <label class="field-label" for="proxyTestUrl">代理连通性测试 URL</label>
+              <textarea id="proxyTestUrl" class="field-input" name="testUrl" rows="7" placeholder="每行一个测试地址"></textarea>
+              <div class="field-help">代理健康检查会逐个代理测试这些地址；每条代理至少通过 2 条测试 URL 才算有效。站点自动代理仍使用各站点自己的 URL 判断直连。</div>
+            </div>
+          </div>
+
+          <div class="proxy-switch-grid">
+            <label class="switch-row">
+              <span>
+                <strong>自动回退代理</strong>
+                <small>站点选择“自动”时，按保存时检测结果决定直连/代理</small>
+              </span>
+              <input type="checkbox" id="proxyAutoFallback" name="autoFallback" checked>
+            </label>
+            <label class="switch-row">
+              <span>
+                <strong>Telegram 走代理</strong>
+                <small>用于 Telegram 通知/测试；服务器直连 Telegram 超时时请开启</small>
+              </span>
+              <input type="checkbox" id="proxyTelegramNotify" name="telegramNotifyProxy" checked>
+            </label>
+          </div>
+
+          <div class="credential-actions">
+            <button class="btn btn-primary" type="submit">保存代理设置</button>
+            <button class="btn btn-secondary" type="button" id="btnReloadProxy">刷新</button>
+          </div>
+        </form>
+      </div>
+      <div class="card settings-card">
+        <h2 class="section-title">站点代理策略</h2>
+        <div id="proxySites" class="proxy-sites"></div>
+      </div>
+      <div class="modal-backdrop" id="proxyTestModal" style="display:none">
+        <div class="modal-card proxy-test-modal-card" role="dialog" aria-modal="true">
+          <div class="modal-header">
+            <div><h2>代理测试</h2><p>逐条代理访问逐个测试 URL，单项超时 5 秒</p></div>
+            <button class="modal-close" type="button" id="proxyTestClose">×</button>
+          </div>
+          <div id="proxyTestResult"></div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- Tab: 通知 -->
+    <section class="tab-content" id="tab-notify">
+      <div class="page-header">
+        <div>
+          <h1>通知设置</h1>
+          <p class="subtitle">Telegram / Bark 可分别订阅签到报告、Cookie 失效和代理失效通知</p>
+        </div>
+        <button class="btn btn-secondary" id="btnTestNotify">测试通知</button>
+      </div>
+      <div class="card settings-card">
+        <form id="notifyForm" class="credential-form">
+          <h2 class="section-title">签到报告</h2>
+          <div class="report-options-grid">
+            <label class="switch-row"><span><strong>集中签到后统一报告</strong><small>全部签到完成后汇总发送</small></span><input type="checkbox" name="consolidated" checked></label>
+            <label class="switch-row"><span><strong>反向通知</strong><small>仅针对签到/保活报告：只在签到/保活失败时通知；Cookie失效/代理失效不受影响</small></span><input type="checkbox" name="onlyFailures"></label>
+          </div>
+          <div class="notify-columns">
+            <section class="notify-column">
+              <h2 class="section-title">Telegram</h2>
+              <label class="switch-row"><span><strong>启用 Telegram</strong><small>使用 SignMate 代理发送</small></span><input type="checkbox" name="telegramEnabled" checked></label>
+              <label><span class="field-label">Bot Token</span><input class="field-input" name="telegramBotToken" type="password" placeholder="123456:ABC..."></label>
+              <label><span class="field-label">Chat ID</span><input class="field-input" name="telegramChatId" placeholder="例如 1010290845"></label>
+              <div class="notification-routes"><label><input type="checkbox" name="telegramSignin" checked> 签到报告</label><label><input type="checkbox" name="telegramCookie" checked> Cookie失效</label><label><input type="checkbox" name="telegramProxy" checked> 代理失效</label></div>
+            </section>
+            <section class="notify-column">
+              <h2 class="section-title">Bark</h2>
+              <label class="switch-row"><span><strong>启用 Bark</strong><small>支持自定义 Bark 地址</small></span><input type="checkbox" name="barkEnabled"></label>
+              <label><span class="field-label">Bark 服务地址</span><input class="field-input" name="barkServer" placeholder="https://api.day.app 或 https://bark.example.com"></label>
+              <label><span class="field-label">Bark Key</span><input class="field-input" name="barkKey" placeholder="你的 Bark Key"></label>
+              <div class="notification-routes"><label><input type="checkbox" name="barkSignin" checked> 签到报告</label><label><input type="checkbox" name="barkCookie" checked> Cookie失效</label><label><input type="checkbox" name="barkProxy" checked> 代理失效</label></div>
+            </section>
+          </div>
+          <div class="credential-actions"><button class="btn btn-primary" type="submit">保存通知设置</button><button class="btn btn-secondary" type="button" id="btnReloadNotify">刷新</button></div>
+        </form>
+      </div>
+    </section>
+
+
+
+    <!-- Tab: 维护 -->
+    <section class="tab-content" id="tab-maintenance">
+      <div class="page-header">
+        <div>
+          <h1>维护</h1>
+          <p class="subtitle">用户数据导入/导出、CookieCloud、WebDAV 备份同步与分类维护 · <span id="signmateVersion">版本读取中…</span></p>
+        </div>
+      </div>
+      <div id="maintenancePageRoot"><div class="card"><div class="empty-cell">正在加载…</div></div></div>
+    </section>
+
+    <!-- Tab: 日志 -->
+    <section class="tab-content" id="tab-logs">
+      <div class="page-header">
+        <div>
+          <h1>运行日志</h1>
+          <p class="subtitle">最近 200 条日志</p>
+        </div>
+        <button class="btn btn-secondary" id="btnRefreshLogs">刷新</button>
+      </div>
+      <div class="card">
+        <div class="log-viewer" id="logViewer">
+          <span class="empty-cell">正在加载…</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/app.js?v=20260529-1255"></script>
+</body>
+</html>

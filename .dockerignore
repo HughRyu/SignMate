@@ -1,0 +1,18 @@
+node_modules/
+.git/
+data/
+logs/
+.env
+.env.*
+!.env.example
+config/*.yaml
+!config/*.yaml.example
+backups/
+inspect_*.mjs
+*.log
+
+# Local debug/probe files and historical patch backups are not part of published image
+src/backup-*/
+**/backup-*/
+probe_*.mjs
+tmp/
