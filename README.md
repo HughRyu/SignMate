@@ -4,10 +4,79 @@
 
 ## 快速开始
 
-### 1. 部署到服务器
+### 方式 A：直接使用 GHCR Docker 镜像（推荐）
+
+镜像地址：
+
+```text
+ghcr.io/hughryu/signmate:latest
+```
+
+创建目录与配置文件：
 
 ```bash
-# 进入项目目录
+mkdir -p /opt/docker/signmate/{config,data,logs}
+cd /opt/docker/signmate
+
+cat > .env <<EOF
+TZ=Asia/Shanghai
+LOG_LEVEL=info
+RUN_ON_START=false
+HTTP_TIMEOUT=30000
+EOF
+
+cat > config/secrets.yaml <<EOF
+# 与 config/sites.yaml 中的站点 key 对应，填入真实 Cookie / Token / 账号等凭据。
+# 示例：
+# nodeseek:
+#   cookie: "session=<YOUR_SESSION_COOKIE>;"
+EOF
+chmod 600 config/secrets.yaml
+```
+
+创建 `docker-compose.yml`：
+
+```yaml
+services:
+  signmate:
+    image: ghcr.io/hughryu/signmate:latest
+    container_name: signmate
+    restart: unless-stopped
+    ports:
+      - "9999:6668"
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Shanghai
+      - WEB_PORT=6668
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+```
+
+启动：
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose logs -f
+```
+
+更新：
+
+```bash
+cd /opt/docker/signmate
+docker compose pull
+docker compose up -d
+```
+
+> 如果 GHCR 包被设为私有，需要先执行 `docker login ghcr.io`。公开包无需登录即可拉取。
+
+### 方式 B：从源码构建部署
+
+```bash
+git clone https://github.com/HughRyu/SignMate.git /opt/docker/signmate
 cd /opt/docker/signmate
 
 # 配置环境变量
@@ -20,7 +89,7 @@ chmod 600 config/secrets.yaml
 vim config/secrets.yaml   # 填入 Cookie 等敏感信息
 
 # 构建并启动
-docker compose up -d
+docker compose up -d --build
 
 # 查看日志
 docker compose logs -f
