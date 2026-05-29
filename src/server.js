@@ -9,7 +9,7 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, unlink
 import { join, basename } from "node:path";
 import { parse, stringify } from "yaml";
 import logger from "./utils/logger.js";
-import { loadConfig, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState } from "./runner.js";
+import { loadConfig, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState, BatchAlreadyRunningError } from "./runner.js";
 import { notifier, TelegramChannel, BarkChannel } from "./notify.js";
 import * as store from "./store.js";
 import { applySiteProxyMode, getGlobalProxy, setGlobalProxy, siteProxyMode, testDirect, testProxy, normalizeProxyUrl, testProxyPool, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
@@ -399,6 +399,43 @@ function wantsJson(req) {
   return req.path.startsWith("/api/") || String(req.headers.accept || "").includes("application/json");
 }
 
+function escapeHtml(value = "") {
+  return String(value || "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  }[ch]));
+}
+
+function requestOrigin(req) {
+  const raw = req.headers.origin || req.headers.referer || "";
+  if (!raw) return null;
+  try { return new URL(String(raw)); } catch { return null; }
+}
+
+function isSameOriginRequest(req) {
+  const origin = requestOrigin(req);
+  if (!origin) return true;
+  const host = String(req.headers.host || "").toLowerCase();
+  return host && origin.host.toLowerCase() === host;
+}
+
+function requireSameOrigin(req, res, next) {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+  if (req.path === "/login") return next();
+  if (isSameOriginRequest(req)) return next();
+  return res.status(403).json({ ok: false, error: "请求来源不匹配，请从 SignMate 面板内操作" });
+}
+
+function sendRunError(res, err, fallbackStatus = 500) {
+  if (err instanceof BatchAlreadyRunningError || err?.code === "BATCH_ALREADY_RUNNING") {
+    return res.status(409).json({ ok: false, error: err.message, code: "BATCH_ALREADY_RUNNING", data: err.state || getBatchState() });
+  }
+  return res.status(fallbackStatus).json({ ok: false, error: err.message });
+}
+
 function isAuthenticated(req) {
   const settings = authSettings();
   if (settings.disabled) return true;
@@ -414,11 +451,12 @@ function requireAuth(req, res, next) {
 }
 
 function loginPageHtml({ error = "", branding = readBranding() } = {}) {
-  const title = String(branding.title || "SignMate");
+  const title = escapeHtml(String(branding.title || "SignMate"));
+  const errorHtml = error ? `<div class="error">${escapeHtml(error)}</div>` : "";
   const logo = `<span>✓</span>`;
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · 登录</title><style>
     :root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}body{margin:0;min-height:100vh;background:radial-gradient(circle at top left,#dbeafe,transparent 32%),linear-gradient(135deg,#f8fafc,#e2e8f0);color:#0f172a;overflow:auto}.login-shell{min-height:100vh;box-sizing:border-box;display:flex;justify-content:center;align-items:flex-start;padding:96px 16px 32px}.login-card{width:min(420px,calc(100vw - 32px));padding:34px;border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 24px 80px rgba(15,23,42,.18);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.72)}.brand{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;margin-bottom:26px}.logo{width:52px;height:52px;border-radius:16px;background:#0071e3;color:#fff;display:grid;place-items:center;font-size:28px;font-weight:800;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover}.brand h1{font-size:28px;margin:0}.brand p{margin:3px 0 0;color:#64748b}.field{display:grid;gap:8px;margin:16px 0}.field label{font-size:13px;font-weight:700;color:#475569}.field input{height:46px;border-radius:14px;border:1px solid #cbd5e1;padding:0 14px;font-size:15px;background:#fff;color:#0f172a;outline:none}.field input:focus{border-color:#0071e3;box-shadow:0 0 0 4px rgba(0,113,227,.14)}button{width:100%;height:48px;border:0;border-radius:16px;background:#0071e3;color:#fff;font-weight:800;font-size:15px;cursor:pointer;margin-top:8px}.error{padding:10px 12px;border-radius:12px;background:#fee2e2;color:#991b1b;font-size:13px;margin-bottom:10px}.hint{font-size:12px;color:#64748b;margin-top:16px;text-align:center}@media (prefers-color-scheme:dark){body{background:radial-gradient(circle at top left,#1e3a8a,transparent 32%),linear-gradient(135deg,#020617,#0f172a);color:#e5e7eb}.login-card{background:rgba(15,23,42,.78);border-color:rgba(148,163,184,.22)}.brand p,.field label,.hint{color:#94a3b8}.field input{background:#020617;border-color:#334155;color:#e5e7eb}.error{background:#450a0a;color:#fecaca}}
-  </style></head><body><div class="login-shell"><main class="login-card"><div class="brand"><div class="logo">${logo}</div><div><h1>${title}</h1><p>登录自动签到中心</p></div></div>${error ? `<div class="error">${error}</div>` : ""}<form method="post" action="/login"><input type="hidden" name="next" value="/"><div class="field"><label>管理员用户名</label><input name="username" autocomplete="username" required></div><div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div><button type="submit">登录</button></form><div class="hint">SignMate · Self-hosted dashboard</div></main></div></body></html>`;
+  </style></head><body><div class="login-shell"><main class="login-card"><div class="brand"><div class="logo">${logo}</div><div><h1>${title}</h1><p>登录自动签到中心</p></div></div>${errorHtml}<form method="post" action="/login"><input type="hidden" name="next" value="/"><div class="field"><label>管理员用户名</label><input name="username" autocomplete="username" required></div><div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div><button type="submit">登录</button></form><div class="hint">SignMate · Self-hosted dashboard</div></main></div></body></html>`;
 }
 
 function readBranding() {
@@ -895,6 +933,7 @@ export async function startServer() {
   // 解析 JSON / 表单 body
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: false }));
+  app.use(requireSameOrigin);
 
   app.get("/login", (req, res) => {
     if (isAuthenticated(req)) return res.redirect(String(req.query.next || "/"));
@@ -1947,7 +1986,7 @@ export async function startServer() {
       res.json({ ok: true, data: results });
     } catch (err) {
       logger.error(`[批量继续] 异常: ${err.message}`);
-      res.status(500).json({ ok: false, error: err.message });
+      sendRunError(res, err);
     }
   });
 
@@ -1962,7 +2001,7 @@ export async function startServer() {
       res.json({ ok: true, data: results });
     } catch (err) {
       logger.error(`[保活] 执行失败: ${err.message}`);
-      res.status(500).json({ ok: false, error: err.message });
+      sendRunError(res, err);
     }
   });
 
@@ -2010,7 +2049,7 @@ export async function startServer() {
       }
     } catch (err) {
       logger.error(`[手动签到] 异常: ${err.message}`);
-      res.status(500).json({ ok: false, error: err.message });
+      sendRunError(res, err);
     }
   });
 

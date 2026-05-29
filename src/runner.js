@@ -140,6 +140,20 @@ const BATCH_STATE_PATH = new URL("../data/batch-state.json", import.meta.url).pa
 let activeBatchRun = null;
 let batchInterruptedNotified = false;
 
+export class BatchAlreadyRunningError extends Error {
+  constructor(state) {
+    super("已有批量任务正在执行，请等待完成或先终止当前任务");
+    this.name = "BatchAlreadyRunningError";
+    this.code = "BATCH_ALREADY_RUNNING";
+    this.state = state || { active: true };
+  }
+}
+
+function assertNoActiveBatchRun() {
+  if (!activeBatchRun) return;
+  throw new BatchAlreadyRunningError(getBatchState());
+}
+
 function readBatchStateSafe() {
   try {
     if (!existsSync(BATCH_STATE_PATH)) return null;
@@ -432,7 +446,8 @@ export async function runSingle(siteConfig, secrets) {
  * 执行所有已启用的站点签到
  */
 export async function runAll(options = {}) {
-  const { sites, secrets } = await loadConfig();
+  assertNoActiveBatchRun();
+  const { sites, secrets } = loadConfig();
   const kind = options.kind || null;
   const autoOnly = options.autoOnly === true;
   const skipKeys = new Set(Array.isArray(options.skipKeys) ? options.skipKeys.map(String) : []);

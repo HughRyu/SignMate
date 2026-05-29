@@ -204,26 +204,42 @@ async function ensureRandomPlan({ state, kind, batch, defaultBatchMode, enabledS
   return plan;
 }
 
-async function runBatchJob(mode, label, defaultBatchMode) {
-  const runKey = `all:${mode}`;
-  if (runningBatchKinds.has(runKey)) return;
+async function runBatchJob(mode, label, defaultBatchMode, options = {}) {
+  const kind = options.kind || "all";
+  const runKey = `${kind}:${mode}`;
+  if (runningBatchKinds.has(runKey)) return false;
   runningBatchKinds.add(runKey);
   try {
     const { runAll } = await import("./runner.js");
     logger.info(`[定时触发] ${label}`);
-    const results = await runAll({ autoOnly: true, scheduleMode: mode, defaultScheduleMode: defaultBatchMode });
+    const results = await runAll({ autoOnly: true, scheduleMode: mode, defaultScheduleMode: defaultBatchMode, ...(options.kind ? { kind: options.kind } : {}) });
     for (const r of results) {
       r.details = { ...(r.details || {}), scheduleMode: mode };
       r.scheduleMode = mode;
       await store.addEntry(r.site, r);
     }
+    return true;
+  } catch (err) {
+    if (err?.code === "BATCH_ALREADY_RUNNING") {
+      logger.warn(`[定时触发] ${label} 跳过：已有批量任务正在执行`);
+      return false;
+    }
+    throw err;
   } finally {
     runningBatchKinds.delete(runKey);
   }
 }
 
+function siteAutoKind(site = {}) {
+  return site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
+}
+
 function eligibleAutoSitesAll(enabledSites, mode, defaultBatchMode) {
   return enabledSites.filter(site => (!site.schedule || site.schedule === "auto") && effectiveScheduleMode(site, defaultBatchMode) === mode);
+}
+
+function eligibleAutoSitesByKind(enabledSites, mode, defaultBatchMode, kind) {
+  return eligibleAutoSitesAll(enabledSites, mode, defaultBatchMode).filter(site => siteAutoKind(site) === kind);
 }
 
 async function todayLooksAlreadyBatchRanAll(eligibleSites, today) {
@@ -301,14 +317,20 @@ async function checkDynamicBatchSchedule(enabledSites) {
   const nowMinute = now.hour * 60 + now.minute;
   const state = readRandomStateSafe();
 
-  const fixedEligible = eligibleAutoSitesAll(enabledSites, "fixed", defaultBatchMode);
-  if (fixedEligible.length) {
-    const fixedMinute = minuteOfDayFromTime(batch.signin_time || "09:00", "09:00");
-    const key = "all:fixed";
-    if (nowMinute === fixedMinute && state[key]?.completedDate !== now.date) {
-      await runBatchJob("fixed", "批量签到/保活", defaultBatchMode);
-      state[key] = { date: now.date, completedDate: now.date, completedAt: new Date().toISOString(), dueTime: timeFromMinute(fixedMinute), mode: "fixed" };
-      writeRandomStateSafe(state);
+  const fixedSignins = eligibleAutoSitesByKind(enabledSites, "fixed", defaultBatchMode, "signin");
+  const fixedVisits = eligibleAutoSitesByKind(enabledSites, "fixed", defaultBatchMode, "visit");
+  const fixedJobs = [
+    { key: "signin:fixed", kind: "signin", label: "批量签到", minute: minuteOfDayFromTime(batch.signin_time || "09:00", "09:00"), eligible: fixedSignins },
+    { key: "visit:fixed", kind: "visit", label: "批量保活", minute: minuteOfDayFromTime(batch.visit_time || "09:30", "09:30"), eligible: fixedVisits },
+  ];
+  for (const job of fixedJobs) {
+    if (!job.eligible.length) continue;
+    if (nowMinute === job.minute && state[job.key]?.completedDate !== now.date) {
+      const ran = await runBatchJob("fixed", job.label, defaultBatchMode, { kind: job.kind });
+      if (ran) {
+        state[job.key] = { date: now.date, completedDate: now.date, completedAt: new Date().toISOString(), dueTime: timeFromMinute(job.minute), mode: "fixed", kind: job.kind };
+        writeRandomStateSafe(state);
+      }
     }
   }
 

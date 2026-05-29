@@ -10,7 +10,7 @@
 
 ```text
 ghcr.io/hughryu/signmate:latest
-# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.5
+# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.6
 ```
 
 创建目录与配置文件：
@@ -19,15 +19,17 @@ ghcr.io/hughryu/signmate:latest
 mkdir -p /opt/docker/signmate/{config,data,logs}
 cd /opt/docker/signmate
 
+ADMIN_PASSWORD="$(openssl rand -base64 24)"
 cat > .env <<EOF
 TZ=Asia/Shanghai
 LOG_LEVEL=info
 RUN_ON_START=false
 HTTP_TIMEOUT=30000
 SIGNMATE_AUTH_USERNAME=admin
-SIGNMATE_AUTH_PASSWORD=change-this-password
+SIGNMATE_AUTH_PASSWORD=${ADMIN_PASSWORD}
 SIGNMATE_AUTH_DISABLED=false
 EOF
+echo "SignMate 初始管理员密码：${ADMIN_PASSWORD}"
 
 ```
 
@@ -36,7 +38,7 @@ EOF
 ```yaml
 services:
   signmate:
-    image: ghcr.io/hughryu/signmate:v0.1.5
+    image: ghcr.io/hughryu/signmate:v0.1.6
     container_name: signmate
     restart: unless-stopped
     ports:
@@ -63,7 +65,7 @@ docker compose up -d
 docker compose logs -f
 ```
 
-首次启动如果还没有 `config/sites.yaml`，面板会以空站点列表正常打开；后续在网页里手动添加站点、维护 Cookie、代理和通知配置即可。默认 `RUN_ON_START=false`，避免全新部署尚未维护 Cookie 时自动执行签到。
+首次启动如果还没有 `config/sites.yaml`，面板会以空站点列表正常打开；后续在网页里手动添加站点、维护 Cookie、代理和通知配置即可。默认 `RUN_ON_START=false`，避免全新部署尚未维护 Cookie 时自动执行签到。请保存上面输出的初始管理员密码，不要使用示例固定密码公开部署。
 
 更新：
 
@@ -209,8 +211,8 @@ docker compose logs -f
 # 重启容器
 docker compose restart
 
-# 更新后重新构建
-docker compose build --no-cache && docker compose up -d
+# 更新源码后重新构建
+docker compose up -d --build
 
 # 手动执行一次签到（测试配置）
 docker compose exec signmate node src/index.js
