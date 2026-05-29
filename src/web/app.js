@@ -20,7 +20,7 @@ const DEFAULT_CATEGORIES = [
   { key: "game", label: "游戏", emoji: "🎮" },
 ];
 let siteCategories = [...DEFAULT_CATEGORIES];
-let appSettings = { auth: {}, branding: { title: "SignMate", logoUrl: "" } };
+let appSettings = { auth: {}, branding: { title: "SignMate" } };
 
 function orderedCategories() {
   const homeOrder = ["forum", "pt", "website", "game"];
@@ -224,15 +224,7 @@ function applyBranding(branding = {}) {
   if (titleEl) titleEl.textContent = title;
   document.title = `${title} · 自动签到中心`;
   const logoEl = document.querySelector(".nav-logo");
-  if (logoEl) {
-    if (branding.logoUrl) {
-      logoEl.innerHTML = `<img src="${escAttr(branding.logoUrl)}" alt="${escAttr(title)}">`;
-      logoEl.classList.add("has-image");
-    } else {
-      logoEl.textContent = "✓";
-      logoEl.classList.remove("has-image");
-    }
-  }
+  if (logoEl) logoEl.textContent = "✓";
 }
 
 async function api(url, options = {}) {
@@ -2019,10 +2011,7 @@ function maintenanceInnerHtml() {
               <label class="field-label" for="appAuthUsername">管理员用户名</label><input id="appAuthUsername" class="field-input" autocomplete="username" value="admin">
               <label class="field-label" for="appAuthPassword">新密码</label><input id="appAuthPassword" class="field-input" type="password" autocomplete="new-password" placeholder="留空不修改；至少 8 位">
               <label class="field-label" for="appBrandTitle">标题</label><input id="appBrandTitle" class="field-input" value="SignMate">
-              <label class="field-label" for="appLogoFile">Logo 图片</label><input id="appLogoFile" class="field-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
-              <label class="mini-switch"><input type="checkbox" id="appClearLogo"><span>清除已上传 Logo</span></label>
               <label class="mini-switch"><input type="checkbox" id="appAuthDisabled"><span>关闭登录认证（不推荐）</span></label>
-              <div class="brand-preview" id="appBrandPreview"><span>✓</span><strong>SignMate</strong></div>
               <div class="credential-actions"><button class="btn btn-primary" type="submit">保存面板设置</button><button class="btn btn-secondary" id="btnLogout" type="button">退出登录</button></div>
             </form>
           </section>
@@ -2072,7 +2061,6 @@ function maintenanceInnerHtml() {
 
 function bindMaintenanceControls() {
   document.getElementById("appSettingsForm")?.addEventListener("submit", saveAppSettings);
-  document.getElementById("appLogoFile")?.addEventListener("change", previewSelectedLogo);
   document.getElementById("btnLogout")?.addEventListener("click", logoutApp);
   document.getElementById("btnExportData")?.addEventListener("click", exportUserData);
   document.getElementById("importDataFile")?.addEventListener("change", importUserData);
@@ -2102,12 +2090,10 @@ function updateAppSettingsSummary() {
   const el = document.getElementById("appSettingsSummary");
   const auth = appSettings.auth || {};
   const branding = appSettings.branding || {};
-  if (el) el.textContent = `认证：${auth.disabled ? "已关闭" : (auth.passwordSet ? "已启用" : "未配置")} · Logo：${branding.logoUrl ? "已上传" : "默认"}`;
+  if (el) el.textContent = `认证：${auth.disabled ? "已关闭" : (auth.passwordSet ? "已启用" : "未配置")}`;
   const username = document.getElementById("appAuthUsername"); if (username) username.value = auth.username || "admin";
   const disabled = document.getElementById("appAuthDisabled"); if (disabled) disabled.checked = auth.disabled === true;
   const title = document.getElementById("appBrandTitle"); if (title) title.value = branding.title || "SignMate";
-  const preview = document.getElementById("appBrandPreview");
-  if (preview) preview.innerHTML = `${branding.logoUrl ? `<img src="${escAttr(branding.logoUrl)}" alt="Logo">` : `<span>✓</span>`}<strong>${esc(branding.title || "SignMate")}</strong>`;
 }
 
 function fileToDataUrl(file) {
@@ -2119,12 +2105,6 @@ function fileToDataUrl(file) {
   });
 }
 
-function previewSelectedLogo(event) {
-  const file = event.target.files?.[0];
-  const preview = document.getElementById("appBrandPreview");
-  if (file && preview) preview.innerHTML = `<span>${esc(file.name)}</span><strong>${esc(document.getElementById("appBrandTitle")?.value || "SignMate")}</strong>`;
-}
-
 async function saveAppSettings(event) {
   event.preventDefault();
   try {
@@ -2132,14 +2112,9 @@ async function saveAppSettings(event) {
     const password = document.getElementById("appAuthPassword")?.value || "";
     const disabled = document.getElementById("appAuthDisabled")?.checked === true;
     await api("/api/app-settings/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password, disabled }) });
-    const logoFile = document.getElementById("appLogoFile")?.files?.[0];
-    const logoDataUrl = logoFile ? await fileToDataUrl(logoFile) : "";
     const title = document.getElementById("appBrandTitle")?.value || "SignMate";
-    const clearLogo = document.getElementById("appClearLogo")?.checked === true;
-    await api("/api/app-settings/branding", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, logoDataUrl, clearLogo }) });
+    await api("/api/app-settings/branding", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) });
     document.getElementById("appAuthPassword").value = "";
-    document.getElementById("appLogoFile").value = "";
-    if (document.getElementById("appClearLogo")) document.getElementById("appClearLogo").checked = false;
     await loadAppSettings();
     updateAppSettingsSummary();
     showToast("✅ 面板设置已保存", "success");
@@ -2280,10 +2255,7 @@ async function openMaintenanceModal() {
               <label class="field-label" for="appAuthUsername">管理员用户名</label><input id="appAuthUsername" class="field-input" autocomplete="username" value="admin">
               <label class="field-label" for="appAuthPassword">新密码</label><input id="appAuthPassword" class="field-input" type="password" autocomplete="new-password" placeholder="留空不修改；至少 8 位">
               <label class="field-label" for="appBrandTitle">标题</label><input id="appBrandTitle" class="field-input" value="SignMate">
-              <label class="field-label" for="appLogoFile">Logo 图片</label><input id="appLogoFile" class="field-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
-              <label class="mini-switch"><input type="checkbox" id="appClearLogo"><span>清除已上传 Logo</span></label>
               <label class="mini-switch"><input type="checkbox" id="appAuthDisabled"><span>关闭登录认证（不推荐）</span></label>
-              <div class="brand-preview" id="appBrandPreview"><span>✓</span><strong>SignMate</strong></div>
               <div class="credential-actions"><button class="btn btn-primary" type="submit">保存面板设置</button><button class="btn btn-secondary" id="btnLogout" type="button">退出登录</button></div>
             </form>
           </section>
@@ -2329,7 +2301,6 @@ async function openMaintenanceModal() {
   document.getElementById("maintenanceClose")?.addEventListener("click", () => modal.remove());
   modal.addEventListener("click", event => { if (event.target === modal) modal.remove(); });
   document.getElementById("appSettingsForm")?.addEventListener("submit", saveAppSettings);
-  document.getElementById("appLogoFile")?.addEventListener("change", previewSelectedLogo);
   document.getElementById("btnLogout")?.addEventListener("click", logoutApp);
   document.getElementById("btnExportData")?.addEventListener("click", exportUserData);
   document.getElementById("importDataFile")?.addEventListener("change", importUserData);

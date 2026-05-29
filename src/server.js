@@ -6,7 +6,7 @@
 
 import express from "express";
 import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
-import { join, basename, extname } from "node:path";
+import { join, basename } from "node:path";
 import { parse, stringify } from "yaml";
 import logger from "./utils/logger.js";
 import { loadConfig, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState } from "./runner.js";
@@ -15,7 +15,7 @@ import * as store from "./store.js";
 import { applySiteProxyMode, getGlobalProxy, setGlobalProxy, siteProxyMode, testDirect, testProxy, normalizeProxyUrl, testProxyPool, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
 import { ProxyAgent, fetch as undiciFetch } from "undici";
 import CryptoJS from "crypto-js";
-import { timingSafeEqual, randomBytes, createHmac } from "node:crypto";
+import { timingSafeEqual, createHmac } from "node:crypto";
 import BUILTIN_SITES from "./builtin-sites.js";
 
 const PORT = parseInt(process.env.WEB_PORT || "9999", 10);
@@ -29,7 +29,6 @@ const SITES_PATH = join(CONFIG_DIR, "sites.yaml");
 const DATA_DIR = join(import.meta.dirname, "..", "data");
 const MAINTENANCE_STATE_PATH = join(DATA_DIR, "maintenance-state.json");
 const BRANDING_PATH = join(CONFIG_DIR, "branding.json");
-const ASSETS_DIR = join(DATA_DIR, "assets");
 const DRIVERS_DIR = join(import.meta.dirname, "drivers");
 const DEFAULT_SITE_CATEGORIES = [
   { key: "forum", label: "论坛", emoji: "💬" },
@@ -405,34 +404,20 @@ function requireAuth(req, res, next) {
 
 function loginPageHtml({ error = "", branding = readBranding() } = {}) {
   const title = String(branding.title || "SignMate");
-  const logo = branding.logoUrl ? `<img src="${branding.logoUrl}" alt="${title}">` : `<span>✓</span>`;
+  const logo = `<span>✓</span>`;
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · 登录</title><style>
     :root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at top left,#dbeafe,transparent 32%),linear-gradient(135deg,#f8fafc,#e2e8f0);color:#0f172a}.login-card{width:min(420px,calc(100vw - 32px));padding:34px;border-radius:28px;background:rgba(255,255,255,.78);box-shadow:0 24px 80px rgba(15,23,42,.18);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.72)}.brand{display:flex;align-items:center;gap:14px;margin-bottom:26px}.logo{width:52px;height:52px;border-radius:16px;background:#0071e3;color:#fff;display:grid;place-items:center;font-size:28px;font-weight:800;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover}.brand h1{font-size:28px;margin:0}.brand p{margin:3px 0 0;color:#64748b}.field{display:grid;gap:8px;margin:16px 0}.field label{font-size:13px;font-weight:700;color:#475569}.field input{height:46px;border-radius:14px;border:1px solid #cbd5e1;padding:0 14px;font-size:15px;background:#fff;color:#0f172a;outline:none}.field input:focus{border-color:#0071e3;box-shadow:0 0 0 4px rgba(0,113,227,.14)}button{width:100%;height:48px;border:0;border-radius:16px;background:#0071e3;color:#fff;font-weight:800;font-size:15px;cursor:pointer;margin-top:8px}.error{padding:10px 12px;border-radius:12px;background:#fee2e2;color:#991b1b;font-size:13px;margin-bottom:10px}.hint{font-size:12px;color:#64748b;margin-top:16px;text-align:center}@media (prefers-color-scheme:dark){body{background:radial-gradient(circle at top left,#1e3a8a,transparent 32%),linear-gradient(135deg,#020617,#0f172a);color:#e5e7eb}.login-card{background:rgba(15,23,42,.78);border-color:rgba(148,163,184,.22)}.brand p,.field label,.hint{color:#94a3b8}.field input{background:#020617;border-color:#334155;color:#e5e7eb}.error{background:#450a0a;color:#fecaca}}
   </style></head><body><main class="login-card"><div class="brand"><div class="logo">${logo}</div><div><h1>${title}</h1><p>登录自动签到中心</p></div></div>${error ? `<div class="error">${error}</div>` : ""}<form method="post" action="/login"><input type="hidden" name="next" value="/"><div class="field"><label>管理员用户名</label><input name="username" autocomplete="username" autofocus required></div><div class="field"><label>密码</label><input name="password" type="password" autocomplete="current-password" required></div><button type="submit">登录</button></form><div class="hint">SignMate · Self-hosted dashboard</div></main></body></html>`;
 }
 
 function readBranding() {
-  return readJsonFileSafe(BRANDING_PATH, { title: "SignMate", logoUrl: "" });
+  const raw = readJsonFileSafe(BRANDING_PATH, { title: "SignMate" });
+  return { title: String(raw.title || "SignMate") };
 }
 
 function writeBranding(value = {}) {
   mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(BRANDING_PATH, JSON.stringify({ title: String(value.title || "SignMate").trim() || "SignMate", logoUrl: String(value.logoUrl || "") }, null, 2), "utf-8");
-}
-
-function sanitizeLogoDataUrl(value = "") {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  const match = text.match(/^data:(image\/(?:png|jpeg|jpg|webp|gif|svg\+xml));base64,([A-Za-z0-9+/=]+)$/i);
-  if (!match) throw new Error("仅支持 png/jpeg/webp/gif/svg 图片 data URL");
-  const bytes = Buffer.from(match[2], "base64");
-  if (bytes.length > 1024 * 1024) throw new Error("Logo 图片不能超过 1MB");
-  const mime = match[1].toLowerCase().replace("jpg", "jpeg");
-  const ext = mime.includes("png") ? ".png" : mime.includes("webp") ? ".webp" : mime.includes("gif") ? ".gif" : mime.includes("svg") ? ".svg" : ".jpg";
-  mkdirSync(ASSETS_DIR, { recursive: true });
-  const file = `logo-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
-  writeFileSync(join(ASSETS_DIR, file), bytes);
-  return `/assets/${file}`;
+  writeFileSync(BRANDING_PATH, JSON.stringify({ title: String(value.title || "SignMate").trim() || "SignMate" }, null, 2), "utf-8");
 }
 
 function eventsFromConfig(channel = {}) {
@@ -900,7 +885,6 @@ export async function startServer() {
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: false }));
 
-  app.use("/assets", express.static(ASSETS_DIR));
   app.get("/login", (req, res) => {
     if (isAuthenticated(req)) return res.redirect(String(req.query.next || "/"));
     res.send(loginPageHtml({ branding: readBranding() }));
@@ -990,9 +974,7 @@ export async function startServer() {
     try {
       const current = readBranding();
       const title = String(req.body?.title || current.title || "SignMate").trim() || "SignMate";
-      let logoUrl = req.body?.clearLogo === true ? "" : (current.logoUrl || "");
-      if (req.body?.logoDataUrl) logoUrl = sanitizeLogoDataUrl(req.body.logoDataUrl);
-      writeBranding({ title, logoUrl });
+      writeBranding({ title });
       res.json({ ok: true, data: readBranding() });
     } catch (err) { res.status(400).json({ ok: false, error: err.message }); }
   });
