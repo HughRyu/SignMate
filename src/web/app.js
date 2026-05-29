@@ -1339,7 +1339,7 @@ function showSiteManageModal(sites, proxy, kind = "signin", batch = {}, options 
         </div>
         <div class="site-manage-toolbar-actions">
           <button class="btn btn-primary" type="button" id="btnAddSite">＋ 添加站点</button>
-          
+
           <button class="btn btn-secondary" type="button" id="siteManageRefresh">刷新</button>
           <button class="btn btn-primary" type="button" id="siteManageDone">完成</button>
         </div>
@@ -1864,26 +1864,33 @@ async function openAddSiteModal(kind = "signin") {
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.id = "addSiteModal";
-  modal.innerHTML = `<div class="modal-card add-site-modal-card" role="dialog" aria-modal="true"><div class="modal-header"><div><h2>添加站点</h2><p>从 SignMate 已适配站点列表中选择添加</p></div><button class="modal-close" type="button" id="addSiteClose">×</button></div><div id="addSiteBox" class="add-site-box"><div class="empty-cell"><span class="spinner"></span>读取已适配站点列表…</div></div></div>`;
+  modal.innerHTML = `<div class="modal-card add-site-modal-card" role="dialog" aria-modal="true"><div class="modal-header"><div><h2>添加站点</h2><p>从 SignMate 已适配站点列表中选择添加</p></div><button class="modal-close" type="button" id="addSiteClose">×</button></div><div id="addSiteBox" class="add-site-box"><div class="empty-cell centered"><span class="spinner"></span>读取已适配站点列表…</div></div></div>`;
   document.body.appendChild(modal);
   document.getElementById("addSiteClose")?.addEventListener("click", () => modal.remove());
   modal.addEventListener("click", event => { if (event.target === modal) modal.remove(); });
   const box = document.getElementById("addSiteBox");
 
-  try {
+  const refreshAvailableSites = async () => {
+    box.innerHTML = `<div class="empty-cell centered"><span class="spinner"></span>读取已适配站点列表…</div>`;
     await loadCategories();
     const { data } = await api("/api/available-sites");
     const pending = (data || []).filter(item => !item.added);
     box.innerHTML = `
+      <div class="available-site-toolbar">
+        <label class="mini-switch"><input type="checkbox" id="availableSelectAll" ${pending.length ? "" : "disabled"}><span>全选可添加站点</span></label>
+        <button class="btn btn-primary btn-compact" type="button" id="addSelectedSites" ${pending.length ? "" : "disabled"}>添加选中</button>
+        <small>${pending.length ? `可添加 ${pending.length} / 已适配 ${data.length}` : `已适配 ${data.length} 个站点均已添加`}</small>
+      </div>
       <div class="available-site-list">
         ${pending.length ? pending.map(item => `
-          <div class="available-site-row">
-            <div>
+          <div class="available-site-row" data-key="${escAttr(item.key)}">
+            <label class="available-site-check"><input type="checkbox" class="available-site-select" data-key="${escAttr(item.key)}"></label>
+            <div class="available-site-info">
               <strong>${esc(displaySiteName(item.name))}</strong>
               <small>${esc(item.kind === "visit" ? "保活" : "签到")} · Driver: ${esc(item.driver)} · ${esc(item.baseUrl || "未配置 URL")}</small>
             </div>
             <div class="available-site-actions">
-              ${timePairHtml("09:00", { kind: "available", driver: item.driver })}
+              ${timePairHtml("09:00", { kind: "available", driver: item.key })}
               <button class="btn btn-primary btn-compact add-maintained-site" type="button"
                 data-driver="${escAttr(item.driver)}"
                 data-key="${escAttr(item.key)}"
@@ -1893,51 +1900,99 @@ async function openAddSiteModal(kind = "signin") {
                 data-signin-mode="${escAttr(item.signinMode || "")}" data-category="${escAttr(item.category || "forum")}">添加</button>
             </div>
           </div>
-        `).join("") : `<div class="empty-cell">暂无可添加站点。</div>`}
+        `).join("") : `<div class="empty-cell centered add-site-empty"><strong>暂无可添加站点。</strong><span>这里只显示 SignMate 已适配且尚未添加的站点；如需支持新站点，需要先新增 Driver 适配。</span></div>`}
       </div>
-      <div class="field-help">这里只显示 SignMate 已适配且尚未添加的站点；如需支持新站点，需要先新增 Driver 适配。</div>
+      ${pending.length ? `<div class="field-help centered-help">这里只显示 SignMate 已适配且尚未添加的站点；如需支持新站点，需要先新增 Driver 适配。</div>` : ""}
     `;
 
-    box.querySelectorAll(".add-maintained-site").forEach(btn => {
+    const payloadForButton = (btn) => {
+      const availablePair = box.querySelector(`.time-pair-available[data-driver="${CSS.escape(btn.dataset.key)}"]`);
+      const hourVal = availablePair?.querySelector(".available-hour")?.value || "09";
+      const minuteVal = availablePair?.querySelector(".available-minute")?.value || "00";
+      const [hour, minute] = [`${hourVal}`, `${minuteVal}`].map(v => parseInt(v, 10));
+      return {
+        key: btn.dataset.key,
+        note: btn.dataset.name,
+        driver: btn.dataset.driver,
+        baseUrl: btn.dataset.baseUrl,
+        schedule: `${Number.isFinite(minute) ? minute : 0} ${Number.isFinite(hour) ? hour : 9} * * *`,
+        proxyMode: "auto",
+        signinMode: btn.dataset.signinMode || "",
+        category: btn.dataset.category || "forum",
+        kind: btn.dataset.kind || "signin",
+      };
+    };
+
+    const addButtons = [...box.querySelectorAll(".add-maintained-site")];
+    const addOne = async (btn, { quiet = false } = {}) => {
+      btn.disabled = true;
+      const row = btn.closest(".available-site-row");
+      try {
+        await api("/api/sites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadForButton(btn)),
+        });
+        row?.classList.add("is-added");
+        if (!quiet) showToast("✅ 站点已添加", "success");
+        return true;
+      } catch (err) {
+        showToast(`添加 ${btn.dataset.name || btn.dataset.key} 失败: ${err.message}`, "error");
+        btn.disabled = false;
+        return false;
+      }
+    };
+
+    addButtons.forEach(btn => {
       btn.addEventListener("click", async () => {
-        const availablePair = box.querySelector(`.time-pair-available[data-driver="${CSS.escape(btn.dataset.driver)}"]`);
-        const hourVal = availablePair?.querySelector(".available-hour")?.value || "09";
-        const minuteVal = availablePair?.querySelector(".available-minute")?.value || "00";
-        const [hour, minute] = [`${hourVal}`, `${minuteVal}`].map(v => parseInt(v, 10));
-        const schedule = `${Number.isFinite(minute) ? minute : 0} ${Number.isFinite(hour) ? hour : 9} * * *`;
-        btn.disabled = true;
-        try {
-          await api("/api/sites", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              key: btn.dataset.key,
-              note: btn.dataset.name,
-              driver: btn.dataset.driver,
-              baseUrl: btn.dataset.baseUrl,
-              schedule,
-              proxyMode: "auto",
-              signinMode: btn.dataset.signinMode || "",
-              category: btn.dataset.category || "forum",
-              kind: btn.dataset.kind || "signin",
-            }),
-          });
-          showToast("✅ 站点已添加", "success");
+        const ok = await addOne(btn);
+        if (ok) {
           await loadSites(true);
-          document.getElementById("addSiteModal")?.remove();
-          await openSiteManageModal(kind, { sort: manageSort, kindFilter: manageKindFilter });
-        } catch (err) {
-          showToast(`添加失败: ${err.message}`, "error");
-        } finally {
-          btn.disabled = false;
+          await openSiteManageModal(kind, { forceRefresh: true });
+          await refreshAvailableSites();
         }
       });
     });
+
+    const selectAll = box.querySelector("#availableSelectAll");
+    const selectedBtn = box.querySelector("#addSelectedSites");
+    const syncSelectAll = () => {
+      const boxes = [...box.querySelectorAll(".available-site-select")].filter(input => !input.disabled);
+      const checked = boxes.filter(input => input.checked);
+      if (selectAll) {
+        selectAll.checked = boxes.length > 0 && checked.length === boxes.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < boxes.length;
+      }
+      if (selectedBtn) selectedBtn.disabled = checked.length === 0;
+    };
+    selectAll?.addEventListener("change", () => {
+      box.querySelectorAll(".available-site-select").forEach(input => { if (!input.disabled) input.checked = selectAll.checked; });
+      syncSelectAll();
+    });
+    box.querySelectorAll(".available-site-select").forEach(input => input.addEventListener("change", syncSelectAll));
+    syncSelectAll();
+
+    selectedBtn?.addEventListener("click", async () => {
+      const checkedKeys = [...box.querySelectorAll(".available-site-select:checked")].map(input => input.dataset.key);
+      const buttons = checkedKeys.map(key => box.querySelector(`.add-maintained-site[data-key="${CSS.escape(key)}"]`)).filter(Boolean);
+      if (!buttons.length) return;
+      selectedBtn.disabled = true;
+      selectedBtn.innerHTML = '<span class="spinner"></span>添加中…';
+      let ok = 0;
+      for (const btn of buttons) if (await addOne(btn, { quiet: true })) ok += 1;
+      showToast(`✅ 已添加 ${ok}/${buttons.length} 个站点`, ok === buttons.length ? "success" : "error");
+      await loadSites(true);
+      await openSiteManageModal(kind, { forceRefresh: true });
+      await refreshAvailableSites();
+    });
+  };
+
+  try {
+    await refreshAvailableSites();
   } catch (err) {
-    box.innerHTML = `<div class="empty-cell">读取失败：${esc(err.message)}</div>`;
+    box.innerHTML = `<div class="empty-cell centered">读取失败：${esc(err.message)}</div>`;
   }
 }
-
 
 
 async function loadMaintenancePage() {
@@ -2230,7 +2285,7 @@ async function openMaintenanceModal() {
               <input id="cookieCloudPassword" class="field-input" name="password" type="password" autocomplete="current-password" placeholder="不填则使用已保存密码">
               <div class="maintenance-checklist cookiecloud-options">
                 <label class="mini-switch"><input type="checkbox" id="cookieCloudIncludeDisabled"><span>含停用站点</span></label>
-                
+
                 <label class="mini-switch"><input type="checkbox" id="cookieCloudAutoSync"><span>自动同步</span></label>
               </div>
               <label class="field-label" for="cookieCloudAutoInterval">自动同步间隔（分钟）</label>

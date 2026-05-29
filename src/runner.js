@@ -16,8 +16,6 @@ const DRIVER_REGISTRY = {};
 const DEFAULT_SITE_CATEGORIES = [
   { key: "forum", label: "论坛", emoji: "💬" },
   { key: "pt", label: "PT站点", emoji: "📀" },
-  { key: "website", label: "网站", emoji: "🌐" },
-  { key: "game", label: "游戏", emoji: "🎮" },
 ];
 
 function normalizeCategoryKey(value = "") {
@@ -35,15 +33,14 @@ function loadCategoryMetaSafe() {
       if (!key || out.has(key)) continue;
       out.set(key, { key, label: String(item.label || key).trim(), emoji: String(item.emoji || "🏷️").trim() });
     }
-    for (const item of DEFAULT_SITE_CATEGORIES) if (!out.has(item.key)) out.set(item.key, item);
-    return out;
+    return out.size ? out : new Map(DEFAULT_SITE_CATEGORIES.map(item => [item.key, item]));
   } catch {
     return new Map(DEFAULT_SITE_CATEGORIES.map(item => [item.key, item]));
   }
 }
 
 function siteCategory(siteConfig = {}) {
-  return normalizeCategoryKey(siteConfig.category || (siteConfig.kind === "visit" ? "website" : "forum")) || "forum";
+  return normalizeCategoryKey(siteConfig.category || (siteConfig.kind === "visit" ? "pt" : "forum")) || "forum";
 }
 
 function firstNonEmpty(...values) {
@@ -113,7 +110,7 @@ function buildCategorizedNotifyMessages(results = []) {
     groups.get(key).push(result);
   }
 
-  const order = ["forum", "pt", "website", "game", ...categoryMeta.keys()];
+  const order = ["forum", "pt", ...categoryMeta.keys()];
   const seen = new Set();
   const out = [];
   for (const key of order) {

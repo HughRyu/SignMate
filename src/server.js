@@ -33,8 +33,6 @@ const DRIVERS_DIR = join(import.meta.dirname, "drivers");
 const DEFAULT_SITE_CATEGORIES = [
   { key: "forum", label: "论坛", emoji: "💬" },
   { key: "pt", label: "PT站点", emoji: "📀" },
-  { key: "website", label: "网站", emoji: "🌐" },
-  { key: "game", label: "游戏", emoji: "🎮" },
 ];
 
 
