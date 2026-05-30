@@ -399,6 +399,21 @@ export const BUILTIN_SITES = {
     "proxy": "on",
     "category": "forum",
     "kind": "signin"
+  },
+  "baidu-tieba": {
+    "enabled": true,
+    "driver": "tieba",
+    "schedule": "auto",
+    "note": "百度贴吧",
+    "notify": true,
+    "retry": 1,
+    "retry_delay_ms": 10000,
+    "timeout": 60000,
+    "base_url": "https://tieba.baidu.com",
+    "signin_mode": "api",
+    "proxy": "auto",
+    "category": "forum",
+    "kind": "signin"
   }
 };
 
