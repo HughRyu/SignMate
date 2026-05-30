@@ -75,7 +75,7 @@ function inferResultStatus(result = {}) {
   const allText = `${message}；${stepText}`;
   const siteKind = result.kind || "signin";
 
-  if (details.checkinAction === "already_signed_before_run" || /运行前已是已签到状态|今日已完成签到|已签到\d+天/.test(allText)) return "✓ 今日已签到";
+  if (details.checkinAction === "already_signed_before_run" || (details.alreadySigned === true && details.clickedSignIn !== true && details.submitted !== true) || /运行前已是已签到状态|今日已完成签到|今天已完成签到|今日已签到|今天已签到|已签到\d+天/.test(allText)) return "✓ 今日已签到";
   if (details.checkinAction === "captcha_solved" || (result.success && /OCR 验证码通过|验证码通过/.test(allText))) return "✓ 验证码通过，签到成功";
   // 成功结果优先按成功摘要处理，避免步骤名“验证码/OCR”导致通知误判为拦截。
   if (result.success && /已点击|点击签到|签到成功|签到已得|本次签到获得|签到获得|领取|获得|奖励|魔力值|分享率|check.?in/i.test(allText)) return siteKind === "visit" ? "✓ 保活成功" : "✓ 签到成功";

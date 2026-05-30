@@ -457,6 +457,7 @@ function detailLabel(key = "") {
     nodeSeekLevel: "NodeSeek 等级", nodeSeekLevelProgress: "等级进度", attendanceRank: "签到排名", attendanceTotalParticipants: "参与人数",
     username: "用户名", totalEnergy: "总能量", rewardEnergy: "今日能量", postCount: "帖子", likesReceived: "获赞", trustLevel: "信任等级",
     proxyModeUsed: "代理模式", proxyUsed: "是否使用代理", proxyReason: "代理原因", verificationBlocked: "需要验证",
+    totalForums: "贴吧总数", tiebaTotalForums: "贴吧总数", successCount: "贴吧签到成功", tiebaSuccessCount: "贴吧签到成功", alreadySignedCount: "贴吧已签到", tiebaAlreadySignedCount: "贴吧已签到", shieldedCount: "贴吧屏蔽", tiebaShieldedCount: "贴吧屏蔽", failedCount: "贴吧失败", tiebaFailedCount: "贴吧失败",
     bonus: "魔力值", bonusGain: "签到获得", ratio: "分享率", upload: "上传", download: "下载", invite: "邀请", rewardName: "奖励名称",
     qianmojuPoints: "铜币总数", qianmojuRewardAmount: "签到铜币", qianmojuRewardUnit: "奖励单位", qianmojuLevel: "用户组", monthDays: "月签到", signText: "SignText", checkinAction: "签到动作", addup: "总签到", cons: "连续签到", rewardAmount: "签到奖励", rewardUnit: "奖励单位", nextRewardAmount: "明日奖励", userGroup: "用户组", experience: "总经验", totalExp: "总经验", vitality: "活力"
   };
@@ -731,6 +732,24 @@ function buildAggregateMetrics(details = {}, siteKey = "") {
     if (qmTotalDays !== null && qmTotalDays > 0) items.push(metricItem(`📅${esc(String(qmTotalDays))}`, "metric-chip metric-days", "阡陌居总签到"));
     if (qmMonthDays !== null && qmMonthDays > 0) items.push(metricItem(`🗓️${esc(String(qmMonthDays))}`, "metric-chip metric-days", "阡陌居月签到"));
   }
+  if (siteKey === "baidu-tieba") {
+    const totalForums = finiteNumber(details.tiebaTotalForums) ?? finiteNumber(details.totalForums);
+    const successCount = finiteNumber(details.tiebaSuccessCount) ?? finiteNumber(details.successCount);
+    const alreadySignedCount = finiteNumber(details.tiebaAlreadySignedCount) ?? finiteNumber(details.alreadySignedCount);
+    const shieldedCount = finiteNumber(details.tiebaShieldedCount) ?? finiteNumber(details.shieldedCount);
+    const failedCount = finiteNumber(details.tiebaFailedCount) ?? finiteNumber(details.failedCount);
+    if (totalForums !== null) items.push(metricItem(`📌贴吧 ${esc(String(totalForums))}`, "metric-chip metric-days", "关注贴吧总数"));
+    if (successCount !== null || alreadySignedCount !== null) {
+      const parts = [];
+      if (successCount !== null) parts.push(`成功 ${successCount}`);
+      if (alreadySignedCount !== null) parts.push(`已签 ${alreadySignedCount}`);
+      items.push(metricItem(`✅${esc(parts.join(" / "))}`, "metric-chip metric-reward", "百度贴吧签到结果"));
+    }
+    if (shieldedCount !== null && shieldedCount > 0) items.push(metricItem(`🛡️屏蔽 ${esc(String(shieldedCount))}`, "metric-chip metric-level", "被屏蔽贴吧数量"));
+    if (failedCount !== null && failedCount > 0) items.push(metricItem(`⚠️失败 ${esc(String(failedCount))}`, "metric-chip metric-error", "签到失败贴吧数量"));
+    return items.join("");
+  }
+
   if (siteKey === "feng-com") {
     const fengCoins = finiteNumber(details.fengCoins) ?? finiteNumber(details.totalCoins) ?? finiteNumber(details.coins);
     const levelNo = finiteNumber(details.level);
@@ -874,6 +893,21 @@ function cleanDailyMessage(message = "", siteKey = "") {
       || cleaned.match(/签到\s*(\d+)\s*铜币/)?.[1];
     if (reward) return `签到铜币 +${reward}`;
     return cleaned.replace(/积分\s*\d+[；;]?/g, "").replace(/用户组\s*[^；;]+[；;]?/g, "").replace(/本月\s*\d+\s*天[；;]?/g, "").trim() || cleaned;
+  }
+
+  if (siteKey === "baidu-tieba") {
+    const total = cleaned.match(/贴吧总数\s*(\d+)/)?.[1];
+    const success = cleaned.match(/签到成功\s*(\d+)/)?.[1];
+    const already = cleaned.match(/已经签到\s*(\d+)/)?.[1];
+    const shielded = cleaned.match(/被屏蔽\s*(\d+)/)?.[1];
+    const failed = cleaned.match(/签到失败\s*(\d+)/)?.[1];
+    const parts = [];
+    if (success) parts.push(`成功 ${success}`);
+    if (already) parts.push(`已签 ${already}`);
+    if (shielded && Number(shielded) > 0) parts.push(`屏蔽 ${shielded}`);
+    if (failed && Number(failed) > 0) parts.push(`失败 ${failed}`);
+    if (total && !parts.length) parts.push(`贴吧总数 ${total}`);
+    return parts.join("；") || cleaned;
   }
 
   if (siteKey === "kafan") {

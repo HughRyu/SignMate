@@ -190,12 +190,15 @@ function parsePtStats(text = "", siteKey = "") {
     || normalized.match(/私人邀请\s*[:：]\s*([0-9]+)/)?.[1]
     || normalized.match(/\[邀请\]\s*[:：]\s*([0-9]+)/)?.[1]
     || "";
-  const signText = normalized.match(/这是您的第\s*\d+\s*次[签簽]到[^。]*本次签到获得\s*[0-9,.]+\s*个[^。；;]*/)?.[0]
+  let signText = normalized.match(/这是您的第\s*\d+\s*次[签簽]到[^。]*本次签到获得\s*[0-9,.]+\s*个[^。；;]*/)?.[0]
     || normalized.match(/本次[签簽]到获得\s*[0-9,.]+\s*个[^。；;]*/)?.[0]
     || normalized.match(/[签簽]到获得\s*[0-9,.]+\s*个[^。；;]*/)?.[0]
     || normalized.match(/[签簽]到已得\s*[0-9,.]+/)?.[0]
     || normalized.match(/[签簽]到[^\]\s]*(?:已得\s*[0-9,.]+|获得\s*[0-9,.]+|魔力值?\s*\+?\s*[0-9,.]+)?[^\]。；;]*/)?.[0]
     || "";
+  if (siteKey === "hdsky-me" && /^签到$/.test(signText) && /已签到|Showed\s*Up/i.test(normalized)) {
+    signText = "今日已签到";
+  }
   let bonusGain = signText.match(/(?:已得|获得)\s*([0-9,.]+)/)?.[1]
     || signText.match(/魔力值?\s*\+?\s*([0-9,.]+)/)?.[1]
     || normalized.match(/[签簽]到已得\s*([0-9,.]+)/)?.[1]
