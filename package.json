@@ -23,7 +23,8 @@
     "sharp": "^0.33.0",
     "tesseract.js": "^6.0.0",
     "undici": "^7.16.0",
-    "yaml": "^2.7.0"
+    "yaml": "^2.7.0",
+    "cloakbrowser": "^0.3.31"
   },
   "displayName": "SignMate",
   "productName": "SignMate 签伴"

@@ -9,6 +9,7 @@ import WebsiteDriver from "./website.js";
 import logger from "../utils/logger.js";
 import { ocr } from "../captcha-ocr.js";
 import { createHmac } from "node:crypto";
+import { createHttpSession, getCookieForSite, htmlToText, pageTitleFromHtml, readText } from "../utils/http-session.js";
 import { resolveChromiumExecutablePath } from "../utils/browser.js";
 
 
@@ -219,6 +220,170 @@ function hasVerification(text = "") {
   return /验证码|验证中|验证措施|人机验证|机器人|captcha|geetest|turnstile|cloudflare|滑块|点击下图|安全校验|滑动认证|拖动滑块|客户端异常|请确认您是合法用户/i.test(String(text || ""));
 }
 
+function wantsApiMode(siteConfig = {}) {
+  const mode = String(siteConfig.experimental_signin_mode || siteConfig.protocol_mode || process.env.SIGNMATE_EXPERIMENTAL_SIGNIN_MODE || "").trim().toLowerCase();
+  return ["api", "api-first", "api_preferred", "http"].includes(mode);
+}
+
+function allowsBrowserFallback(siteConfig = {}) {
+  if (siteConfig.api_fallback_playwright === false || siteConfig.protocol_fallback_playwright === false) return false;
+  return process.env.SIGNMATE_API_FALLBACK_PLAYWRIGHT !== "false";
+}
+
+function supportsNexusApi(siteConfig = {}) {
+  return siteConfig.driver === "nexusphp";
+}
+
+function nexusApiStatusPaths(siteKey = "") {
+  if (siteKey === "hhanclub-net") return ["/attendance.php"];
+  if (siteKey === "ourbits-club") return ["/attendance.php"];
+  return [];
+}
+
+function mergeSignOnlyStats(base = {}, extra = {}) {
+  const picked = {};
+  for (const key of ["signText", "bonusGain", "rewardName"]) {
+    if (extra[key]) picked[key] = extra[key];
+  }
+  return { ...base, ...picked };
+}
+
+function sanitizeInstructionalSignStats(siteKey = "", stats = {}, text = "") {
+  if (siteKey !== "ourbits-club") return stats;
+  const signText = String(stats.signText || "");
+  const source = String(text || "");
+  const instructional = /首次[签簽]到获得|每次[签簽]到可额外获得|连续[签簽]到\s*\d+\s*天后/.test(signText)
+    || (/首次[签簽]到获得\s*10\s*个魔力值/.test(source) && /^(?:签到获得 10 个魔力值|签到)$/.test(signText));
+  if (!instructional) return stats;
+  return { ...stats, signText: "", bonusGain: "", rewardName: "" };
+}
+
+function hasOurBitsTurnstile(text = "") {
+  return /challenges\.cloudflare\.com\/turnstile|TurnstileCallback|captcha_note|请耐心等待签到验证程序加载/.test(String(text || ""));
+}
+
+async function readAdditionalNexusStatusPages(session, siteKey = "", stats = {}, steps = []) {
+  let combinedText = "";
+  let mergedStats = stats;
+  for (const path of nexusApiStatusPaths(siteKey)) {
+    try {
+      const res = await session.get(path);
+      const html = await readText(res);
+      const text = htmlToText(html);
+      combinedText += `\n${text}`;
+      mergedStats = mergeSignOnlyStats(mergedStats, parsePtStats(text, siteKey));
+      steps.push({ label: "HTTP 读取签到状态页", ok: res.status >= 200 && res.status < 400, status: res.status, detail: path });
+    } catch (err) {
+      steps.push({ label: "HTTP 读取签到状态页", ok: false, detail: `${path}: ${err.message}` });
+    }
+  }
+  return { text: combinedText, stats: mergedStats };
+}
+
+function loginOkFromText(text = "", stats = {}) {
+  return /欢迎回来|歡迎回來|退出|控制面板|用户中心|我的账户|嗨[,，]/.test(text) && !!stats.username;
+}
+
+function buildPtInfoDetail(stats = {}) {
+  return [`用户 ${stats.username || "-"}`, stats.bonus ? `魔力 ${stats.bonus}` : "", stats.ratio ? `分享率 ${stats.ratio}` : "", stats.upload ? `上传 ${stats.upload}` : "", stats.download ? `下载 ${stats.download}` : "", stats.inviteDisplay ? `邀请数 ${stats.inviteDisplay}` : ""].filter(Boolean).join("；");
+}
+
+function buildVisitMessage(ok, stats = {}, signTime = "") {
+  const messageParts = [];
+  messageParts.push(ok ? "HTTP API 保活完成" : "HTTP API 访问失败或登录态异常");
+  if (stats.bonus) messageParts.push(`魔力值 ${stats.bonus}`);
+  if (stats.ratio) messageParts.push(`分享率 ${stats.ratio}`);
+  if (stats.upload) messageParts.push(`上传 ${stats.upload}`);
+  if (stats.download) messageParts.push(`下载 ${stats.download}`);
+  messageParts.push(`检查时间：${signTime}`);
+  return messageParts.join("；");
+}
+
+async function runNexusApi(siteConfig = {}, secrets = {}, driverName = "NexusPHP") {
+  const { base_url, timeout = 60_000, proxy_url } = siteConfig;
+  if (!base_url) return { handled: true, result: { success: false, message: "基础 URL 未配置" } };
+  const siteKey = siteConfig.key || siteConfig.id || "";
+  if (!supportsNexusApi(siteConfig)) return { handled: false, reason: "site_api_not_supported" };
+
+  const signTime = formatTime();
+  const url = base_url.replace(/\/$/, "");
+  const cookie = getCookieForSite(secrets, siteConfig);
+  const session = createHttpSession({ baseUrl: url, cookie, proxyUrl: proxy_url, timeout });
+  const steps = [];
+  if (!cookie) {
+    steps.push({ label: "检查 Cookie", ok: false, detail: "未配置 Cookie" });
+    return { handled: true, result: { success: false, message: `${driverName} Cookie 未配置；检查时间：${signTime}`, details: { signTime, clickedSignIn: false, alreadySigned: false, verificationBlocked: false }, steps } };
+  }
+
+  logger.info(`[NexusPHP/API] ${driverName} 步骤 1/4：HTTP 打开站点 → ${url}${proxy_url ? `，代理: ${proxy_url}` : ""}`);
+  const homeResp = await session.get("/");
+  const homeHtml = await readText(homeResp);
+  const homeText = htmlToText(homeHtml);
+  const title = pageTitleFromHtml(homeHtml);
+  let stats = sanitizeInstructionalSignStats(siteKey, parsePtStats(homeText, siteKey), homeText);
+  const extraStatus = await readAdditionalNexusStatusPages(session, siteKey, stats, steps);
+  const allStatusText = `${homeText}\n${extraStatus.text || ""}`;
+  stats = sanitizeInstructionalSignStats(siteKey, extraStatus.stats, allStatusText);
+  const loggedIn = loginOkFromText(allStatusText, stats);
+  steps.push({ label: "HTTP 打开站点", ok: homeResp.status >= 200 && homeResp.status < 400, status: homeResp.status, detail: url });
+  steps.push({ label: "确认登录态", ok: loggedIn, detail: stats.username ? `用户 ${stats.username}` : "未识别到登录用户" });
+
+  if ((siteConfig.kind || "signin") === "visit") {
+    const ok = homeResp.status >= 200 && homeResp.status < 400 && loggedIn;
+    steps.push({ label: "HTTP 保活访问", ok, detail: ok ? "API/HTTP 已打开站点并确认登录态" : "未确认登录态，保活失败" });
+    steps.push({ label: "读取 PT 账号信息", ok: !!stats.username || !!stats.bonus, detail: buildPtInfoDetail(stats) });
+    return {
+      handled: true,
+      result: {
+        success: ok,
+        message: buildVisitMessage(ok, stats, signTime),
+        details: { ...stats, signTime, pageTitle: title, status: homeResp.status, clickedSignIn: false, alreadySigned: false, verificationBlocked: false, checkinAction: "api_keepalive" },
+        steps,
+      },
+    };
+  }
+
+  const already = /已签到|Showed\s*Up|今日已[签簽]到|已经[签簽]到|这是您的第\s*\d+\s*次[签簽]到/i.test(allStatusText);
+  if (siteKey === "hdsky-me") {
+    if (already) {
+      stats = { ...stats, signText: stats.signText || "今日已签到" };
+      steps.push({ label: "检查签到状态", ok: true, detail: "HTTP 页面显示今日已签到" });
+      steps.push({ label: "读取 PT 账号信息", ok: !!stats.username || !!stats.bonus, detail: buildPtInfoDetail(stats) });
+      return {
+        handled: true,
+        result: {
+          success: loggedIn,
+          message: `今日已签到${stats.bonus ? `；魔力值 ${stats.bonus}` : ""}${stats.ratio ? `；分享率 ${stats.ratio}` : ""}；检查时间：${signTime}`,
+          details: { ...stats, signTime, pageTitle: title, status: homeResp.status, clickedSignIn: false, alreadySigned: true, verificationBlocked: false, checkinAction: "api_already_signed" },
+          steps,
+        },
+      };
+    }
+    return { handled: false, reason: "hdsky_captcha_not_promoted" };
+  }
+
+  if (siteKey === "ourbits-club" && hasOurBitsTurnstile(allStatusText) && !already) {
+    steps.push({ label: "HTTP 检测 OurBits Turnstile", ok: false, detail: "签到页需要 Cloudflare Turnstile，未确认已签到" });
+    return { handled: false, reason: "ourbits_turnstile_required" };
+  }
+
+  const signedByHttp = already || !!stats.bonusGain || /[签簽]到已得|已[签簽]到|今日已[签簽]到|已经[签簽]到|本次[签簽]到获得|[签簽]到获得\s*[0-9,.]+/i.test(stats.signText || "");
+  if (signedByHttp) {
+    steps.push({ label: "HTTP 检查签到状态", ok: true, detail: stats.signText || "HTTP 页面显示今日已签到" });
+    steps.push({ label: "读取 PT 账号信息", ok: !!stats.username || !!stats.bonus, detail: buildPtInfoDetail(stats) });
+    return {
+      handled: true,
+      result: {
+        success: loggedIn,
+        message: `${stats.signText || "今日已签到"}${stats.bonus ? `；魔力值 ${stats.bonus}` : ""}${stats.ratio ? `；分享率 ${stats.ratio}` : ""}；检查时间：${signTime}`,
+        details: { ...stats, signTime, pageTitle: title, status: homeResp.status, clickedSignIn: false, alreadySigned: true, verificationBlocked: false, checkinAction: "api_already_signed" },
+        steps,
+      },
+    };
+  }
+  return { handled: false, reason: "signin_submit_api_not_implemented" };
+}
+
 
 
 function mergeStats(base = {}, extra = {}) {
@@ -335,6 +500,19 @@ ${body}`)) return false;
 
 export default class NexusPhpDriver extends WebsiteDriver {
   async signIn() {
+    if (wantsApiMode(this.siteConfig)) {
+      try {
+        const api = await runNexusApi(this.siteConfig, this.secrets, this.name);
+        if (api.handled) return api.result;
+        if (!allowsBrowserFallback(this.siteConfig)) {
+          return { success: false, message: `HTTP/API 模式未能处理：${api.reason || "未实现"}` };
+        }
+        logger.warn(`[NexusPHP/API] ${this.name} HTTP/API 未处理，回退 Playwright：${api.reason || "unknown"}`);
+      } catch (err) {
+        if (!allowsBrowserFallback(this.siteConfig)) return { success: false, message: `HTTP/API 执行失败：${err.message}` };
+        logger.warn(`[NexusPHP/API] ${this.name} HTTP/API 失败，回退 Playwright：${err.message}`);
+      }
+    }
     const { chromium } = await import("playwright-core");
     const {
       base_url,
@@ -452,8 +630,9 @@ export default class NexusPhpDriver extends WebsiteDriver {
         }, siteKey).catch(() => ({ panelText: "", stats: {} }));
       };
       let siteExtra = await readStructuredSiteStats();
-      let stats = mergeStats(parsePtStats(`${text}
-${siteExtra.panelText}`, siteKey), siteExtra.stats);
+      let stats = sanitizeInstructionalSignStats(siteKey, mergeStats(parsePtStats(`${text}
+${siteExtra.panelText}`, siteKey), siteExtra.stats), `${text}
+${siteExtra.panelText}`);
       if (!stats.inviteDisplay) {
         const controlUrl = new URL("/usercp.php", url).toString();
         const controlPage = await context.newPage();
@@ -564,8 +743,9 @@ ${siteExtra.panelText}`, siteKey), siteExtra.stats);
                   await page.waitForTimeout(1500);
                   const verifyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
                   const verifyExtra = await readStructuredSiteStats();
-                  const verifyStats = mergeStats(parsePtStats(`${verifyText}
-${verifyExtra.panelText}`, siteKey), verifyExtra.stats);
+                  const verifyStats = sanitizeInstructionalSignStats(siteKey, mergeStats(parsePtStats(`${verifyText}
+${verifyExtra.panelText}`, siteKey), verifyExtra.stats), `${verifyText}
+${verifyExtra.panelText}`);
                   const verifyGain = bonusDelta(beforeBonus, verifyStats.bonus || stats.bonus);
                   const remainingOpenCdSignEntry = siteKey === "open-cd"
                     ? (await page.locator('#showup, a:has-text("签到"), a:has-text("簽到"), button:has-text("签到"), button:has-text("簽到"), input[value*="签到"], input[value*="簽到"]').count().catch(() => 0)) > 0
@@ -659,9 +839,11 @@ ${verifyExtra.panelText}`, siteKey), verifyExtra.stats);
           }
           text = afterClickText || text;
           siteExtra = await readStructuredSiteStats();
-          const afterClickStats = mergeStats(parsePtStats(`${text}
-${siteExtra.panelText}`, siteKey), siteExtra.stats);
-          stats = mergeStats(stats, afterClickStats);
+          const afterClickStats = sanitizeInstructionalSignStats(siteKey, mergeStats(parsePtStats(`${text}
+${siteExtra.panelText}`, siteKey), siteExtra.stats), `${text}
+${siteExtra.panelText}`);
+          stats = sanitizeInstructionalSignStats(siteKey, mergeStats(stats, afterClickStats), `${text}
+${siteExtra.panelText}`);
           if (!stats.bonusGain) {
             const gain = bonusDelta(beforeBonus, afterClickStats.bonus || stats.bonus);
             if (gain) stats = { ...stats, bonusGain: gain, rewardName: stats.rewardName || "魔力值" };
@@ -681,7 +863,7 @@ ${siteExtra.panelText}`, siteKey), siteExtra.stats);
           } else {
             blocked = (hasOpenCdCaptchaFrame && !openCdCaptchaSolved) || hasVerification(text.replace(/未验证用户\s*\d+|被警告用户\s*\d+|被禁用户\s*\d+/g, "")) || isTwoFactorPage(text, page.url());
           }
-          already = already || /[签簽]到已得|已[签簽]到|[签簽]到成功|今日已[签簽]到|已经[签簽]到|本次[签簽]到获得|[签簽]到获得\s*[0-9,.]+\s*个/.test(text);
+          already = already || (siteKey !== "ourbits-club" && /[签簽]到已得|已[签簽]到|[签簽]到成功|今日已[签簽]到|已经[签簽]到|本次[签簽]到获得|[签簽]到获得\s*[0-9,.]+\s*个/.test(text));
           if (already && stats.bonusGain) {
             loggedIn = true;
             blocked = false;
@@ -704,6 +886,11 @@ ${siteExtra.panelText}`, siteKey), siteExtra.stats);
       steps.push({ label: clicked ? "执行签到" : "检查签到状态", ok: !blocked && (already || !clicked), detail: clickDetail });
 
       const implicitNoEntryOk = !clicked && !blocked && loggedIn && ["pt-btschool-club"].includes(siteKey) && (!!stats.bonus || !!stats.username);
+      if (siteKey === "ourbits-club" && clicked && !already && hasOurBitsTurnstile(text)) {
+        blocked = true;
+        stats = { ...stats, signText: "", bonusGain: "", rewardName: "" };
+        steps.push({ label: "确认 OurBits 签到结果", ok: false, detail: "签到页仍显示 Turnstile/验证加载说明，未确认签到成功" });
+      }
       const gainConfirmsSign = siteKey !== "open-cd" && !!stats.bonusGain;
       const signConfirmed = implicitNoEntryOk || already || gainConfirmsSign || /已[签簽]到|[签簽]到成功|本次[签簽]到获得|[签簽]到已得|[签簽]到获得\s*[0-9,.]+\s*个/.test(stats.signText || "");
       const ok = status >= 200 && status < 400 && loggedIn && signConfirmed && !blocked;

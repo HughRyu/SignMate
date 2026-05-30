@@ -440,6 +440,9 @@ export async function runSingle(siteConfig, secrets) {
   }
 
   let effectiveSiteConfig = await resolveProxyForSite(siteConfig);
+  if (!effectiveSiteConfig.proxy_candidate_url && siteConfig.proxy_url && siteConfig.proxy_url !== effectiveSiteConfig.proxy_url) {
+    effectiveSiteConfig = { ...effectiveSiteConfig, proxy_candidate_url: siteConfig.proxy_url };
+  }
   if (effectiveSiteConfig.site_offline) {
     return { success: false, message: effectiveSiteConfig.offline_reason || "站点离线：直连和代理均不可用", site: siteConfig.note || driverName, formatted: `❌ ${siteConfig.note || driverName}
 📝 ${effectiveSiteConfig.offline_reason || "站点离线"}`, kind: siteConfig.kind || "signin", category: siteCategory(siteConfig), categoryLabel: (loadCategoryMetaSafe().get(siteCategory(siteConfig))?.label || siteCategory(siteConfig)), details: { proxyModeUsed: "offline", proxyUsed: false, proxyReason: effectiveSiteConfig.proxy_reason }, steps: [{ label: "判断站点连通性", ok: false, detail: effectiveSiteConfig.offline_reason || "站点离线" }] };

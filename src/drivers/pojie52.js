@@ -7,7 +7,9 @@
 
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
-import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { launchBrowser, resolveChromiumExecutablePath } from "../utils/browser.js";
+import { wantsHttpMode, allowsHttpFallback, runDiscuzHttp } from "../utils/discuz-http.js";
+import { createHttpSession, htmlToText, readText } from "../utils/http-session.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -15,6 +17,13 @@ function normalizeCookieHeader(value = "") {
     .split(/[\r\n;]+/)
     .map(part => part.trim().replace(/;+$/, ""))
     .filter(Boolean)
+    .join("; ");
+}
+
+function cookieHeaderFromCookies(cookies = []) {
+  return (cookies || [])
+    .filter(c => c?.name && c?.value !== undefined)
+    .map(c => `${c.name}=${c.value}`)
     .join("; ");
 }
 
@@ -110,6 +119,18 @@ function cleanTaskMessage(text = "") {
   return normalized.slice(0, 120) || "签到完成";
 }
 
+async function readHttpTextWithCookie({ origin, cookie, siteConfig, path, headers = {} }) {
+  const session = createHttpSession({
+    baseUrl: origin,
+    cookie,
+    proxyUrl: siteConfig.proxy_url || "",
+    timeout: siteConfig.timeout || 60_000,
+  });
+  const response = await session.get(path, { headers });
+  const html = await readText(response);
+  return { response, html, text: htmlToText(html) };
+}
+
 export default class Pojie52Driver extends BaseDriver {
   getCookie() {
     const secrets = this.secrets?.pojie52 || this.secrets?.["52pojie"] || {};
@@ -120,6 +141,11 @@ export default class Pojie52Driver extends BaseDriver {
   }
 
   async signIn() {
+    if (wantsHttpMode(this.siteConfig)) {
+      const httpResult = await runDiscuzHttp(this.siteConfig, this.secrets, "pojie52");
+      if (httpResult.success || !allowsHttpFallback(this.siteConfig)) return httpResult;
+      logger.warn(`[${this.siteConfig.note || "pojie52"}] HTTP/API-first 失败，回退 Playwright：${httpResult.message}`);
+    }
     const { chromium } = await import("playwright-core");
     const {
       base_url = "https://www.52pojie.cn",
@@ -135,13 +161,17 @@ export default class Pojie52Driver extends BaseDriver {
     const proxy = proxy_url ? { server: proxy_url } : undefined;
     const signTime = formatSignTime();
 
-    logger.info(`[吾爱破解] 步骤 1/5：启动 Playwright 浏览器${proxy_url ? `，代理: ${proxy_url}` : ""}`);
-    const browser = await chromium.launch({
-      executablePath: chromium_executable_path,
-      headless: true,
-      proxy,
-      args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
-      timeout,
+    logger.info(`[吾爱破解] 步骤 1/5：启动 Playwright/CloakBrowser 浏览器${proxy_url ? `，代理: ${proxy_url}` : ""}`);
+    const browser = await launchBrowser({
+      chromium,
+      siteConfig: this.siteConfig,
+      launchOptions: {
+        executablePath: chromium_executable_path,
+        headless: true,
+        proxy,
+        args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+        timeout,
+      },
     });
 
     try {
@@ -174,14 +204,29 @@ export default class Pojie52Driver extends BaseDriver {
           message: "吾爱破解登录态无效或 Cookie 不完整，请重新维护 Cookie",
           details: { signTime, pageTitle: title },
           steps: [
-            { label: "启动 Playwright 浏览器", ok: true },
+            { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
             { label: "注入 Cookie 并准备浏览器上下文", ok: true },
             { label: "打开吾爱破解任务页面", ok: false, status: response?.status() || null, detail: "未识别到登录状态" },
           ],
         };
       }
 
-      logger.info("[吾爱破解] 步骤 5/5：查找并执行每日任务");
+      logger.info("[吾爱破解] 步骤 5/5：浏览器通过验证后切换 HTTP 执行每日任务");
+      const browserCookies = await context.cookies(origin);
+      const verifiedCookie = cookieHeaderFromCookies(browserCookies);
+      const httpSiteConfig = { ...this.siteConfig, http_cookie_override: verifiedCookie || cookie };
+      const httpResult = await runDiscuzHttp(httpSiteConfig, this.secrets, "pojie52");
+      if (httpResult.success) {
+        httpResult.steps = [
+          { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
+          { label: "注入 Cookie 并通过 JS 验证", ok: true },
+          ...(httpResult.steps || []),
+        ];
+        httpResult.details = { ...(httpResult.details || {}), browserLight: true, pageTitle: httpResult.details?.pageTitle || title };
+        return httpResult;
+      }
+      logger.warn(`[吾爱破解] 浏览器轻量 HTTP 执行失败，回退页面内执行：${httpResult.message}`);
+
       const taskResult = await page.evaluate(async () => {
         const abs = (href) => new URL(href, location.href).toString();
         const links = Array.from(document.querySelectorAll("a[href]"));
@@ -212,14 +257,12 @@ export default class Pojie52Driver extends BaseDriver {
         }
       }
 
-      await page.goto(taskUrl, { waitUntil: "domcontentloaded", timeout }).catch(() => null);
-      await page.waitForTimeout(1200);
-      title = await page.title().catch(() => title);
-      bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => bodyText);
+      const verify = await readHttpTextWithCookie({ origin, cookie: verifiedCookie || cookie, siteConfig: this.siteConfig, path: taskUrl }).catch(() => null);
+      title = title || "任务 - 吾爱破解 - 52pojie.cn";
+      bodyText = verify?.text || bodyText;
       const creditUrl = `${origin}/home.php?mod=spacecp&ac=credit`;
-      await page.goto(creditUrl, { waitUntil: "domcontentloaded", timeout }).catch(() => null);
-      await page.waitForTimeout(1000);
-      const creditText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
+      const credit = await readHttpTextWithCookie({ origin, cookie: verifiedCookie || cookie, siteConfig: this.siteConfig, path: creditUrl }).catch(() => null);
+      const creditText = credit?.text || "";
       const afterCredit = parseCredit(creditText || bodyText);
       const afterPoints = parseDiscuzPoints(creditText || bodyText);
       const combined = `${taskResult.text || ""} ${bodyText}`;
@@ -242,7 +285,7 @@ export default class Pojie52Driver extends BaseDriver {
         details: { signTime, rewardPoints, totalPoints, totalCoins, alreadySigned: alreadyDone, taskUrl: taskResult.url, pageTitle: title },
         raw: taskResult,
         steps: [
-          { label: "启动 Playwright 浏览器", ok: true },
+          { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
           { label: "注入 Cookie 并准备浏览器上下文", ok: true },
           { label: "打开吾爱破解任务页面", ok: true, status: response?.status() || null },
           { label: "读取登录状态与积分", ok: true, detail: Number.isFinite(totalPoints) ? `总积分 ${totalPoints}` : "已登录" },

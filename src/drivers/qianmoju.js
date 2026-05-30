@@ -8,6 +8,7 @@
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
 import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { wantsHttpMode, allowsHttpFallback, runDiscuzHttp } from "../utils/discuz-http.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -117,6 +118,11 @@ export default class QianmojuDriver extends BaseDriver {
   }
 
   async signIn() {
+    if (wantsHttpMode(this.siteConfig)) {
+      const httpResult = await runDiscuzHttp(this.siteConfig, this.secrets, "qianmoju");
+      if (httpResult.success || !allowsHttpFallback(this.siteConfig)) return httpResult;
+      logger.warn(`[${this.siteConfig.note || "qianmoju"}] HTTP/API-first 失败，回退 Playwright：${httpResult.message}`);
+    }
     const { chromium } = await import("playwright-core");
     const {
       base_url = "https://www.1000qm.vip",

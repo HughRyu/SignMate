@@ -10,6 +10,7 @@ import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
 import { ProxyAgent } from "undici";
 import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { wantsHttpMode, allowsHttpFallback, runSiteHttp } from "../utils/site-http.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -90,6 +91,11 @@ export default class NodeLocDriver extends BaseDriver {
   }
 
   async signIn() {
+    if (wantsHttpMode(this.siteConfig)) {
+      const httpResult = await runSiteHttp(this.siteConfig, this.secrets, "nodeloc");
+      if (httpResult.success || !allowsHttpFallback(this.siteConfig)) return httpResult;
+      logger.warn(`[${this.siteConfig.note || "nodeloc"}] HTTP/API-first 失败，回退 Playwright：${httpResult.message}`);
+    }
     const { chromium } = await import("playwright-core");
     const {
       base_url = "https://www.nodeloc.com",

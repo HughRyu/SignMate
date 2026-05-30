@@ -8,6 +8,7 @@
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
 import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { wantsHttpMode, allowsHttpFallback, runSiteHttp } from "../utils/site-http.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -63,6 +64,11 @@ export default class ChiphellDriver extends BaseDriver {
   }
 
   async signIn() {
+    if (wantsHttpMode(this.siteConfig)) {
+      const httpResult = await runSiteHttp(this.siteConfig, this.secrets, "chiphell");
+      if (httpResult.success || !allowsHttpFallback(this.siteConfig)) return httpResult;
+      logger.warn(`[${this.siteConfig.note || "chiphell"}] HTTP/API-first 失败，回退 Playwright：${httpResult.message}`);
+    }
     const { chromium } = await import("playwright-core");
     const {
       base_url = "https://www.chiphell.com/forum.php",
