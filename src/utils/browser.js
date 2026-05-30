@@ -1,6 +1,23 @@
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 
+function firstExisting(candidates = []) {
+  return candidates.find(path => path && existsSync(path));
+}
+
+function discoverLocalChromiumPath() {
+  return firstExisting([
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ]);
+}
+
 function discoverPlaywrightChromiumPath() {
   const root = "/ms-playwright";
   if (!existsSync(root)) return undefined;
@@ -21,8 +38,8 @@ export async function resolveChromiumExecutablePath(chromium) {
   const configured = process.env.CHROMIUM_PATH || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
   if (configured) return configured;
   const detected = typeof chromium?.executablePath === "function" ? chromium.executablePath() : "";
-  if (detected) return detected;
-  return discoverPlaywrightChromiumPath();
+  if (detected && existsSync(detected)) return detected;
+  return discoverPlaywrightChromiumPath() || discoverLocalChromiumPath() || detected;
 }
 
 function truthy(value = "") {

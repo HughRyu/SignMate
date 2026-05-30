@@ -85,7 +85,8 @@ function isAdOrExternalUrl(url = "", origin = "") {
   try {
     const parsed = new URL(url, origin);
     const expected = new URL(origin);
-    return parsed.origin !== expected.origin || !/^\/mission\/daily\/redeem(?:\?|$)/i.test(parsed.pathname + parsed.search);
+    const hostOk = parsed.hostname === expected.hostname || (expected.hostname === "www.v2ex.com" && parsed.hostname === "v2ex.com");
+    return !hostOk || parsed.pathname !== "/mission/daily/redeem" || !parsed.searchParams.has("once");
   } catch {
     return true;
   }
