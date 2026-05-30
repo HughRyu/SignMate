@@ -11,6 +11,7 @@
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
 import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { alreadyRedeemed, confirmedV2EXDailyReward, findV2EXDailyRedeemHref } from "./v2ex-utils.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -63,10 +64,6 @@ function formatSignTime(date = new Date()) {
 
 function includesLogin(body = "") {
   return /Sign Out|Settings|Notes|Planet/i.test(body);
-}
-
-function alreadyRedeemed(body = "") {
-  return /already redeemed|已领取|每日登录奖励已领取|Daily login reward already redeemed/i.test(body);
 }
 
 function extractCoinStats(text = "") {
@@ -235,10 +232,16 @@ export default class V2EXDriver extends BaseDriver {
       }
 
       logger.info("[V2EX] 步骤 5/5：查找并访问领取奖励链接");
-      const redeemHref = await page.$$eval("a", links => {
-        const hit = links.find(a => /mission\/daily\/redeem/i.test(a.href) || /领取|redeem/i.test(a.textContent || ""));
-        return hit?.href || "";
+      const hrefs = await page.evaluate(() => {
+        const values = [
+          ...Array.from(document.querySelectorAll("[href]"), node => node.getAttribute("href")),
+          ...Array.from(document.querySelectorAll("form[action]"), node => node.getAttribute("action")),
+          ...Array.from(document.querySelectorAll("[onclick]"), node => node.getAttribute("onclick")),
+        ].filter(Boolean);
+        const htmlMatches = document.documentElement.innerHTML.match(/\/mission\/daily\/redeem\?once=[^"' <>)]+/gi) || [];
+        return [...values, ...htmlMatches];
       });
+      const redeemHref = findV2EXDailyRedeemHref(hrefs, origin);
 
       if (!redeemHref) {
         return {
@@ -249,7 +252,7 @@ export default class V2EXDriver extends BaseDriver {
             { label: "启动 Playwright 浏览器", ok: true },
             { label: "注入 Cookie 并准备浏览器上下文", ok: true },
             { label: "打开 V2EX 每日任务页面", ok: true, status: daily?.status() || null },
-            { label: "查找领取链接", ok: false, detail: preview },
+            { label: "查找领取链接", ok: false, detail: `${preview}；未发现同站 /mission/daily/redeem 链接` },
           ],
         };
       }
@@ -258,22 +261,30 @@ export default class V2EXDriver extends BaseDriver {
       await page.waitForTimeout(2000);
       const finalText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
       const finalPreview = finalText.replace(/\s+/g, " ").slice(0, 220);
-      const coinStats = mergeCoinStats(extractCoinStats(bodyText), extractCoinStats(finalText), await readBalanceStats(page, origin, timeout));
+      const verify = await page.goto(dailyUrl, { waitUntil: "domcontentloaded", timeout }).catch(() => null);
+      await page.waitForTimeout(1200);
+      const verifyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
+      const verifyPreview = verifyText.replace(/\s+/g, " ").slice(0, 220);
+      const coinStats = mergeCoinStats(extractCoinStats(bodyText), extractCoinStats(finalText), extractCoinStats(verifyText), await readBalanceStats(page, origin, timeout));
       const extra = coinMessage(coinStats);
-      const ok = redeem?.status() && redeem.status() < 400;
-      const message = ok ? `签到成功${extra ? `；${extra}` : ""}；签到时间：${signTime}` : `签到失败 HTTP ${redeem?.status() || "unknown"}`;
+      const redeemOk = redeem?.status() && redeem.status() < 400;
+      const verified = Boolean(redeemOk && confirmedV2EXDailyReward(`${finalText}\n${verifyText}`, coinStats));
+      const message = verified
+        ? `签到成功${extra ? `；${extra}` : ""}；签到时间：${signTime}`
+        : `访问领取链接后未确认 V2EX 今日奖励${redeem?.status() ? `；HTTP ${redeem.status()}` : ""}`;
 
       return {
-        success: Boolean(ok),
+        success: verified,
         message,
-        raw: finalPreview,
+        raw: verifyPreview || finalPreview,
         details: { signTime, ...coinStats, pageTitle: await page.title().catch(() => title) },
         steps: [
           { label: "启动 Playwright 浏览器", ok: true },
           { label: "注入 Cookie 并准备浏览器上下文", ok: true },
           { label: "打开 V2EX 每日任务页面", ok: true, status: daily?.status() || null },
           { label: "找到领取奖励链接", ok: true, detail: redeemHref },
-          { label: "访问领取链接", ok: Boolean(ok), status: redeem?.status() || null, detail: `${finalPreview}${extra ? `；${extra}` : ""}` },
+          { label: "访问领取链接", ok: Boolean(redeemOk), status: redeem?.status() || null, detail: finalPreview },
+          { label: "复查签到状态", ok: verified, status: verify?.status() || null, detail: `${verifyPreview || finalPreview}${extra ? `；${extra}` : ""}` },
         ],
       };
     } finally {
