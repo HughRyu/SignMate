@@ -10346,3 +10346,58 @@ input.is-saved-field:focus {
     max-width: 124px !important;
   }
 }
+
+/* ---- 2026-05-31: contain PC toolbar/categories inside Status Bar edges ---- */
+@media (min-width: 981px) {
+  .nav-status-area,
+  .nav-stats-strip,
+  #tab-sites .home-site-search-bar {
+    width: min(1100px, calc(100vw - 32px)) !important;
+    max-width: min(1100px, calc(100vw - 32px)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+  #tab-sites .home-site-search-bar {
+    overflow: hidden !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-end !important;
+    justify-self: stretch !important;
+    scrollbar-width: none !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions::-webkit-scrollbar {
+    display: none !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions .btn,
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions button,
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions .category-pill {
+    flex: 0 0 auto !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions #btnRunAll {
+    justify-self: end !important;
+  }
+}
+@media (min-width: 761px) and (max-width: 980px) {
+  #tab-sites .home-site-search-bar {
+    overflow: hidden !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-self: stretch !important;
+    justify-content: flex-end !important;
+    scrollbar-width: none !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions::-webkit-scrollbar {
+    display: none !important;
+  }
+}
