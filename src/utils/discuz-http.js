@@ -225,11 +225,29 @@ function kafanMessage(prefix, stats = {}, signTime = "") {
 
 function parsePojiePoints(text = "") {
   const normalized = compactText(text);
-  const credit = normalized.match(/(?:吾爱币|金币|CB)[:：]?\s*(-?\d+)/i)?.[1];
-  const points = normalized.match(/(?:积分|威望|贡献)[:：]\s*(-?\d+)/)?.[1];
+  const creditPatterns = [
+    /吾爱币[:：]?\s*(-?\d+)\s*CB/i,
+    /(?:^|[\s|])吾爱币[:：]?\s*(-?\d+)(?=\s|$)/i,
+    /CB[:：]?\s*(-?\d+)/i,
+  ];
+  const pointPatterns = [
+    /积分[:：]?\s*(-?\d+)\s*\(/,
+    /(?:^|[\s|])积分[:：]?\s*(-?\d+)(?=\s|$)/,
+    /威望[:：]\s*(-?\d+)/,
+    /贡献[:：]\s*(-?\d+)/,
+  ];
+  const firstNumber = (patterns) => {
+    for (const pattern of patterns) {
+      const hit = normalized.match(pattern);
+      if (!hit) continue;
+      const num = Number.parseInt(hit[1], 10);
+      if (Number.isFinite(num)) return num;
+    }
+    return null;
+  };
   return {
-    totalCoins: credit !== undefined ? Number.parseInt(credit, 10) : null,
-    totalPoints: points !== undefined ? Number.parseInt(points, 10) : null,
+    totalCoins: firstNumber(creditPatterns),
+    totalPoints: firstNumber(pointPatterns),
   };
 }
 
@@ -398,7 +416,8 @@ async function runPojie52(siteConfig, secrets) {
     if (/成功|完成|领取|申请|已完成|已申请|积分|吾爱币|金币|CB|今天|明天/.test(taskText)) break;
   }
   const verify = await openText(session, taskUrl, steps, "HTTP 复查吾爱破解任务状态");
-  const after = parsePojiePoints(verify.text || taskText);
+  const credit = await openText(session, `${origin}/home.php?mod=spacecp&ac=credit`, steps, "HTTP 读取吾爱破解积分").catch(() => null);
+  const after = parsePojiePoints(`${credit?.text || ""} ${verify.text || ""} ${taskText}`);
   const combined = `${taskText} ${verify.text}`;
   const alreadyDone = /已完成|已申请|已经申请|明天|下次再来|今天已/.test(combined);
   const ok = (taskStatus >= 200 && taskStatus < 400) && (alreadyDone || /成功|完成|领取|申请/.test(combined));

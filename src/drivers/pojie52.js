@@ -60,38 +60,32 @@ function isLoggedIn(text = "") {
   return /HughRyu|退出|积分|消息|提醒|快捷导航|我的/.test(text) && !/登录|立即登录/.test(text.slice(0, 500));
 }
 
-function parseCredit(text = "") {
+function firstNumber(patterns = [], text = "") {
   const normalized = String(text || "").replace(/\s+/g, " ");
-  const patterns = [
-    /吾爱币[:：]?\s*(-?\d+)/,
-    /金币[:：]?\s*(-?\d+)/,
-    /CB[:：]?\s*(-?\d+)/i,
-  ];
   for (const pattern of patterns) {
     const hit = normalized.match(pattern);
-    if (hit) {
-      const num = Number.parseInt(hit[1], 10);
-      if (Number.isFinite(num)) return num;
-    }
+    if (!hit) continue;
+    const num = Number.parseInt(hit[1], 10);
+    if (Number.isFinite(num)) return num;
   }
   return null;
 }
 
+function parseCredit(text = "") {
+  return firstNumber([
+    /吾爱币[:：]?\s*(-?\d+)\s*CB/i,
+    /(?:^|[\s|])吾爱币[:：]?\s*(-?\d+)(?=\s|$)/i,
+    /CB[:：]?\s*(-?\d+)/i,
+  ], text);
+}
+
 function parseDiscuzPoints(text = "") {
-  const normalized = String(text || "").replace(/\s+/g, " ");
-  const patterns = [
-    /积分[:：]\s*(-?\d+)/,
+  return firstNumber([
+    /积分[:：]?\s*(-?\d+)\s*\(/,
+    /(?:^|[\s|])积分[:：]?\s*(-?\d+)(?=\s|$)/,
     /威望[:：]\s*(-?\d+)/,
     /贡献[:：]\s*(-?\d+)/,
-  ];
-  for (const pattern of patterns) {
-    const hit = normalized.match(pattern);
-    if (hit) {
-      const num = Number.parseInt(hit[1], 10);
-      if (Number.isFinite(num)) return num;
-    }
-  }
-  return null;
+  ], text);
 }
 
 function extractReward(text = "", beforeCredit = null, afterCredit = null) {
