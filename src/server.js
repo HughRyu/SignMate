@@ -2018,19 +2018,38 @@ export async function startServer() {
       const batch = sitesRaw.batch || {};
       const batchMode = batch.mode === "fixed" ? "fixed" : (batch.mode === "random" ? "random" : (batch.mode === "independent" ? "independent" : "random"));
       const fixedTime = normalizeClockTime(batch.signin_time || "09:00", "09:00");
-      const visitFixedTime = normalizeClockTime(batch.visit_time || fixedTime || "09:30", "09:30");
+      const visitFixedTime = fixedTime;
       const summary = {
         mode: batchMode,
-        fixed: { signin: null, visit: null, dueTime: fixedTime, visitDueTime: visitFixedTime },
+        fixed: { signin: null, visit: null, dueTime: fixedTime, visitDueTime: visitFixedTime, keepalivePolicy: "after_signin" },
         random: { signin: null, visit: null, dueTime: null },
         manual: { all: null, signin: null, visit: null },
         latest: { signin: null, visit: null },
         latestScheduled: null,
         latestBatch: null,
+        activeBatch: null,
+        signinStatus: null,
         randomStart: normalizeClockTime(batch.random_start || "02:00", "02:00"),
         randomEnd: normalizeClockTime(batch.random_end || "22:00", "22:00"),
       };
       const batchItems = [];
+      const activeState = getBatchState();
+      if (activeState && (activeState.active || activeState.cancelRequestedAt || activeState.cancelledAt || activeState.interruptedNotifiedAt || activeState.notifyFailedAt || activeState.notifyError)) {
+        const activeMode = activeState.scheduleMode || (activeState.id && String(activeState.id).startsWith("manual-") ? "manual" : null);
+        summary.activeBatch = {
+          active: activeState.active === true,
+          mode: activeMode,
+          startedAt: activeState.startedAt || null,
+          completedAt: activeState.completedAt || null,
+          durationMs: activeState.startedAt ? Math.max(0, new Date(activeState.completedAt || new Date()).getTime() - new Date(activeState.startedAt).getTime()) : null,
+          success: Number(activeState.successCount || 0),
+          failed: Number(activeState.failureCount || 0),
+          total: Number(activeState.total || 0),
+          done: Number(activeState.done || 0),
+          pause: activeState.cancelRequestedAt || activeState.cancelledAt ? "manual" : (activeState.interruptedNotifiedAt || activeState.interruptedAt ? "unexpected" : null),
+          status: activeState.active ? (activeState.cancelRequestedAt ? "stopping" : "running") : (activeState.cancelledAt || activeState.cancelRequestedAt ? "cancelled" : (activeState.interruptedNotifiedAt || activeState.interruptedAt ? "interrupted" : (activeState.notifyFailedAt || activeState.notifyError ? "notify_failed" : "idle"))),
+        };
+      }
       for (const entry of history) {
         const kind = entry.kind || entry.details?.kind || "signin";
         if (kind !== "signin" && kind !== "visit") continue;
@@ -2039,6 +2058,7 @@ export async function startServer() {
         const item = {
           site: entry.site,
           siteKey: entry.siteKey || entry.key || null,
+          kind,
           success: entry.success,
           time: rawTime,
           mode: mode === "manual" || mode === "fixed" || mode === "random" ? mode : null,
@@ -2079,6 +2099,9 @@ export async function startServer() {
         }
         const startMs = Math.min(...groupItems.map(item => item.ms));
         const endMs = Math.max(...groupItems.map(item => item.ms));
+        const signinItems = groupItems.filter(item => item.kind === "signin");
+        const signinSuccess = signinItems.filter(item => item.success).length;
+        const signinFailed = signinItems.filter(item => !item.success).length;
         summary.latestBatch = {
           mode: firstBatchItem.mode,
           time: new Date(endMs).toISOString(),
@@ -2088,8 +2111,37 @@ export async function startServer() {
           success: groupItems.filter(item => item.success).length,
           failed: groupItems.filter(item => !item.success).length,
           total: groupItems.length,
+          signinSuccess,
+          signinFailed,
+          signinTotal: signinItems.length,
+          signinPause: null,
         };
       }
+      const enabledSigninKeys = new Set();
+      try {
+        for (const site of loadConfig().sites || []) {
+          const siteKind = site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
+          if (site.enabled !== false && siteKind === "signin") enabledSigninKeys.add(String(site.key || site.driver || site.note || ""));
+        }
+      } catch {}
+      const todayKey = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Shanghai" });
+      const signedToday = new Set();
+      for (const entry of history) {
+        const entryKind = entry.kind || entry.details?.kind || "signin";
+        if (entryKind !== "signin" || entry.success !== true) continue;
+        const ts = entry.timestamp || entry.time || null;
+        if (!ts) continue;
+        const day = new Date(ts).toLocaleDateString("sv-SE", { timeZone: "Asia/Shanghai" });
+        if (day !== todayKey) continue;
+        const key = String(entry.siteKey || entry.key || entry.site || "");
+        if (key) signedToday.add(key);
+      }
+      summary.signinStatus = {
+        signed: signedToday.size,
+        total: enabledSigninKeys.size || signedToday.size,
+        pause: summary.activeBatch?.pause || summary.latestBatch?.signinPause || null,
+      };
+
       try {
         const statePath = join(import.meta.dirname, "..", "data", "random-schedule-state.json");
         const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, "utf-8")) : {};

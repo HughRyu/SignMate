@@ -65,7 +65,10 @@ function randomCronBetween(start = "02:00", end = "22:00") {
 
 function effectiveScheduleMode(site = {}, defaultMode = "fixed") {
   const mode = site.schedule_mode || site.scheduleMode || defaultMode;
-  return mode === "independent" ? "independent" : (mode === "random" ? "random" : "fixed");
+  if (mode === "independent") return "independent";
+  if (mode === "random") return "random";
+  if (mode === "batch") return defaultMode === "random" ? "random" : "fixed";
+  return "fixed";
 }
 
 const DATA_DIR = new URL("../data", import.meta.url).pathname;
@@ -317,20 +320,15 @@ async function checkDynamicBatchSchedule(enabledSites) {
   const nowMinute = now.hour * 60 + now.minute;
   const state = readRandomStateSafe();
 
-  const fixedSignins = eligibleAutoSitesByKind(enabledSites, "fixed", defaultBatchMode, "signin");
-  const fixedVisits = eligibleAutoSitesByKind(enabledSites, "fixed", defaultBatchMode, "visit");
-  const fixedJobs = [
-    { key: "signin:fixed", kind: "signin", label: "批量签到", minute: minuteOfDayFromTime(batch.signin_time || "09:00", "09:00"), eligible: fixedSignins },
-    { key: "visit:fixed", kind: "visit", label: "批量保活", minute: minuteOfDayFromTime(batch.visit_time || "09:30", "09:30"), eligible: fixedVisits },
-  ];
-  for (const job of fixedJobs) {
-    if (!job.eligible.length) continue;
-    if (nowMinute === job.minute && state[job.key]?.completedDate !== now.date) {
-      const ran = await runBatchJob("fixed", job.label, defaultBatchMode, { kind: job.kind });
-      if (ran) {
-        state[job.key] = { date: now.date, completedDate: now.date, completedAt: new Date().toISOString(), dueTime: timeFromMinute(job.minute), mode: "fixed", kind: job.kind };
-        writeRandomStateSafe(state);
-      }
+  const fixedAll = eligibleAutoSitesAll(enabledSites, "fixed", defaultBatchMode);
+  const fixedMinute = minuteOfDayFromTime(batch.signin_time || "09:00", "09:00");
+  // 固定批量只有一个触发点：先签到站点，再紧接着执行保活站点。
+  // 不再把保活拆成独立的半小时后批次，避免 UI 和实际语义割裂。
+  if (fixedAll.length && nowMinute === fixedMinute && state["all:fixed"]?.completedDate !== now.date) {
+    const ran = await runBatchJob("fixed", "批量签到/保活", defaultBatchMode);
+    if (ran) {
+      state["all:fixed"] = { date: now.date, completedDate: now.date, completedAt: new Date().toISOString(), dueTime: timeFromMinute(fixedMinute), mode: "fixed", kind: "all" };
+      writeRandomStateSafe(state);
     }
   }
 

@@ -220,11 +220,11 @@ function updateClock() {
   el.textContent = now.toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit" });
 }
 
-function formatShortDateTime(value) {
+function formatShortDateTime(value, { withYear = false } = {}) {
   if (!value) return "暂无";
   const d = new Date(value);
   if (!Number.isFinite(d.getTime())) return "暂无";
-  return d.toLocaleString("zh-CN", { hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("zh-CN", { hour12: false, ...(withYear ? { year: "numeric" } : {}), month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 
@@ -239,10 +239,27 @@ function formatDuration(value) {
 }
 
 function scheduleModeLabel(mode = "") {
-  if (mode === "fixed" || mode === "batch") return "批量执行";
-  if (mode === "random") return "随机执行";
-  if (mode === "manual") return "手动执行";
-  return "最近执行";
+  if (mode === "fixed" || mode === "batch") return "自动";
+  if (mode === "random") return "自动随机";
+  if (mode === "manual") return "手动";
+  return "最近";
+}
+
+function batchSettingText(data = {}, actualMode = "") {
+  const configuredMode = data?.mode || actualMode || "";
+  if (configuredMode === "fixed") return `${data?.fixed?.dueTime || "--:--"}（签到后立即保活）`;
+  if (configuredMode === "random") {
+    const due = data?.random?.dueTime && !String(data.random.dueTime).includes("跳过") ? `；今日 ${data.random.dueTime}` : "";
+    return `${data?.randomStart || "02:00"} - ${data?.randomEnd || "22:00"} 随机${due}（签到后立即保活）`;
+  }
+  if (configuredMode === "independent") return "独立执行";
+  return "暂无";
+}
+
+function signinPauseText(value = "") {
+  if (value === "manual") return "手动暂停";
+  if (value === "unexpected") return "意外暂停";
+  return "正常";
 }
 
 function executionMethodShort(site = {}) {
@@ -285,27 +302,30 @@ function lastRunScheduleTitle(site = {}, recentLabel = "最近执行") {
 async function refreshNavTimeTooltip() {
   const el = document.getElementById("navTime");
   if (!el) return;
-  const emptyTitle = ["批量执行时间：暂无", "批量执行设定：暂无", "总签到用时：暂无", "成功 0", "失败 0"].join("\n");
+  const emptyTitle = ["批量执行时间：暂无", "批量执行设定：暂无", "总签到用时：暂无", "成功 0", "失败 0", "签到状态：已签到 0，正常"].join("\n");
   try {
     const { data } = await api("/api/batch-summary");
-    const latest = data?.latestBatch || data?.latestScheduled || data?.latest?.signin || data?.latest?.visit || null;
-    if (!latest?.time) {
+    const latest = data?.activeBatch?.active ? data.activeBatch : (data?.latestBatch || data?.latestScheduled || data?.latest?.signin || data?.latest?.visit || null);
+    if (!latest?.time && !latest?.startedAt) {
       el.title = emptyTitle;
       return;
     }
-    const mode = latest.mode || data?.mode || "";
-    const modeLabel = scheduleModeLabel(mode);
-    const setting = data?.mode === "fixed"
-      ? `批量 ${data?.fixed?.dueTime || "--:--"}${data?.fixed?.visitDueTime && data.fixed.visitDueTime !== data.fixed.dueTime ? ` / 保活 ${data.fixed.visitDueTime}` : ""}`
-      : (data?.mode === "random" ? `随机 ${data?.randomStart || "02:00"} - ${data?.randomEnd || "22:00"}` : scheduleModeLabel(data?.mode || mode));
+    const actualMode = latest.mode || data?.mode || "";
+    const modeLabel = scheduleModeLabel(actualMode);
+    const eventTime = latest.time || latest.completedAt || latest.startedAt;
     const success = Number(latest.success ?? 0);
     const failed = Number(latest.failed ?? 0);
+    const signed = Number(data?.signinStatus?.signed ?? latest.signinSuccess ?? 0);
+    const signedTotal = Number(data?.signinStatus?.total ?? latest.signinTotal ?? 0);
+    const pause = data?.activeBatch?.pause || data?.signinStatus?.pause || latest.signinPause || "";
+    const signedText = Number.isFinite(signedTotal) && signedTotal > 0 ? `${signed}/${signedTotal}` : `${Number.isFinite(signed) ? signed : 0}`;
     el.title = [
-      `批量执行时间：${modeLabel} ${formatShortDateTime(latest.time)}`,
-      `批量执行设定：${setting}`,
+      `批量执行时间：${formatShortDateTime(eventTime, { withYear: true })}（${modeLabel}）`,
+      `批量执行设定：${batchSettingText(data, actualMode)}`,
       `总签到用时：${formatDuration(latest.durationMs)}`,
       `成功 ${Number.isFinite(success) ? success : 0}`,
       `失败 ${Number.isFinite(failed) ? failed : 0}`,
+      `签到状态：已签到 ${signedText}，${signinPauseText(pause)}`,
     ].join("\n");
   } catch {
     el.title = emptyTitle;

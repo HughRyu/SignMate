@@ -488,10 +488,15 @@ export async function runAll(options = {}) {
     if (autoOnly && options.scheduleMode) {
       const defaultMode = options.defaultScheduleMode === "random" ? "random" : "fixed";
       const rawMode = s.schedule_mode || s.scheduleMode || defaultMode;
-      const mode = rawMode === "independent" ? "independent" : (rawMode === "random" ? "random" : "fixed");
+      const mode = rawMode === "independent" ? "independent" : (rawMode === "random" || (rawMode === "batch" && defaultMode === "random") ? "random" : "fixed");
       if (mode !== options.scheduleMode) return false;
     }
     return true;
+  }).sort((a, b) => {
+    if (kind) return 0;
+    const kindOf = site => site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
+    const rank = site => kindOf(site) === "signin" ? 0 : 1;
+    return rank(a) - rank(b);
   });
 
   if (enabled.length === 0) {
@@ -503,9 +508,10 @@ export async function runAll(options = {}) {
 
   const results = [];
   const batchState = {
-    id: `${kind || "signin"}-${Date.now()}`,
-    kind: kind === "visit" ? "visit" : "signin",
+    id: `${kind || "all"}-${Date.now()}`,
+    kind: kind === "visit" ? "visit" : (kind === "signin" ? "signin" : "all"),
     startedAt: new Date().toISOString(),
+    scheduleMode: options.scheduleMode || options.manualScheduleMode || null,
     total: Number(options.originalTotal || 0) || enabled.length,
     done: skipKeys.size,
     successCount: 0,
