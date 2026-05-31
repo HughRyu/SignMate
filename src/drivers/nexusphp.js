@@ -904,8 +904,8 @@ ${siteExtra.panelText}`);
         stats = { ...stats, signText: "", bonusGain: "", rewardName: "" };
         steps.push({ label: "确认 OurBits 签到结果", ok: false, detail: "签到页仍显示 Turnstile/验证加载说明，未确认签到成功" });
       }
-      const gainConfirmsSign = siteKey !== "open-cd" && !!stats.bonusGain;
-      const signConfirmed = implicitNoEntryOk || already || gainConfirmsSign || /已[签簽]到|[签簽]到成功|本次[签簽]到获得|[签簽]到已得|[签簽]到获得\s*[0-9,.]+\s*个/.test(stats.signText || "");
+      const gainConfirmsSign = siteKey !== "open-cd" && siteKey !== "ourbits-club" && !!stats.bonusGain;
+      const signConfirmed = implicitNoEntryOk || already || gainConfirmsSign || (siteKey !== "ourbits-club" && /已[签簽]到|[签簽]到成功|本次[签簽]到获得|[签簽]到已得|[签簽]到获得\s*[0-9,.]+\s*个/.test(stats.signText || ""));
       const ok = status >= 200 && status < 400 && loggedIn && signConfirmed && !blocked;
       const messageParts = [];
       if (blocked) messageParts.push(steps.some(s => /Cloudflare Turnstile/.test(s.label + " " + (s.detail || ""))) ? "签到遇到 Cloudflare Turnstile 验证，需人工验证或更可信浏览器环境" : (steps.some(s => /图片验证码|OpenCD/.test(s.label + " " + (s.detail || ""))) ? "签到遇到图片验证码，OCR 未通过" : "签到遇到验证措施"));
