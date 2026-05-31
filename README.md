@@ -9,8 +9,9 @@
 镜像地址：
 
 ```text
-ghcr.io/hughryu/signmate:latest
-# 或固定正式版本：ghcr.io/hughryu/signmate:v0.1.11
+ghcr.io/hughryu/signmate:latest   # 最新稳定版（随 v* 正式版本标签更新）
+ghcr.io/hughryu/signmate:edge     # main 分支最新构建，包含尚未发版的新功能/修复
+ghcr.io/hughryu/signmate:v0.1.11  # 固定正式版本
 ```
 
 创建目录与配置文件：
@@ -38,7 +39,7 @@ echo "SignMate 初始管理员密码：${ADMIN_PASSWORD}"
 ```yaml
 services:
   signmate:
-    image: ghcr.io/hughryu/signmate:v0.1.11
+    image: ghcr.io/hughryu/signmate:latest
     container_name: signmate
     restart: unless-stopped
     ports:
@@ -67,13 +68,15 @@ docker compose logs -f
 
 首次启动如果还没有 `config/sites.yaml`，面板会以空站点列表正常打开；后续在网页里手动添加站点、维护 Cookie、代理和通知配置即可。默认 `RUN_ON_START=false`，避免全新部署尚未维护 Cookie 时自动执行签到。请保存上面输出的初始管理员密码，不要使用示例固定密码公开部署。
 
-更新：
+更新稳定版：
 
 ```bash
 cd /opt/docker/signmate
 docker compose pull
 docker compose up -d
 ```
+
+如果需要立即体验 main 分支最新构建，可将 compose 镜像 tag 改为 `ghcr.io/hughryu/signmate:edge`。
 
 > 如果 GHCR 包被设为私有，需要先执行 `docker login ghcr.io`。公开包无需登录即可拉取。
 
