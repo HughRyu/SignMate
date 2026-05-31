@@ -10559,3 +10559,66 @@ input.is-saved-field:focus {
     padding-left: 0 !important;
   }
 }
+
+/* ---- 2026-05-31: final batch progress/filter reset/missed signin polish ---- */
+#tab-sites .batch-progress {
+  width: min(960px, calc(var(--content-edge-width, 1036px) - 76px)) !important;
+  max-width: min(960px, calc(var(--content-edge-width, 1036px) - 76px)) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 14px 24px 16px !important;
+  box-sizing: border-box !important;
+}
+#tab-sites .batch-progress-head {
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+#tab-sites .batch-progress-title {
+  padding-left: 4px !important;
+  gap: 10px !important;
+}
+#tab-sites .batch-progress-title .spinner {
+  margin-left: 2px !important;
+  flex: 0 0 auto !important;
+}
+#tab-sites .batch-progress-bar,
+#tab-sites .batch-progress-step {
+  margin-left: 4px !important;
+  margin-right: 4px !important;
+}
+.site-card-time.missed-today-signin {
+  color: #dc2626 !important;
+  font-weight: 850 !important;
+  background: linear-gradient(90deg, #dc2626 0%, #fb7185 36%, #ef4444 72%, #b91c1c 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: missedSigninFlow 1.45s linear infinite;
+}
+@keyframes missedSigninFlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 220% 50%; }
+}
+.site-category-actions .category-pill:not(.active),
+.site-category-actions .site-category-filter:not(.active),
+.site-category-actions .site-kind-filter:not(.active) {
+  color: var(--text-sec) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nav-stats-strip .nav-success-filter:not(.active),
+.nav-stats-strip .nav-failed-filter:not(.active),
+.nav-stats-strip .nav-kind-filter:not(.active) {
+  color: var(--text-sec) !important;
+  background: rgba(255,255,255,.64) !important;
+  box-shadow: inset 0 0 0 1px rgba(148,163,184,.20) !important;
+}
+@media (max-width: 760px) {
+  #tab-sites .batch-progress {
+    width: calc(100vw - 36px) !important;
+    max-width: calc(100vw - 36px) !important;
+    padding: 13px 18px 15px !important;
+  }
+  #tab-sites .batch-progress-title { padding-left: 2px !important; }
+}

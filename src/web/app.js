@@ -1109,6 +1109,19 @@ function cleanDailyMessage(message = "", siteKey = "") {
     .trim() || cleaned;
 }
 
+function hasMissedTodaySignin(site = {}) {
+  if (!site?.enabled || siteKindOf(site) !== "signin") return false;
+  if (site._running || site.lastSuccess === true || !site.lastTime) return false;
+  const batchMode = appSettings?.batch?.mode || site.scheduleMode || site.schedule_mode || "fixed";
+  if (batchMode !== "fixed") return false;
+  const t = appSettings?.batch?.signinTime || "09:00";
+  const [hour = 9, minute = 0] = String(t).split(":").map(n => Number.parseInt(n, 10));
+  const due = new Date();
+  due.setHours(Number.isFinite(hour) ? hour : 9, Number.isFinite(minute) ? minute : 0, 0, 0);
+  if (Date.now() <= due.getTime()) return false;
+  return localDateKey(site.lastTime) !== localDateKey(new Date());
+}
+
 function buildSiteCard(site) {
   const hasStatus = site.lastSuccess !== null;
   const details = site.details || {};
@@ -1141,8 +1154,10 @@ function buildSiteCard(site) {
   const recentLabel = isVisit ? "最近保活" : "最近签到";
   const lastRunTime = site.lastTime ? new Date(site.lastTime).toLocaleString("zh-CN", { hour12: false }) : "";
   const timeLineText = lastRunTime || `暂无${actionText}记录`;
+  const missedTodaySignin = hasMissedTodaySignin(site);
+  const timeLineClass = missedTodaySignin ? "site-card-time missed-today-signin" : "site-card-time";
   const executionMethod = executionMethodShort(site);
-  const scheduleTitle = lastRunScheduleTitle(site, recentLabel);
+  const scheduleTitle = missedTodaySignin ? `已过今日设定签到时间，尚未完成今日签到；${lastRunScheduleTitle(site, recentLabel)}` : lastRunScheduleTitle(site, recentLabel);
 
   const showStatusBand = (!isVisit || isRunning) && (!isPtSite || verificationBlocked);
   const ptStatusClass = isPtSite && showStatusBand ? "has-pt-status" : "";
@@ -1178,7 +1193,7 @@ function buildSiteCard(site) {
         </button>
       </div>
 
-      <div class="site-card-schedule" title="${escAttr(scheduleTitle)}"><span>🕘 ${recentLabel}</span><span>${timeLineText}</span></div>
+      <div class="site-card-schedule" title="${escAttr(scheduleTitle)}"><span>🕘 ${recentLabel}</span><span class="${timeLineClass}">${timeLineText}</span></div>
     </div>
   `;
 }
@@ -3320,10 +3335,11 @@ function renderBatchProgress(sites = latestAllSites) {
   const notice = batchRunState.notice || current;
   const noticeType = batchRunState.noticeType || (batchRunState.active ? "info" : (failed ? "error" : "success"));
   const longNoticeClass = notice.length > 28 || /中断|未完成|服务重启/.test(notice) ? "is-plain" : "";
-  const titleText = interrupted ? "上次批量任务已中断" : (batchRunState.cancelled ? "批量任务已终止" : "全部签到进度");
+  const stopping = batchRunState.stopping === true;
+  const titleText = interrupted ? "上次批量任务已中断" : (batchRunState.cancelled ? "批量任务已终止" : (stopping ? "正在终止批量任务" : "全部签到进度"));
   const actionHtml = interrupted
     ? `<button class="btn btn-primary btn-compact batch-progress-action" id="btnResumeBatchProgress" type="button">继续剩余站点</button><button class="btn btn-secondary btn-compact batch-progress-action" id="btnDismissBatchProgress" type="button">知道了</button>`
-    : (batchRunState.active ? `<button class="btn btn-danger btn-compact batch-progress-action" id="btnCancelBatchProgress" type="button">终止签到</button>` : (batchRunState.cancelled ? `<button class="btn btn-secondary btn-compact batch-progress-action" id="btnDismissBatchProgress" type="button">知道了</button>` : ""));
+    : (batchRunState.active && !stopping ? `<button class="btn btn-danger btn-compact batch-progress-action" id="btnCancelBatchProgress" type="button">终止签到</button>` : (batchRunState.cancelled ? `<button class="btn btn-secondary btn-compact batch-progress-action" id="btnDismissBatchProgress" type="button">知道了</button>` : ""));
   el.classList.remove("hidden");
   el.innerHTML = `
     <div class="batch-progress-head">
@@ -3360,12 +3376,20 @@ function applyBackendBatchState(state = {}) {
   const hasInterruptedState = !state.completedAt && !!state.interruptedNotifiedAt && Number(state.total || 0) > 0;
   const cancelled = !state.active && (!!state.cancelRequestedAt || !!state.cancelledAt);
   const notifyFailed = !!state.notifyFailedAt || !!state.notifyError;
-  if ((hasInterruptedState || cancelled || notifyFailed) && state.id && dismissedInterruptedBatchIds.has(state.id)) return false;
+  if ((hasInterruptedState || cancelled || notifyFailed) && state.id && dismissedInterruptedBatchIds.has(state.id)) {
+    if (batchRunState.stopping && (cancelled || !state.active)) {
+      batchRunState = { active: false };
+      renderBatchProgress(latestAllSites);
+    }
+    return false;
+  }
   if (state.active === false && !hasInterruptedState && !cancelled && !notifyFailed) return false;
   const active = state.active === true;
+  const localStopping = batchRunState.stopping === true;
   if (state.cancelRequestedAt && state.id && dismissedInterruptedBatchIds.has(state.id)) return false;
   batchRunState.id = state.id || "";
   batchRunState.active = active;
+  batchRunState.stopping = localStopping || !!state.cancelRequestedAt;
   batchRunState.interrupted = !active && hasInterruptedState;
   batchRunState.cancelled = cancelled;
   batchRunState.notifyFailed = notifyFailed;
@@ -3525,9 +3549,16 @@ async function cancelBatchRun() {
       dismissedInterruptedBatchIds.add(stateId);
       localStorage.setItem("dismissedInterruptedBatchIds", JSON.stringify([...dismissedInterruptedBatchIds]));
     }
-    batchRunState = { active: false };
+    batchRunState = {
+      ...batchRunState,
+      active: true,
+      stopping: true,
+      currentStep: "终止请求已收到；当前站点执行完后停止，前台不再安排后续站点。",
+      notice: "正在终止；等待当前站点收尾…",
+      noticeType: "warning",
+    };
     renderBatchProgress(latestAllSites);
-    showToast(data?.message || "已请求终止；后端会停止后续站点", "warning");
+    showToast(data?.message || "已请求终止；当前站点结束后停止后续站点", "warning");
     await refreshBackendBatchState(true);
   } catch (err) {
     showToast(`终止失败: ${err.message}`, "error");
