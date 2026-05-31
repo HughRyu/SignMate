@@ -121,6 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   document.getElementById("btnRunAll")?.addEventListener("click", triggerAll);
+  document.getElementById("btnQuickCookieSync")?.addEventListener("click", quickCookieCloudSync);
   document.getElementById("btnManageSites")?.addEventListener("click", () => openSiteManageModal("all"));
   document.getElementById("btnRefreshHistory")?.addEventListener("click", () => loadHistory());
   document.getElementById("btnClearHistory")?.addEventListener("click", clearHistory);
@@ -171,25 +172,49 @@ function formatShortDateTime(value) {
   return d.toLocaleString("zh-CN", { hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
+function scheduleModeLabel(mode = "") {
+  if (mode === "fixed" || mode === "batch") return "批量执行";
+  if (mode === "random") return "随机执行";
+  if (mode === "manual") return "手动执行";
+  return "最近执行";
+}
+
+function executionMethodShort(site = {}) {
+  const method = String(site.executionMethod || "").toLowerCase();
+  if (method === "hybrid") return "API+Browser";
+  if (method === "api") return "API";
+  if (method === "browser") return "Browser";
+  if (method === "api-first") return "API-first";
+  return site.executionMethodLabel || "Auto";
+}
+
+function executionMethodTitle(site = {}) {
+  const label = executionMethodShort(site);
+  const action = site.details?.checkinAction ? `；本次动作：${site.details.checkinAction}` : "";
+  return `执行方式：${label}${action}`;
+}
+
+function lastRunScheduleTitle(site = {}, recentLabel = "最近执行") {
+  if (!site.lastTime) return `暂无${recentLabel.replace(/^最近/, "")}记录`;
+  const mode = site.details?.scheduleMode || site.scheduleMode || "";
+  const time = new Date(site.lastTime).toLocaleString("zh-CN", { hour12: false });
+  return `${scheduleModeLabel(mode)}时间：${time}`;
+}
+
 async function refreshNavTimeTooltip() {
   const el = document.getElementById("navTime");
   if (!el) return;
   try {
     const { data } = await api("/api/batch-summary");
-    const fixedSignin = data?.fixed?.signin?.time;
-    const fixedVisit = data?.fixed?.visit?.time;
-    const randomSignin = data?.random?.signin?.time;
-    const randomVisit = data?.random?.visit?.time;
-    const fixedDue = data?.fixed?.dueTime || data?.fixed?.signinDueTime || "";
-    const batchLine = data?.mode === "fixed" && fixedDue
-      ? `${formatShortDateTime(fixedSignin || fixedVisit)}（预计 ${fixedDue}）`
-      : formatShortDateTime(fixedSignin || fixedVisit);
-    el.title = [
-      "上次执行时间",
-      `批量签到 / 批量保活：${batchLine}`,
-      `随机签到 / 随机保活：${formatShortDateTime(randomSignin || randomVisit)}`,
-      `一键签到：${formatShortDateTime(data?.manual?.all?.time)}`,
-    ].filter(Boolean).join("\n");
+    const latest = data?.latestScheduled || data?.latest?.signin || data?.latest?.visit || null;
+    if (!latest?.time) {
+      el.title = "上次执行时间：暂无";
+      return;
+    }
+    const mode = latest.mode || "";
+    const label = scheduleModeLabel(mode);
+    const due = mode === "fixed" && data?.fixed?.dueTime ? `；当前批量时间 ${data.fixed.dueTime}` : "";
+    el.title = `${label}：${formatShortDateTime(latest.time)}${latest.site ? `；站点 ${latest.site}` : ""}${due}`;
   } catch {
     el.title = "上次执行时间：暂无";
   }
@@ -1004,6 +1029,8 @@ function buildSiteCard(site) {
   const recentLabel = isVisit ? "最近保活" : "最近签到";
   const lastRunTime = site.lastTime ? new Date(site.lastTime).toLocaleString("zh-CN", { hour12: false }) : "";
   const timeLineText = lastRunTime || `暂无${actionText}记录`;
+  const executionMethod = executionMethodShort(site);
+  const scheduleTitle = lastRunScheduleTitle(site, recentLabel);
 
   const showStatusBand = (!isVisit || isRunning) && (!isPtSite || verificationBlocked);
   const ptStatusClass = isPtSite && showStatusBand ? "has-pt-status" : "";
@@ -1012,7 +1039,7 @@ function buildSiteCard(site) {
     <div class="card site-card ${isVisit ? "visit-card" : "signin-card"} ${isPtSite ? "pt-card" : ""} ${ptStatusClass} ${hasStatus && !site.lastSuccess ? "is-running" : ""}" id="card-${escAttr(site.key)}" data-category="${escAttr(site.category || 'forum')}">
       <span class="site-category-corner cat-${escAttr(categoryKey)}" title="分类：${escAttr(categoryLabel(categoryKey))}">${esc(categoryAbbr(categoryKey))}</span>
       <div class="site-card-header">
-        <span class="site-card-name proxy-name-${escAttr(details.proxyModeUsed || (site.proxyMode === "on" ? "proxy" : site.proxyMode === "off" ? "direct" : "auto"))}" data-site-url="${escAttr(site.baseUrl || site.base_url || "")}" title="双击打开签到站点" tabindex="-1">${esc(displayName)}</span>
+        <span class="site-card-name proxy-name-${escAttr(details.proxyModeUsed || (site.proxyMode === "on" ? "proxy" : site.proxyMode === "off" ? "direct" : "auto"))}" data-site-url="${escAttr(site.baseUrl || site.base_url || "")}" title="双击打开签到站点" tabindex="-1">${esc(displayName)}<span class="site-exec-badge" title="${escAttr(executionMethodTitle(site))}">${esc(executionMethod)}</span></span>
         <div class="site-card-header-right">
           ${verificationLock}${statusBadge}
           <button class="site-card-tag ${tagClass} tag-button" id="toggle-${escAttr(site.key)}" title="点击切换启用/禁用；禁用后刷新页面才会从当前列表隐藏">${tagText}</button>
@@ -1039,7 +1066,7 @@ function buildSiteCard(site) {
         </button>
       </div>
 
-      <div class="site-card-schedule"><span>🕘 ${recentLabel}</span><span>${timeLineText}</span></div>
+      <div class="site-card-schedule" title="${escAttr(scheduleTitle)}"><span>🕘 ${recentLabel}</span><span>${timeLineText}</span></div>
     </div>
   `;
 }
@@ -1411,7 +1438,7 @@ function showSiteManageModal(sites, proxy, kind = "signin", batch = {}, options 
             <div class="site-manage-row site-manage-grid-row mode-${escAttr(effectiveKind)}" data-site="${escAttr(site.key)}" data-kind="${escAttr(effectiveKind)}" data-category="${escAttr(site.category || 'forum')}">
               <div class="site-manage-main compact">
                 ${manageTwoFaBadge}
-                <strong class="manage-site-name" data-site="${escAttr(site.key)}" title="双击修改站点名"><span class="manage-driver-kind-icon" title="Driver 默认适配：${escAttr(kindLabel(adaptedKindOf(site)))}">${driverKindIcon(site)}</span>${esc(displaySiteName(site.name))}</strong>
+                <strong class="manage-site-name" data-site="${escAttr(site.key)}" title="双击修改站点名"><span class="manage-driver-kind-icon" title="Driver 默认适配：${escAttr(kindLabel(adaptedKindOf(site)))}">${driverKindIcon(site)}</span>${esc(displaySiteName(site.name))}<span class="site-exec-badge manage-exec-badge" title="${escAttr(executionMethodTitle(site))}">${esc(executionMethodShort(site))}</span></strong>
                 <small class="manage-site-summary" aria-hidden="true"></small>
               </div>
               <span class="mobile-field-label">执行方式</span>
@@ -2465,6 +2492,26 @@ function renderCookieCloudMatches(matches = [], mode = "preview") {
   document.getElementById("cookieCloudSelectMaintained")?.addEventListener("click", () => modal.querySelectorAll(".cookiecloud-site-choice").forEach((el, i) => { el.checked = !!matches[i]?.signmateHasCookie; }));
   document.getElementById("cookieCloudModalSync")?.addEventListener("click", syncCookieCloud);
   modal.addEventListener("click", event => { if (event.target === modal) closeCookieCloudPreviewModal(); });
+}
+
+
+async function quickCookieCloudSync() {
+  const btn = document.getElementById("btnQuickCookieSync");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>同步中…'; }
+  try {
+    const { data } = await api("/api/cookiecloud/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const skippedItems = data.skippedItems || [];
+    if (skippedItems.length) {
+      showToast(`✅ 已同步 ${data.updated?.length || 0} 个站点 Cookie，跳过 ${skippedItems.length} 个不完整 Cookie`, "warning");
+    } else {
+      showToast(`✅ 已同步 ${data.updated?.length || 0} 个站点 Cookie`, "success");
+    }
+    await loadSites(true);
+  } catch (err) {
+    showToast(`Cookie 同步失败: ${err.message}`, "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = "🔄 Cookie 同步"; }
+  }
 }
 
 async function previewCookieCloud() {

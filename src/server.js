@@ -84,6 +84,36 @@ function newestCookieCloudUpdatedAt() {
   return { latest, source, count };
 }
 
+function executionMethodOf(site = {}, status = {}) {
+  const action = String(status.details?.checkinAction || "").toLowerCase();
+  const steps = Array.isArray(status.steps) ? status.steps : [];
+  const stepText = steps.map(step => `${step?.label || ""} ${step?.detail || ""}`).join(" ").toLowerCase();
+  if (action.startsWith("api_") || /http|api|fetch/.test(action) || /http|api|fetch/.test(stepText)) {
+    if (/playwright|browser|cloak/.test(stepText) || status.details?.browserLight === true) return "hybrid";
+    return "api";
+  }
+  if (/browser_|playwright|browser|cloak/.test(action) || /playwright|browser|cloak/.test(stepText)) return "browser";
+  const configured = String(site.signin_mode || site.signinMode || "").toLowerCase();
+  if (configured === "api") return "api";
+  if (configured === "visit") return "api";
+  if (configured === "playwright" || configured === "browser") {
+    const driver = String(site.driver || "").toLowerCase();
+    if (["v2ex", "nodeseek", "pojie52"].includes(driver) || site.protocol_mode || site.experimental_signin_mode) return "api-first";
+    return "browser";
+  }
+  return "api-first";
+}
+
+function executionMethodLabel(method = "") {
+  switch (method) {
+    case "api": return "API";
+    case "browser": return "Browser";
+    case "hybrid": return "API+Browser";
+    case "api-first": return "API-first";
+    default: return "Auto";
+  }
+}
+
 function enrichCookieCloudConfig(config = readCookieCloudConfig()) {
   const state = maintenanceState().cookiecloud || {};
   const newest = newestCookieCloudUpdatedAt();
@@ -1138,6 +1168,7 @@ export async function startServer() {
           status.lastMessage.includes("invalid header value") ||
           status.lastMessage.includes("Headers.append")
         );
+        const executionMethod = executionMethodOf(site, status);
         return {
           key,
           name,
@@ -1154,6 +1185,8 @@ export async function startServer() {
           proxyGlobalEnabled: site.proxy_global_enabled === true,
           proxyModeUsed: status.details?.proxyModeUsed || null,
           proxyUsed: status.details?.proxyUsed ?? null,
+          executionMethod,
+          executionMethodLabel: executionMethodLabel(executionMethod),
           category: site.category || "forum",
           kind: site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin"),
           baseUrl: site.base_url || "",
@@ -1991,18 +2024,21 @@ export async function startServer() {
         random: { signin: null, visit: null, dueTime: null },
         manual: { all: null, signin: null, visit: null },
         latest: { signin: null, visit: null },
+        latestScheduled: null,
       };
       for (const entry of history) {
         const kind = entry.kind || entry.details?.kind || "signin";
         if (kind !== "signin" && kind !== "visit") continue;
+        const mode = entry.details?.scheduleMode || entry.details?.schedule_mode || entry.scheduleMode || entry.schedule_mode || null;
         const item = {
           site: entry.site,
           siteKey: entry.siteKey || entry.key || null,
           success: entry.success,
           time: entry.timestamp || entry.time || null,
+          mode: mode === "manual" || mode === "fixed" || mode === "random" ? mode : null,
         };
         if (!summary.latest[kind]) summary.latest[kind] = item;
-        const mode = entry.details?.scheduleMode || entry.details?.schedule_mode || entry.scheduleMode || entry.schedule_mode || null;
+        if (!summary.latestScheduled && item.mode) summary.latestScheduled = item;
         const hasExplicitMode = mode === "manual" || mode === "fixed" || mode === "random";
         if (mode === "manual") {
           if (!summary.manual[kind]) summary.manual[kind] = item;
