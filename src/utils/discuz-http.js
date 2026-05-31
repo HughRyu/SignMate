@@ -1,8 +1,7 @@
 // ============================================================
-// discuz-http — experimental HTTP/API-first helpers for Discuz
-// plugin-style daily sign-in drivers.
-//
-// Used only in the 6999 experimental SignMate branch unless promoted.
+// discuz-http — HTTP/API-first helpers for Discuz plugin-style
+// daily sign-in drivers. Playwright remains the fallback when a
+// site blocks HTTP or the protocol flow cannot confirm success.
 // Keeps Cookie values private: never log or return Cookie contents.
 // ============================================================
 
@@ -14,9 +13,9 @@ export function wantsHttpMode(siteConfig = {}) {
     siteConfig.experimental_signin_mode
     || siteConfig.protocol_mode
     || process.env.SIGNMATE_EXPERIMENTAL_SIGNIN_MODE
-    || ""
+    || "api-first"
   ).trim().toLowerCase();
-  return ["api", "api-first", "api_preferred", "http", "http-first", "protocol"].includes(value);
+  return !["playwright", "browser", "off", "false", "0", "disabled"].includes(value);
 }
 
 export function allowsHttpFallback(siteConfig = {}) {

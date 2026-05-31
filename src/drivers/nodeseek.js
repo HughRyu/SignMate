@@ -137,14 +137,23 @@ function buildSuccessMessage(baseMessage, details = {}) {
 
 export default class NodeSeekDriver extends BaseDriver {
   async signIn() {
-    const mode = this.siteConfig.signin_mode || this.siteConfig.mode || "playwright";
-    if (mode === "fetch") return this.signInWithFetch();
+    const mode = String(this.siteConfig.experimental_signin_mode || this.siteConfig.protocol_mode || process.env.SIGNMATE_EXPERIMENTAL_SIGNIN_MODE || "api-first").trim().toLowerCase();
+    const preferFetch = !["playwright", "browser", "off", "false", "0", "disabled"].includes(mode);
+    const allowPlaywrightFallback = this.siteConfig.api_fallback_playwright !== false
+      && this.siteConfig.protocol_fallback_playwright !== false
+      && process.env.SIGNMATE_API_FALLBACK_PLAYWRIGHT !== "false";
+
+    if (preferFetch) {
+      const fetchResult = await this.signInWithFetch();
+      if (fetchResult.success || !allowPlaywrightFallback) return fetchResult;
+      logger.warn(`[NodeSeek] Fetch/API 签到失败，回退 Playwright：${fetchResult.message}`);
+    }
 
     try {
       return await this.signInWithPlaywright();
     } catch (err) {
       logger.warn(`[NodeSeek] Playwright 签到失败: ${err.message}`);
-      if (this.siteConfig.playwright_fallback_fetch === true) {
+      if (!preferFetch && this.siteConfig.playwright_fallback_fetch === true) {
         return this.signInWithFetch();
       }
       return { success: false, message: `Playwright 签到失败: ${err.message}` };

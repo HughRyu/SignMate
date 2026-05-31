@@ -1,8 +1,7 @@
 // ============================================================
-// site-http — experimental HTTP/API-first helpers for selected
-// non-NexusPHP SignMate drivers: Chiphell, NodeLoc, V2EX.
-//
-// 6999 experimental branch only unless promoted.
+// site-http — HTTP/API-first helpers for selected non-NexusPHP
+// SignMate drivers: Chiphell, NodeLoc, V2EX. Playwright remains
+// the fallback when a site blocks HTTP or success is unconfirmed.
 // ============================================================
 
 import logger from "./logger.js";
@@ -14,9 +13,9 @@ export function wantsHttpMode(siteConfig = {}) {
     siteConfig.experimental_signin_mode
     || siteConfig.protocol_mode
     || process.env.SIGNMATE_EXPERIMENTAL_SIGNIN_MODE
-    || ""
+    || "api-first"
   ).trim().toLowerCase();
-  return ["api", "api-first", "api_preferred", "http", "http-first", "protocol"].includes(value);
+  return !["playwright", "browser", "off", "false", "0", "disabled"].includes(value);
 }
 
 export function allowsHttpFallback(siteConfig = {}) {

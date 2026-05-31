@@ -221,8 +221,8 @@ function hasVerification(text = "") {
 }
 
 function wantsApiMode(siteConfig = {}) {
-  const mode = String(siteConfig.experimental_signin_mode || siteConfig.protocol_mode || process.env.SIGNMATE_EXPERIMENTAL_SIGNIN_MODE || "").trim().toLowerCase();
-  return ["api", "api-first", "api_preferred", "http"].includes(mode);
+  const mode = String(siteConfig.experimental_signin_mode || siteConfig.protocol_mode || process.env.SIGNMATE_EXPERIMENTAL_SIGNIN_MODE || "api-first").trim().toLowerCase();
+  return !["playwright", "browser", "off", "false", "0", "disabled"].includes(mode);
 }
 
 function allowsBrowserFallback(siteConfig = {}) {
@@ -236,7 +236,8 @@ function supportsNexusApi(siteConfig = {}) {
 
 function nexusApiStatusPaths(siteKey = "") {
   if (siteKey === "hhanclub-net") return ["/attendance.php"];
-  if (siteKey === "ourbits-club") return ["/attendance.php"];
+  // OurBits is keepalive-only because attendance.php requires Cloudflare Turnstile.
+  // Never visit the sign-in page from the API-first keepalive path.
   return [];
 }
 
