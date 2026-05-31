@@ -10069,3 +10069,36 @@ input.is-saved-field:focus {
   .nav-quick-actions { overflow-x: auto; scrollbar-width: none; }
   .nav-quick-actions::-webkit-scrollbar { display: none; }
 }
+
+/* ---- 2026-05-31: align quick Cookie sync with primary action buttons ---- */
+.nav-quick-actions {
+  margin-top: 8px !important;
+  min-height: 40px !important;
+}
+.nav-cookie-sync-btn {
+  height: 40px !important;
+  min-height: 40px !important;
+  width: 128px !important;
+  min-width: 128px !important;
+  max-width: 128px !important;
+  padding: 0 16px !important;
+  justify-content: center !important;
+  align-items: center !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  border-radius: 980px !important;
+  box-shadow: none !important;
+}
+@media (max-width: 760px) {
+  .nav-quick-actions {
+    min-height: 40px !important;
+    margin-top: 8px !important;
+  }
+  .nav-cookie-sync-btn {
+    height: 40px !important;
+    min-height: 40px !important;
+    width: 128px !important;
+    min-width: 128px !important;
+    max-width: 128px !important;
+  }
+}
