@@ -10790,3 +10790,79 @@ input.is-saved-field:focus {
   .nav-stats-strip .nav-stat-pill strong { font-size: 10px !important; max-width: 18px !important; }
   #tab-sites .site-category-actions .category-pill { padding: 0 5px !important; font-size: 9.5px !important; }
 }
+
+
+/* ---- 2026-05-31: mobile four-stat bar + search clear button ---- */
+.home-site-search-wrap {
+  position: relative !important;
+}
+.home-site-search-clear {
+  position: absolute !important;
+  right: 9px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(148, 163, 184, .18) !important;
+  color: var(--text-sec) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  z-index: 2 !important;
+}
+.home-site-search-clear:hover {
+  background: rgba(148, 163, 184, .28) !important;
+  color: var(--text-main) !important;
+}
+.home-site-search-clear[hidden] {
+  display: none !important;
+}
+.home-site-search-wrap .home-site-search {
+  padding-right: 38px !important;
+}
+@media (max-width: 760px) {
+  .nav-stats-strip .nav-all-filter {
+    display: none !important;
+  }
+  .nav-stats-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 4px !important;
+  }
+  .nav-stats-strip .nav-stat-pill {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 4px !important;
+    gap: 4px !important;
+  }
+  .nav-stats-strip .nav-stat-label {
+    max-width: none !important;
+  }
+  .nav-stats-strip .nav-stat-label::after {
+    content: none !important;
+  }
+  .nav-stats-strip .nav-stat-label {
+    font-size: 11px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+  .nav-stats-strip .nav-stat-pill strong {
+    font-size: 12px !important;
+    max-width: none !important;
+  }
+}
+@media (max-width: 380px) {
+  .nav-stats-strip { gap: 4px !important; }
+  .nav-stats-strip .nav-stat-pill { padding: 0 3px !important; gap: 3px !important; }
+  .nav-stats-strip .nav-stat-label { font-size: 10px !important; }
+  .nav-stats-strip .nav-stat-pill strong { font-size: 11px !important; }
+}

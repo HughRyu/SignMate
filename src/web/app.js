@@ -68,6 +68,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("homeSiteSearch")?.addEventListener("input", event => {
     activeSiteSearch = event.target.value || "";
+    updateHomeSearchClear();
+    loadSites(true);
+  });
+  document.getElementById("homeSiteSearchClear")?.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    const search = document.getElementById("homeSiteSearch");
+    if (!search) return;
+    search.value = "";
+    activeSiteSearch = "";
+    updateHomeSearchClear();
+    search.focus();
     loadSites(true);
   });
   document.getElementById("navSuccessFilter")?.addEventListener("click", (event) => {
@@ -181,6 +193,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+function updateHomeSearchClear() {
+  const search = document.getElementById("homeSiteSearch");
+  const clear = document.getElementById("homeSiteSearchClear");
+  if (!clear) return;
+  clear.hidden = !String(search?.value || activeSiteSearch || "").trim();
+}
+
 function clearSiteFilters({ clearSearch = false } = {}) {
   activeSiteKind = "all";
   activeSiteCategory = "all";
@@ -189,6 +208,7 @@ function clearSiteFilters({ clearSearch = false } = {}) {
     activeSiteSearch = "";
     const search = document.getElementById("homeSiteSearch");
     if (search) search.value = "";
+    updateHomeSearchClear();
   }
 }
 
