@@ -295,6 +295,21 @@ async function readAdditionalNexusStatusPages(session, siteKey = "", stats = {},
   return { text: combinedText, stats: mergedStats };
 }
 
+async function readNexusControlStats(session, siteKey = "", stats = {}, steps = []) {
+  let mergedStats = stats;
+  try {
+    const res = await session.get("/usercp.php");
+    const html = await readText(res);
+    const text = htmlToText(html);
+    const controlStats = buildInviteStats(text, stats.invite);
+    mergedStats = mergeStats(mergedStats, controlStats);
+    steps.push({ label: "HTTP 读取控制面板", ok: res.status >= 200 && res.status < 400, status: res.status, detail: controlStats.inviteDisplay ? `邀请数 ${controlStats.inviteDisplay}` : "/usercp.php" });
+  } catch (err) {
+    steps.push({ label: "HTTP 读取控制面板", ok: false, detail: err.message });
+  }
+  return mergedStats;
+}
+
 function loginOkFromText(text = "", stats = {}) {
   return /欢迎回来|歡迎回來|退出|控制面板|用户中心|我的账户|嗨[,，]/.test(text) && !!stats.username;
 }
@@ -339,6 +354,9 @@ async function runNexusApi(siteConfig = {}, secrets = {}, driverName = "NexusPHP
   const extraStatus = await readAdditionalNexusStatusPages(session, siteKey, stats, steps);
   const allStatusText = `${homeText}\n${extraStatus.text || ""}`;
   stats = sanitizeInstructionalSignStats(siteKey, mergeStats(parsePtStats(allStatusText, siteKey), extraStatus.stats), allStatusText);
+  if (!stats.inviteDisplay || siteKey === "audiences-me") {
+    stats = await readNexusControlStats(session, siteKey, stats, steps);
+  }
   const loggedIn = loginOkFromText(allStatusText, stats);
   steps.push({ label: "HTTP 打开站点", ok: homeResp.status >= 200 && homeResp.status < 400, status: homeResp.status, detail: url });
   steps.push({ label: "确认登录态", ok: loggedIn, detail: stats.username ? `用户 ${stats.username}` : "未识别到登录用户" });
