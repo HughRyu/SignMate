@@ -96,6 +96,8 @@ function enrichCookieCloudConfig(config = readCookieCloudConfig()) {
     lastErrorAt: state.lastErrorAt || "",
     lastError: state.lastError || "",
     lastUpdatedCount: Number(state.lastUpdatedCount ?? newest.count ?? 0) || 0,
+    lastSkippedCount: Number(state.lastSkippedCount || 0) || 0,
+    lastSkippedItems: Array.isArray(state.lastSkippedItems) ? state.lastSkippedItems : [],
     lastSource: state.lastSource || newest.source || "",
     nextSyncAt: config.autoSync && lastSuccessAt ? new Date(new Date(lastSuccessAt).getTime() + intervalMs).toISOString() : "",
   };
@@ -1048,7 +1050,7 @@ export async function startServer() {
       try {
         updateMaintenanceState("cookiecloud", { lastAttemptAt: new Date().toISOString(), lastError: "" });
         const result = await syncCookieCloudFromSavedConfig({ source: "auto" });
-        updateMaintenanceState("cookiecloud", { lastSuccessAt: new Date().toISOString(), lastUpdatedCount: result.updated.length, lastSkippedCount: result.skipped.length, lastSource: "auto", lastError: "" });
+        updateMaintenanceState("cookiecloud", { lastSuccessAt: new Date().toISOString(), lastUpdatedCount: result.updated.length, lastSkippedCount: result.skipped.length, lastSkippedItems: result.skipped, lastSource: "auto", lastError: "" });
         logger.info(`[CookieCloud] 自动同步完成：更新 ${result.updated.length} 个站点，跳过 ${result.skipped.length} 个站点`);
       } catch (err) {
         updateMaintenanceState("cookiecloud", { lastErrorAt: new Date().toISOString(), lastError: err.message });
@@ -1479,7 +1481,7 @@ export async function startServer() {
         secrets[item.key] = { ...(secrets[item.key] || {}), cookie: item.cookie, cookiecloud_updated_at: now, cookiecloud_source: "manual" };
       }
       writeSecrets(secrets);
-      updateMaintenanceState("cookiecloud", { lastAttemptAt: now, lastSuccessAt: now, lastUpdatedCount: toWrite.length, lastSource: "manual", lastError: "" });
+      updateMaintenanceState("cookiecloud", { lastAttemptAt: now, lastSuccessAt: now, lastUpdatedCount: toWrite.length, lastSkippedCount: skippedWrites.length, lastSkippedItems: skippedWrites, lastSource: "manual", lastError: "" });
       if (body.saveConfig === true) {
         upsertEnvValues({ COOKIECLOUD_ENABLED: body.enabled === false ? "false" : "true", COOKIECLOUD_HOST: normalizeCookieCloudHost(host), COOKIECLOUD_UUID: String(uuid || "").trim(), ...(body.password ? { COOKIECLOUD_PASSWORD: String(body.password).trim() } : {}), COOKIECLOUD_AUTO_SYNC: body.autoSync === true ? "true" : "false", COOKIECLOUD_INCLUDE_DISABLED: body.includeDisabled === true ? "true" : "false", COOKIECLOUD_AUTO_INTERVAL_MINUTES: String(Math.max(15, Number(body.autoIntervalMinutes || 180) || 180)) });
       }

@@ -2388,11 +2388,20 @@ function formatMaintenanceTime(value) {
 function updateCookieCloudStatusMeta(config = {}) {
   const el = document.getElementById("cookieCloudStatusMeta");
   if (!el) return;
-  const count = Number(config.lastUpdatedCount || 0);
-  const extra = count ? ` · ${count} 站` : "";
+  const updated = Number(config.lastUpdatedCount || 0);
+  const skipped = Number(config.lastSkippedCount || 0);
+  const source = config.lastSource === "auto" ? "自动" : (config.lastSource === "manual" ? "手动" : "");
+  const parts = [];
+  if (source) parts.push(source);
+  if (updated || config.lastSuccessAt) parts.push(`更新 ${updated}`);
+  if (skipped) parts.push(`跳过 ${skipped}`);
   const error = config.lastError ? ` · 最近错误：${config.lastError}` : "";
-  el.textContent = `最近同步：${formatMaintenanceTime(config.lastSuccessAt)}${extra}${error}`;
-  el.title = config.nextSyncAt ? `下次自动同步：${formatMaintenanceTime(config.nextSyncAt)}` : "";
+  const summary = parts.length ? ` · ${parts.join(" · ")}` : "";
+  el.textContent = `最近同步：${formatMaintenanceTime(config.lastSuccessAt)}${summary}${error}`;
+  const skippedItems = Array.isArray(config.lastSkippedItems) ? config.lastSkippedItems : [];
+  const skippedText = skippedItems.map(item => item.reason).filter(Boolean).join("\n");
+  const nextText = config.nextSyncAt ? `下次自动同步：${formatMaintenanceTime(config.nextSyncAt)}` : "";
+  el.title = [nextText, skippedText].filter(Boolean).join("\n");
 }
 
 function updateWebDavStatusMeta(config = {}) {
