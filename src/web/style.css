@@ -10230,3 +10230,17 @@ input.is-saved-field:focus {
   .nav-stat-label::after { font-size: 9px !important; }
   .nav-stat-pill strong { font-size: 13px !important; }
 }
+
+/* ---- 2026-05-31: keep execution method badges compact ---- */
+.site-exec-badge {
+  min-width: 24px !important;
+  max-width: 34px !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+.manage-exec-badge {
+  min-width: 22px !important;
+  max-width: 32px !important;
+}

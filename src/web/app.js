@@ -182,17 +182,32 @@ function scheduleModeLabel(mode = "") {
 
 function executionMethodShort(site = {}) {
   const method = String(site.executionMethod || "").toLowerCase();
+  if (method === "hybrid") return "A+B";
+  if (method === "api") return "API";
+  if (method === "browser") return "BR";
+  if (method === "api-first") return "A→B";
+  const label = site.executionMethodLabel || "Auto";
+  if (/API\+Browser/i.test(label)) return "A+B";
+  if (/Browser/i.test(label)) return "BR";
+  if (/API-first|API 优先/i.test(label)) return "A→B";
+  return label;
+}
+
+function executionMethodFullLabel(site = {}) {
+  const method = String(site.executionMethod || "").toLowerCase();
   if (method === "hybrid") return "API+Browser";
   if (method === "api") return "API";
   if (method === "browser") return "Browser";
   if (method === "api-first") return "API-first";
-  return site.executionMethodLabel || "Auto";
+  return site.executionMethodLabel || executionMethodShort(site) || "Auto";
 }
 
 function executionMethodTitle(site = {}) {
-  const label = executionMethodShort(site);
+  const shortLabel = executionMethodShort(site);
+  const fullLabel = executionMethodFullLabel(site);
+  const alias = shortLabel !== fullLabel ? `${shortLabel} = ${fullLabel}` : fullLabel;
   const action = site.details?.checkinAction ? `；本次动作：${site.details.checkinAction}` : "";
-  return `执行方式：${label}${action}`;
+  return `执行方式：${alias}${action}`;
 }
 
 function lastRunScheduleTitle(site = {}, recentLabel = "最近执行") {
