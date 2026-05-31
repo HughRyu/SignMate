@@ -600,6 +600,8 @@ export async function runAll(options = {}) {
     }
   }
 
-  if (!batchState.cancelRequestedAt && !batchState.notifyFailedAt) clearBatchStateSafe();
+  // Cancelled batches should stop cleanly without leaving a persistent “知道了” task card.
+  // Keep state only when notification failed, so the frontend can surface that problem.
+  if (!batchState.notifyFailedAt) clearBatchStateSafe();
   return results;
 }

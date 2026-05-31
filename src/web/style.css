@@ -10513,3 +10513,49 @@ input.is-saved-field:focus {
     padding-right: 6px !important;
   }
 }
+
+/* ---- 2026-05-31: clickable total/enabled stats, no text selection on blank reset, batch padding ---- */
+.nav-stats-strip .nav-all-filter,
+.nav-stats-strip button.nav-stat-pill {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+.nav-stats-strip .nav-all-filter:hover,
+.nav-stats-strip .nav-all-filter:focus-visible {
+  background: rgba(219,234,254,.78) !important;
+  box-shadow: inset 0 0 0 1px rgba(59,130,246,.26), 0 6px 16px rgba(59,130,246,.10) !important;
+}
+#tab-sites,
+#tab-sites .main,
+#tab-sites .sites-grid,
+#tab-sites .home-site-search-bar,
+.nav-status-area,
+.nav-stats-strip {
+  -webkit-user-select: none;
+  user-select: none;
+}
+#tab-sites input,
+#tab-sites textarea,
+#tab-sites .site-card,
+#tab-sites .site-card * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.batch-progress {
+  padding-left: 20px !important;
+  padding-right: 18px !important;
+}
+.batch-progress-title {
+  padding-left: 2px !important;
+}
+@media (max-width: 760px) {
+  .batch-progress {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .batch-progress-title {
+    padding-left: 0 !important;
+  }
+}

@@ -100,20 +100,26 @@ document.addEventListener("DOMContentLoaded", () => {
       loadSites(true);
     });
   });
-  document.querySelectorAll(".nav-all-filter").forEach(btn => {
-    btn.addEventListener("click", (event) => {
-      event.currentTarget?.classList.add("clicked");
-      window.setTimeout(() => event.currentTarget?.classList.remove("clicked"), 220);
-      clearSiteFilters();
-      switchTab("sites");
-      loadSites(true);
-    });
+  document.querySelector(".nav-stats-strip")?.addEventListener("click", event => {
+    const allBtn = event.target.closest(".nav-all-filter");
+    if (!allBtn) return;
+    event.preventDefault();
+    event.stopPropagation();
+    allBtn.classList.add("clicked");
+    window.setTimeout(() => allBtn.classList.remove("clicked"), 220);
+    resetSiteViewToAll();
   });
+  document.addEventListener("mousedown", event => {
+    if (event.detail >= 2 && isBlankSiteFilterResetTarget(event.target)) {
+      event.preventDefault();
+      clearTextSelectionSoon();
+    }
+  }, true);
   document.addEventListener("dblclick", event => {
-    if (!event.target.closest(".site-card, .modal, .nav, .nav-status-area, .home-site-search-bar, .batch-progress, button, input, select, textarea, a")) {
-      clearSiteFilters({ clearSearch: true });
-      switchTab("sites");
-      loadSites(true);
+    if (isBlankSiteFilterResetTarget(event.target)) {
+      event.preventDefault();
+      clearTextSelectionSoon();
+      resetSiteViewToAll({ clearSearch: true });
     }
   });
   document.addEventListener("click", event => {
@@ -184,6 +190,26 @@ function clearSiteFilters({ clearSearch = false } = {}) {
     const search = document.getElementById("homeSiteSearch");
     if (search) search.value = "";
   }
+}
+
+function clearTextSelectionSoon() {
+  const clear = () => {
+    try { window.getSelection?.()?.removeAllRanges?.(); } catch {}
+  };
+  clear();
+  window.setTimeout(clear, 0);
+  window.setTimeout(clear, 60);
+}
+
+function isBlankSiteFilterResetTarget(target) {
+  return !target?.closest?.(".site-card, .modal, .nav, .nav-status-area, .home-site-search-bar, .batch-progress, button, input, select, textarea, a, label, [contenteditable='true']");
+}
+
+function resetSiteViewToAll({ clearSearch = false } = {}) {
+  clearSiteFilters({ clearSearch });
+  clearTextSelectionSoon();
+  switchTab("sites");
+  loadSites(true);
 }
 
 // ---- Clock ----
@@ -3317,6 +3343,7 @@ function applyBackendBatchState(state = {}) {
   if ((hasInterruptedState || cancelled || notifyFailed) && state.id && dismissedInterruptedBatchIds.has(state.id)) return false;
   if (state.active === false && !hasInterruptedState && !cancelled && !notifyFailed) return false;
   const active = state.active === true;
+  if (state.cancelRequestedAt && state.id && dismissedInterruptedBatchIds.has(state.id)) return false;
   batchRunState.id = state.id || "";
   batchRunState.active = active;
   batchRunState.interrupted = !active && hasInterruptedState;
@@ -3473,10 +3500,14 @@ async function cancelBatchRun() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reason: "用户在前台点击终止签到" }),
     });
-    batchRunState.notice = data?.message || "已请求终止；当前站点结束后停止后续站点";
-    batchRunState.noticeType = "warning";
+    const stateId = data?.state?.id || batchRunState?.id;
+    if (stateId) {
+      dismissedInterruptedBatchIds.add(stateId);
+      localStorage.setItem("dismissedInterruptedBatchIds", JSON.stringify([...dismissedInterruptedBatchIds]));
+    }
+    batchRunState = { active: false };
     renderBatchProgress(latestAllSites);
-    showToast(batchRunState.notice, "warning");
+    showToast(data?.message || "已请求终止；后端会停止后续站点", "warning");
     await refreshBackendBatchState(true);
   } catch (err) {
     showToast(`终止失败: ${err.message}`, "error");
