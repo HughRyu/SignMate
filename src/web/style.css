@@ -10650,3 +10650,59 @@ input.is-saved-field:focus {
   border-color: rgba(245, 158, 11, 0.34) !important;
   color: #d97706 !important;
 }
+
+
+/* ---- 2026-05-31: mobile status/category tighter final ---- */
+@media (max-width: 760px) {
+  .nav-status-area {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+  .nav-stats-strip {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 2px !important;
+    padding: 3px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+  .nav-stat-pill {
+    height: 26px !important;
+    min-height: 26px !important;
+    padding: 0 1px !important;
+    gap: 1px !important;
+    border-radius: 9px !important;
+  }
+  .nav-stat-label::after {
+    font-size: 9px !important;
+    line-height: 1 !important;
+  }
+  .nav-stat-pill strong {
+    font-size: 12px !important;
+    line-height: 1 !important;
+    min-width: .8em !important;
+  }
+  #tab-sites .site-category-actions {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    gap: 4px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+  #tab-sites .site-category-actions .category-pill {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 7px !important;
+    gap: 3px !important;
+    font-size: 11px !important;
+    border-radius: 999px !important;
+  }
+}
+@media (max-width: 360px) {
+  .nav-stat-label::after { font-size: 8px !important; }
+  .nav-stat-pill strong { font-size: 11px !important; }
+  #tab-sites .site-category-actions .category-pill { padding: 0 6px !important; font-size: 10px !important; }
+}

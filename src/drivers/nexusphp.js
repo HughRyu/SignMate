@@ -407,6 +407,16 @@ function mergeStats(base = {}, extra = {}) {
 
 function buildInviteStats(text = "", fallback = "") {
   const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  const invitePair = normalized.match(/(?:邀请|邀請)(?!人)[^:：0-9]{0,24}[:：]\s*(\d+)\s*\/\s*(\d+)/i);
+  if (invitePair) {
+    const normalInvite = invitePair[1];
+    const tempInvite = invitePair[2];
+    const inviteDisplay = normalInvite && tempInvite ? `${normalInvite}+${tempInvite}` : (normalInvite || "");
+    const inviteNote = normalInvite && tempInvite
+      ? `邀请数：正式 ${normalInvite}，临时 ${tempInvite}`
+      : (normalInvite ? `邀请数：${normalInvite}` : "");
+    return { invite: normalInvite, tempInvite, inviteDisplay, inviteNote };
+  }
   const first = patterns => {
     for (const pattern of patterns) {
       const value = normalized.match(pattern)?.[1];
@@ -415,10 +425,12 @@ function buildInviteStats(text = "", fallback = "") {
     return "";
   };
   const normalInvite = first([
+    /(?:正式|普通|永久|可用|剩余|剩餘)?\s*(?:邀请|邀請)(?!人)(?:\s*\[(?:发送|發送)\])?\s*[:：]?\s*(\d+)\s*\/\s*\d+/i,
     /(?:正式|普通|永久|可用|剩余|剩餘)?\s*(?:邀请|邀請)(?!人)(?:\s*\[(?:发送|發送)\])?\s*[:：]?\s*([0-9]+)/i,
     /(?:invite|invites)(?!r)[^0-9]{0,16}([0-9]+)/i,
   ]) || String(fallback || "").match(/^[0-9]+$/)?.[0] || "";
   const tempInvite = first([
+    /(?:正式|普通|永久|可用|剩余|剩餘)?\s*(?:邀请|邀請)(?!人)(?:\s*\[(?:发送|發送)\])?\s*[:：]?\s*\d+\s*\/\s*(\d+)/i,
     /(?:临时|臨時|暂时|暫時|temporary)\s*(?:邀请|邀請|invite)[^0-9]{0,20}([0-9]+)/i,
     /(?:邀请|邀請|invite)[^。；;]{0,18}(?:临时|臨時|暂时|暫時|temporary)[^0-9]{0,20}([0-9]+)/i,
   ]);
