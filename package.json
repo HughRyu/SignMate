@@ -11,7 +11,8 @@
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "test": "npm run check && npm run check:browser && npm run audit:prod",
     "test:nodeseek": "node src/drivers/nodeseek.js",
-    "check:browser": "node scripts/check-browser.js"
+    "check:browser": "node scripts/check-browser.js",
+    "release:check": "node scripts/release-check.js"
   },
   "dependencies": {
     "chalk": "^5.4.1",
