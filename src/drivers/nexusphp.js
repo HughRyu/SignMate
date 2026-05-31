@@ -200,7 +200,7 @@ function parsePtStats(text = "", siteKey = "") {
   const normalizedUpload = hhanPanel?.[3] || upload;
   const normalizedDownload = hhanPanel?.[4] || download;
   const invite = hhanPanel?.[1]
-    || normalized.match(/(?:邀请|邀請)\s*\[发送\]\s*[:：]\s*([^\s]+)/)?.[1]
+    || normalized.match(/(?:邀请|邀請)\s*\[\s*(?:发送|發送)\s*\]\s*[:：]\s*([^\s]+)/)?.[1]
     || normalized.match(/\[(?:邀请|邀請)\s*[:：]\s*([^\s\]]+)/)?.[1]
     || normalized.match(/私人邀请\s*[:：]\s*([0-9]+)/)?.[1]
     || normalized.match(/\[邀请\]\s*[:：]\s*([0-9]+)/)?.[1]
@@ -407,7 +407,7 @@ function mergeStats(base = {}, extra = {}) {
 
 function buildInviteStats(text = "", fallback = "") {
   const normalized = String(text || "").replace(/\s+/g, " ").trim();
-  const headerInvite = normalized.match(/(?:邀请|邀請)(?!人)[^:：0-9]{0,30}[:：]\s*(\d+)(?:\s*\/\s*(\d+))?/i);
+  const headerInvite = normalized.match(/(?:邀请|邀請)(?!人)(?:\s*\[\s*(?:发送|發送)\s*\])?[^:：0-9]{0,30}[:：]\s*(\d+)(?:\s*\/\s*(\d+))?/i);
   if (headerInvite) {
     const normalInvite = headerInvite[1] || "";
     const tempInvite = headerInvite[2] ?? "";

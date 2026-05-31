@@ -795,11 +795,12 @@ function formatInviteMetric(details = {}, siteKey = "") {
     }
   }
   if (!normal && !temp) return null;
-  const hasTemp = temp !== "";
-  const text = hasTemp ? `邀请数 x${normal || 0} + x${temp}` : `邀请数 x${normal || 0}`;
+  const tempNumber = temp === "" ? null : Number(temp);
+  const showTemp = Number.isFinite(tempNumber) && tempNumber > 0;
+  const text = showTemp ? `邀请数 x${normal || 0}（+${temp}）` : `邀请数 x${normal || 0}`;
   const siteName = siteKey === "audiences-me" ? "Audiences " : "";
-  const title = hasTemp
-    ? `${siteName}邀请数：普通邀请 ${normal || 0}，临时邀请 ${temp}`
+  const title = showTemp
+    ? `${siteName}邀请数：普通邀请 ${normal || 0}，临时邀请 +${temp}`
     : `${siteName}邀请数：${normal || 0}`;
   return { text, title };
 }
