@@ -829,7 +829,8 @@ function buildAggregateMetrics(details = {}, siteKey = "") {
   const totalExp = finiteNumber(details.totalExp) ?? finiteNumber(details.totalExperience)
     ?? (siteKey !== "smzdm" && rewardExp !== null && totalDays !== null ? rewardExp * totalDays : null);
 
-  if (details.bonus && ["pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com"].includes(siteKey)) items.push(metricItem(`🪄魔力值 ${esc(String(details.bonus))}${esc(signedDelta(ptBonusGain(details)))}`, "metric-chip metric-reward", "PT 魔力值（括号内为本次获得）"));
+  if (details.bonus && siteKey === "audiences-me") items.push(metricItem(`🍿爆米花 ${esc(String(details.bonus))}`, "metric-chip metric-reward", "Audiences 爆米花"));
+  else if (details.bonus && ["pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com"].includes(siteKey)) items.push(metricItem(`🪄魔力值 ${esc(String(details.bonus))}${esc(signedDelta(ptBonusGain(details)))}`, "metric-chip metric-reward", "PT 魔力值（括号内为本次获得）"));
   else if (siteKey === "hhanclub-net" && ptBonusGain(details)) items.push(metricItem(`🪄魔力值 ?${esc(signedDelta(ptBonusGain(details)))}`, "metric-chip metric-reward", "HHanClub 憨豆（等同魔力值）"));
   if (!details.bonus && ptBonusGain(details) && ["hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com"].includes(siteKey)) {
     const rewardName = String(details.rewardName || "").replace(/^[,，。；;)）\]】]+|[,，。；;)）\]】]+$/g, "");
@@ -1110,6 +1111,8 @@ function cleanDailyMessage(message = "", siteKey = "") {
 }
 
 function hasMissedTodaySignin(site = {}) {
+  // Temporary UI preview for Hugh: force Audiences card into missed-signin visual state.
+  if (site?.key === "audiences-me") return true;
   if (!site?.enabled || siteKindOf(site) !== "signin") return false;
   if (site._running || site.lastSuccess === true || !site.lastTime) return false;
   const batchMode = appSettings?.batch?.mode || site.scheduleMode || site.schedule_mode || "fixed";

@@ -176,13 +176,27 @@ function parsePtStats(text = "", siteKey = "") {
     || normalized.match(/猫粮\s*(?:\[[^\]]*\])?\s*[:：]?\s*([0-9,.]+)/)?.[1]
     || normalized.match(/魔力\s*[:：]?\s*([0-9,.]+)/)?.[1]
     || "";
-  const ratio = normalized.match(/\[?分享率\]?\s*[:：]\s*(≥?\s*[0-9.]+)/)?.[1]?.replace(/\s+/g, "") || "";
-  const upload = normalized.match(/\[?(?:上传|上傳)(?:量)?\]?\s*[:：]\s*([0-9.]+\s*[KMGTPE]?B)/i)?.[1]?.replace(/\s+(?=[KMGTPE]?B$)/i, " ") || "";
-  const download = normalized.match(/\[?(?:下载|下載)(?:量)?\]?\s*[:：]\s*([0-9.]+\s*[KMGTPE]?B)/i)?.[1]?.replace(/\s+(?=[KMGTPE]?B$)/i, " ") || "";
+  let ratio = normalized.match(/\[?分享率\]?\s*[:：]\s*(≥?\s*[0-9.]+)/)?.[1]?.replace(/\s+/g, "") || "";
+  let upload = normalized.match(/\[?(?:上传|上傳)(?:量)?\]?\s*[:：]\s*([0-9.]+\s*[KMGTPE]?B)/i)?.[1]?.replace(/\s+(?=[KMGTPE]?B$)/i, " ") || "";
+  let download = normalized.match(/\[?(?:下载|下載)(?:量)?\]?\s*[:：]\s*([0-9.]+\s*[KMGTPE]?B)/i)?.[1]?.replace(/\s+(?=[KMGTPE]?B$)/i, " ") || "";
+  let seedPoints = "";
+  let audiencesBonus = "";
+  if (siteKey === "audiences-me") {
+    const audienceRow = normalized.match(/HughRyu\s+(\d+(?:\.\d+)?)\s+([0-9.]+\s*[KMGTPE]?B)\s+([0-9.]+\s*[KMGTPE]?B)\s+([0-9,.]+)\s+([0-9,.]+)/i);
+    if (audienceRow) {
+      ratio = ratio || audienceRow[1];
+      upload = upload || audienceRow[2];
+      download = download || audienceRow[3];
+      audiencesBonus = audienceRow[4];
+      seedPoints = audienceRow[5];
+    }
+    audiencesBonus = audiencesBonus || normalized.match(/爆米花\s*[:：]?\s*([0-9,.]+)/)?.[1] || "";
+    seedPoints = seedPoints || normalized.match(/做种积分\s*[:：]?\s*([0-9,.]+)/)?.[1] || "";
+  }
   const hhanPanel = siteKey === "hhanclub-net"
     ? normalized.match(/\[签到得憨豆\]\s*\[邀请\]\s*[:：]\s*([0-9]+)\s+([0-9,]+)\s*\[勋章\]\s*([0-9.]+\s*[KMGTPE]?B)\s+[0-9]+\s+([0-9.]+\s*[KMGTPE]?B)/i)
     : null;
-  const normalizedBonus = hhanPanel?.[2] || bonus;
+  const normalizedBonus = hhanPanel?.[2] || audiencesBonus || bonus;
   const normalizedUpload = hhanPanel?.[3] || upload;
   const normalizedDownload = hhanPanel?.[4] || download;
   const invite = hhanPanel?.[1]
@@ -213,7 +227,7 @@ function parsePtStats(text = "", siteKey = "") {
   if (siteKey === "pterclub-net" && bonusGain) rewardName = "猫粮";
   rewardName = rewardName.replace(/^[,，。；;)）\]】]+|[,，。；;)）\]】]+$/g, "");
   if (/^[,，。；;\[\]【】()（）0]+$/.test(rewardName)) rewardName = "";
-  return { username, bonus: normalizedBonus, bonusGain, rewardName, ratio, upload: normalizedUpload, download: normalizedDownload, ...buildInviteStats(normalized, invite), signText };
+  return { username, bonus: normalizedBonus, bonusGain, rewardName, ratio, upload: normalizedUpload, download: normalizedDownload, seedPoints, ...buildInviteStats(normalized, invite), signText };
 }
 
 function hasVerification(text = "") {
