@@ -10102,3 +10102,43 @@ input.is-saved-field:focus {
     max-width: 128px !important;
   }
 }
+
+/* ---- 2026-05-31: mobile quick Cookie sync joins site action row ---- */
+.mobile-cookie-sync-btn {
+  display: none !important;
+}
+@media (max-width: 760px) {
+  .nav-quick-actions {
+    display: none !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions #btnManageSites,
+  #tab-sites .home-site-search-bar > .site-header-actions #btnQuickCookieSyncMobile,
+  #tab-sites .home-site-search-bar > .site-header-actions #btnRunAll {
+    grid-area: actions !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: calc((100% - 16px) / 3) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: 0 6px !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    transform: none !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions #btnManageSites {
+    justify-self: start !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions #btnQuickCookieSyncMobile {
+    justify-self: center !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions #btnRunAll {
+    justify-self: end !important;
+  }
+}

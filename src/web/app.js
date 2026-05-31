@@ -122,6 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("btnRunAll")?.addEventListener("click", triggerAll);
   document.getElementById("btnQuickCookieSync")?.addEventListener("click", quickCookieCloudSync);
+  document.getElementById("btnQuickCookieSyncMobile")?.addEventListener("click", quickCookieCloudSync);
   document.getElementById("btnManageSites")?.addEventListener("click", () => openSiteManageModal("all"));
   document.getElementById("btnRefreshHistory")?.addEventListener("click", () => loadHistory());
   document.getElementById("btnClearHistory")?.addEventListener("click", clearHistory);
@@ -2495,8 +2496,8 @@ function renderCookieCloudMatches(matches = [], mode = "preview") {
 }
 
 
-async function quickCookieCloudSync() {
-  const btn = document.getElementById("btnQuickCookieSync");
+async function quickCookieCloudSync(event) {
+  const btn = event?.currentTarget || document.getElementById("btnQuickCookieSync") || document.getElementById("btnQuickCookieSyncMobile");
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>同步中…'; }
   try {
     const { data } = await api("/api/cookiecloud/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
