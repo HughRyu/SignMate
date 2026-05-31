@@ -775,11 +775,10 @@ function formatInviteMetric(details = {}, siteKey = "") {
     }
   }
   if (!normal && !temp) return null;
-  const tempNumber = temp === "" ? null : Number(temp);
-  const hasPositiveTemp = Number.isFinite(tempNumber) && tempNumber > 0;
-  const text = hasPositiveTemp ? `邀请数 x${normal || 0} + x${temp}` : `邀请数 x${normal || 0}`;
+  const hasTemp = temp !== "";
+  const text = hasTemp ? `邀请数 x${normal || 0} + x${temp}` : `邀请数 x${normal || 0}`;
   const siteName = siteKey === "audiences-me" ? "Audiences " : "";
-  const title = hasPositiveTemp
+  const title = hasTemp
     ? `${siteName}邀请数：普通邀请 ${normal || 0}，临时邀请 ${temp}`
     : `${siteName}邀请数：${normal || 0}`;
   return { text, title };

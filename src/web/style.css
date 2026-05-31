@@ -10706,3 +10706,87 @@ input.is-saved-field:focus {
   .nav-stat-pill strong { font-size: 11px !important; }
   #tab-sites .site-category-actions .category-pill { padding: 0 6px !important; font-size: 10px !important; }
 }
+
+
+/* ---- 2026-05-31: mobile screenshot fix, prevent status overlap ---- */
+@media (max-width: 760px) {
+  .nav-status-area {
+    width: calc(100vw - 14px) !important;
+    max-width: calc(100vw - 14px) !important;
+    overflow: hidden !important;
+  }
+  .nav-stats-strip {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 2px !important;
+    padding: 3px !important;
+    width: 100% !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    overflow: hidden !important;
+  }
+  .nav-stats-strip .nav-stat-pill {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 0 !important;
+    gap: 1px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+  .nav-stats-strip .nav-stat-label {
+    display: inline-flex !important;
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    max-width: 12px !important;
+    overflow: hidden !important;
+    font-size: 0 !important;
+    line-height: 1 !important;
+  }
+  .nav-stats-strip .nav-stat-label::after {
+    content: attr(data-short) !important;
+    display: inline-block !important;
+    font-size: 8px !important;
+    line-height: 1 !important;
+    max-width: 10px !important;
+    overflow: hidden !important;
+  }
+  .nav-stats-strip .nav-stat-pill strong {
+    flex: 0 0 auto !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+    min-width: 0 !important;
+    max-width: 20px !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+  }
+  #tab-sites .home-site-search-bar {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  #tab-sites .site-category-actions {
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 3px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  #tab-sites .site-category-actions .category-pill {
+    height: 26px !important;
+    min-height: 26px !important;
+    padding: 0 6px !important;
+    font-size: 10px !important;
+    gap: 2px !important;
+  }
+}
+@media (max-width: 380px) {
+  .nav-stats-strip .nav-stat-label::after { font-size: 7px !important; max-width: 8px !important; }
+  .nav-stats-strip .nav-stat-pill strong { font-size: 10px !important; max-width: 18px !important; }
+  #tab-sites .site-category-actions .category-pill { padding: 0 5px !important; font-size: 9.5px !important; }
+}
