@@ -312,10 +312,15 @@ export const BUILTIN_SITES = {
     "timeout": 30000,
     "base_url": "https://ourbits.club/",
     "category": "pt",
-    "kind": "signin",
+    "kind": "visit",
+    "enforced_kind": "visit",
     "login_keyword": "OurBits",
+    "verification_type": "Cloudflare Turnstile",
+    "verification_auto": false,
+    "signin_blocked_by_verification": true,
+    "verification_note": "OurBits 签到页需要 Cloudflare Turnstile，自动通过不稳定；已改为保活访问，不再触发签到入口。",
     "proxy": "auto",
-    "signin_mode": "playwright"
+    "signin_mode": "visit"
   },
   "piggo-me": {
     "enabled": true,
