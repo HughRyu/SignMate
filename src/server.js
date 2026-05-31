@@ -2018,25 +2018,35 @@ export async function startServer() {
       const batch = sitesRaw.batch || {};
       const batchMode = batch.mode === "fixed" ? "fixed" : (batch.mode === "random" ? "random" : (batch.mode === "independent" ? "independent" : "random"));
       const fixedTime = normalizeClockTime(batch.signin_time || "09:00", "09:00");
+      const visitFixedTime = normalizeClockTime(batch.visit_time || fixedTime || "09:30", "09:30");
       const summary = {
         mode: batchMode,
-        fixed: { signin: null, visit: null, dueTime: fixedTime },
+        fixed: { signin: null, visit: null, dueTime: fixedTime, visitDueTime: visitFixedTime },
         random: { signin: null, visit: null, dueTime: null },
         manual: { all: null, signin: null, visit: null },
         latest: { signin: null, visit: null },
         latestScheduled: null,
+        latestBatch: null,
+        randomStart: normalizeClockTime(batch.random_start || "02:00", "02:00"),
+        randomEnd: normalizeClockTime(batch.random_end || "22:00", "22:00"),
       };
+      const batchItems = [];
       for (const entry of history) {
         const kind = entry.kind || entry.details?.kind || "signin";
         if (kind !== "signin" && kind !== "visit") continue;
         const mode = entry.details?.scheduleMode || entry.details?.schedule_mode || entry.scheduleMode || entry.schedule_mode || null;
+        const rawTime = entry.timestamp || entry.time || null;
         const item = {
           site: entry.site,
           siteKey: entry.siteKey || entry.key || null,
           success: entry.success,
-          time: entry.timestamp || entry.time || null,
+          time: rawTime,
           mode: mode === "manual" || mode === "fixed" || mode === "random" ? mode : null,
         };
+        if (item.mode) {
+          const t = new Date(rawTime || Date.now()).getTime();
+          if (Number.isFinite(t)) batchItems.push({ ...item, ms: t });
+        }
         if (!summary.latest[kind]) summary.latest[kind] = item;
         if (!summary.latestScheduled && item.mode) summary.latestScheduled = item;
         const hasExplicitMode = mode === "manual" || mode === "fixed" || mode === "random";
@@ -2055,6 +2065,30 @@ export async function startServer() {
           if (!summary.manual[kind]) summary.manual[kind] = item;
           if (!summary.manual.all) summary.manual.all = item;
         }
+      }
+      const sortedBatchItems = batchItems.sort((a, b) => b.ms - a.ms);
+      const firstBatchItem = sortedBatchItems[0] || null;
+      if (firstBatchItem) {
+        const groupItems = [];
+        let previousMs = firstBatchItem.ms;
+        for (const item of sortedBatchItems) {
+          if (item.mode !== firstBatchItem.mode) continue;
+          if (Math.abs(previousMs - item.ms) > 10 * 60 * 1000) break;
+          groupItems.push(item);
+          previousMs = item.ms;
+        }
+        const startMs = Math.min(...groupItems.map(item => item.ms));
+        const endMs = Math.max(...groupItems.map(item => item.ms));
+        summary.latestBatch = {
+          mode: firstBatchItem.mode,
+          time: new Date(endMs).toISOString(),
+          startedAt: new Date(startMs).toISOString(),
+          completedAt: new Date(endMs).toISOString(),
+          durationMs: Math.max(0, endMs - startMs),
+          success: groupItems.filter(item => item.success).length,
+          failed: groupItems.filter(item => !item.success).length,
+          total: groupItems.length,
+        };
       }
       try {
         const statePath = join(import.meta.dirname, "..", "data", "random-schedule-state.json");

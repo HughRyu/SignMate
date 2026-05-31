@@ -10401,3 +10401,61 @@ input.is-saved-field:focus {
     display: none !important;
   }
 }
+
+/* ---- 2026-05-31: single content edge for PC status/toolbar/cards ---- */
+:root {
+  --content-edge-width: min(1036px, calc(100vw - 64px));
+}
+@media (min-width: 981px) {
+  .main,
+  .nav .nav-inner,
+  .nav-status-area,
+  .nav-stats-strip,
+  #tab-sites .home-site-search-bar,
+  #tab-sites #sitesGrid,
+  #tab-sites .batch-progress {
+    width: var(--content-edge-width) !important;
+    max-width: var(--content-edge-width) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+  #tab-sites .home-site-search-bar {
+    display: grid !important;
+    grid-template-columns: 128px minmax(12px, 1fr) minmax(320px, 420px) minmax(12px, 1fr) 264px !important;
+    grid-template-areas:
+      "cookie . search . actions"
+      "filters filters filters filters filters" !important;
+    overflow: hidden !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions {
+    grid-area: filters !important;
+    justify-self: end !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-end !important;
+    scrollbar-width: none !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+@media (min-width: 761px) and (max-width: 980px) {
+  .main,
+  .nav-status-area,
+  .nav-stats-strip,
+  #tab-sites .home-site-search-bar,
+  #tab-sites #sitesGrid,
+  #tab-sites .batch-progress {
+    width: calc(100vw - 64px) !important;
+    max-width: calc(100vw - 64px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+}

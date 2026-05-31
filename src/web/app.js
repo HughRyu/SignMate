@@ -173,6 +173,17 @@ function formatShortDateTime(value) {
   return d.toLocaleString("zh-CN", { hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
+
+function formatDuration(value) {
+  const ms = Number(value || 0);
+  if (!Number.isFinite(ms) || ms <= 0) return "暂无";
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) return `${seconds} 秒`;
+  return `${minutes} 分 ${String(seconds).padStart(2, "0")} 秒`;
+}
+
 function scheduleModeLabel(mode = "") {
   if (mode === "fixed" || mode === "batch") return "批量执行";
   if (mode === "random") return "随机执行";
@@ -220,19 +231,30 @@ function lastRunScheduleTitle(site = {}, recentLabel = "最近执行") {
 async function refreshNavTimeTooltip() {
   const el = document.getElementById("navTime");
   if (!el) return;
+  const emptyTitle = ["批量执行时间：暂无", "批量执行设定：暂无", "总签到用时：暂无", "成功 0", "失败 0"].join("\n");
   try {
     const { data } = await api("/api/batch-summary");
-    const latest = data?.latestScheduled || data?.latest?.signin || data?.latest?.visit || null;
+    const latest = data?.latestBatch || data?.latestScheduled || data?.latest?.signin || data?.latest?.visit || null;
     if (!latest?.time) {
-      el.title = "上次执行时间：暂无";
+      el.title = emptyTitle;
       return;
     }
-    const mode = latest.mode || "";
-    const label = scheduleModeLabel(mode);
-    const due = mode === "fixed" && data?.fixed?.dueTime ? `；当前批量时间 ${data.fixed.dueTime}` : "";
-    el.title = `${label}：${formatShortDateTime(latest.time)}${latest.site ? `；站点 ${latest.site}` : ""}${due}`;
+    const mode = latest.mode || data?.mode || "";
+    const modeLabel = scheduleModeLabel(mode);
+    const setting = data?.mode === "fixed"
+      ? `批量 ${data?.fixed?.dueTime || "--:--"}${data?.fixed?.visitDueTime && data.fixed.visitDueTime !== data.fixed.dueTime ? ` / 保活 ${data.fixed.visitDueTime}` : ""}`
+      : (data?.mode === "random" ? `随机 ${data?.randomStart || "02:00"} - ${data?.randomEnd || "22:00"}` : scheduleModeLabel(data?.mode || mode));
+    const success = Number(latest.success ?? 0);
+    const failed = Number(latest.failed ?? 0);
+    el.title = [
+      `批量执行时间：${modeLabel} ${formatShortDateTime(latest.time)}`,
+      `批量执行设定：${setting}`,
+      `总签到用时：${formatDuration(latest.durationMs)}`,
+      `成功 ${Number.isFinite(success) ? success : 0}`,
+      `失败 ${Number.isFinite(failed) ? failed : 0}`,
+    ].join("\n");
   } catch {
-    el.title = "上次执行时间：暂无";
+    el.title = emptyTitle;
   }
 }
 
