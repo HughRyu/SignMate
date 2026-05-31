@@ -786,8 +786,8 @@ function formatInviteMetric(details = {}, siteKey = "") {
   const rawDisplay = String(details.inviteDisplay ?? "").trim();
   const firstInt = value => String(value || "").match(/\d+/)?.[0] || "";
   let normal = firstInt(rawInvite || rawDisplay);
-  let temp = firstInt(rawTemp);
-  if (!temp) {
+  let temp = rawTemp === "0" ? "0" : firstInt(rawTemp);
+  if (temp === "") {
     const pair = (rawDisplay || rawInvite).match(/^\s*(\d+)\s*(?:\+|\/|\(|（)\s*(\d+)/);
     if (pair) {
       normal = pair[1];

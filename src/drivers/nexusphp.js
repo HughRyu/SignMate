@@ -407,14 +407,16 @@ function mergeStats(base = {}, extra = {}) {
 
 function buildInviteStats(text = "", fallback = "") {
   const normalized = String(text || "").replace(/\s+/g, " ").trim();
-  const invitePair = normalized.match(/(?:邀请|邀請)(?!人)[^:：0-9]{0,24}[:：]\s*(\d+)\s*\/\s*(\d+)/i);
-  if (invitePair) {
-    const normalInvite = invitePair[1];
-    const tempInvite = invitePair[2];
-    const inviteDisplay = normalInvite && tempInvite ? `${normalInvite}+${tempInvite}` : (normalInvite || "");
-    const inviteNote = normalInvite && tempInvite
-      ? `邀请数：正式 ${normalInvite}，临时 ${tempInvite}`
-      : (normalInvite ? `邀请数：${normalInvite}` : "");
+  const headerInvite = normalized.match(/(?:邀请|邀請)(?!人)[^:：0-9]{0,30}[:：]\s*(\d+)(?:\s*\/\s*(\d+))?/i);
+  if (headerInvite) {
+    const normalInvite = headerInvite[1] || "";
+    const tempInvite = headerInvite[2] ?? "";
+    const hasNormalInvite = normalInvite !== "";
+    const hasTempInvite = tempInvite !== "";
+    const inviteDisplay = hasTempInvite ? `${normalInvite || 0}+${tempInvite}` : (normalInvite || "");
+    const inviteNote = hasTempInvite
+      ? `邀请数：正式 ${normalInvite || 0}，临时 ${tempInvite}`
+      : (hasNormalInvite ? `邀请数：${normalInvite}` : "");
     return { invite: normalInvite, tempInvite, inviteDisplay, inviteNote };
   }
   const first = patterns => {
@@ -434,10 +436,12 @@ function buildInviteStats(text = "", fallback = "") {
     /(?:临时|臨時|暂时|暫時|temporary)\s*(?:邀请|邀請|invite)[^0-9]{0,20}([0-9]+)/i,
     /(?:邀请|邀請|invite)[^。；;]{0,18}(?:临时|臨時|暂时|暫時|temporary)[^0-9]{0,20}([0-9]+)/i,
   ]);
-  const inviteDisplay = normalInvite && tempInvite ? `${normalInvite}+${tempInvite}` : (normalInvite || "");
-  const inviteNote = normalInvite && tempInvite
-    ? `邀请数：正式 ${normalInvite}，临时 ${tempInvite}`
-    : (normalInvite ? `邀请数：${normalInvite}` : "");
+  const hasNormalInvite = normalInvite !== "";
+  const hasTempInvite = tempInvite !== "";
+  const inviteDisplay = hasTempInvite ? `${normalInvite || 0}+${tempInvite}` : (normalInvite || "");
+  const inviteNote = hasTempInvite
+    ? `邀请数：正式 ${normalInvite || 0}，临时 ${tempInvite}`
+    : (hasNormalInvite ? `邀请数：${normalInvite}` : "");
   return { invite: normalInvite, tempInvite, inviteDisplay, inviteNote };
 }
 
