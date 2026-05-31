@@ -100,6 +100,22 @@ document.addEventListener("DOMContentLoaded", () => {
       loadSites(true);
     });
   });
+  document.querySelectorAll(".nav-all-filter").forEach(btn => {
+    btn.addEventListener("click", (event) => {
+      event.currentTarget?.classList.add("clicked");
+      window.setTimeout(() => event.currentTarget?.classList.remove("clicked"), 220);
+      clearSiteFilters();
+      switchTab("sites");
+      loadSites(true);
+    });
+  });
+  document.addEventListener("dblclick", event => {
+    if (!event.target.closest(".site-card, .modal, .nav, .nav-status-area, .home-site-search-bar, .batch-progress, button, input, select, textarea, a")) {
+      clearSiteFilters({ clearSearch: true });
+      switchTab("sites");
+      loadSites(true);
+    }
+  });
   document.addEventListener("click", event => {
     const dismissBtn = event.target.closest("#btnDismissBatchProgress");
     if (dismissBtn) {
@@ -157,6 +173,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!document.hidden) refreshBackendBatchState(true);
   });
 });
+
+
+function clearSiteFilters({ clearSearch = false } = {}) {
+  activeSiteKind = "all";
+  activeSiteCategory = "all";
+  activeSiteResultFilter = "all";
+  if (clearSearch) {
+    activeSiteSearch = "";
+    const search = document.getElementById("homeSiteSearch");
+    if (search) search.value = "";
+  }
+}
 
 // ---- Clock ----
 function updateClock() {

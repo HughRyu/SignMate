@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SignMate · 自动签到中心</title>
-  <link rel="stylesheet" href="/style.css?v=20260531-1846">
+  <link rel="stylesheet" href="/style.css?v=20260531-1858">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect rx='8' width='32' height='32' fill='%230071e3'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='white' font-family='system-ui'>✓</text></svg>">
 </head>
 <body>
@@ -30,8 +30,8 @@
   </nav>
   <div class="nav-status-area">
     <div class="nav-stats-strip" aria-label="站点与执行统计">
-      <span class="nav-stat-pill"><span class="nav-stat-label" data-short="总">站点总数</span><strong id="navSiteTotal">--</strong></span>
-      <span class="nav-stat-pill"><span class="nav-stat-label" data-short="启">站点启用</span><strong id="navSiteEnabled">--</strong></span>
+      <button class="nav-stat-pill nav-all-filter" id="navSiteTotalFilter" type="button" title="点击查看全部站点；等效全部按钮"><span class="nav-stat-label" data-short="总">站点总数</span><strong id="navSiteTotal">--</strong></button>
+      <button class="nav-stat-pill nav-all-filter" id="navSiteEnabledFilter" type="button" title="点击查看全部站点；等效全部按钮"><span class="nav-stat-label" data-short="启">站点启用</span><strong id="navSiteEnabled">--</strong></button>
       <button class="nav-stat-pill nav-kind-filter" id="navSigninFilter" type="button" data-kind="signin" title="点击查看签到站点；再次点击取消"><span class="nav-stat-label" data-short="签">签到站点</span><strong id="navSigninTotal">--</strong></button>
       <button class="nav-stat-pill nav-kind-filter" id="navVisitFilter" type="button" data-kind="visit" title="点击查看保活站点；再次点击取消"><span class="nav-stat-label" data-short="保">保活站点</span><strong id="navVisitTotal">--</strong></button>
       <button class="nav-stat-pill nav-stat-success nav-success-filter" id="navSuccessFilter" type="button" title="点击查看成功站点"><span class="nav-stat-label" data-short="成">成功</span><strong id="navSuccessCount">--</strong></button>
@@ -240,6 +240,6 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
-  <script src="/app.js?v=20260531-1846"></script>
+  <script src="/app.js?v=20260531-1858"></script>
 </body>
 </html>
