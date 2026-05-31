@@ -106,3 +106,18 @@ docker buildx imagetools inspect ghcr.io/hughryu/signmate:v0.1.13
   - probe 脚本里打印的敏感请求内容
 - 诊断 Cookie 时只输出元数据：字段名、数量、长度、是否存在关键字段；不要输出值。
 - 对 HDSky / OurBits 等验证码站点，除非真实验证成功，否则保持保活或明确失败，禁止用规则文本当成功依据。
+
+## 可选：真实站点 smoke test
+
+发布前如果改动涉及站点执行逻辑，可以在目标环境手动运行指定站点 smoke test：
+
+```bash
+npm run smoke:sites -- v2ex pterclub-net ourbits-club
+```
+
+注意：
+
+- 该命令会真实执行指定站点 Driver，可能触发签到/保活请求。
+- 必须显式传入站点 key；脚本拒绝隐式跑全量站点。
+- 输出只包含状态、message、checkinAction、代理/HTTP/浏览器使用信息，不输出 Cookie 或凭据。
+- 对验证码/Turnstile/保活站点，应优先选择已经明确安全的验证路径。

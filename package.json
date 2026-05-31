@@ -12,7 +12,8 @@
     "test": "npm run check && npm run check:browser && npm run audit:prod",
     "test:nodeseek": "node src/drivers/nodeseek.js",
     "check:browser": "node scripts/check-browser.js",
-    "release:check": "node scripts/release-check.js"
+    "release:check": "node scripts/release-check.js",
+    "smoke:sites": "node scripts/smoke-sites.js"
   },
   "dependencies": {
     "chalk": "^5.4.1",
