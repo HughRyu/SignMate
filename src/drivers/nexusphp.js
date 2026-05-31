@@ -10,7 +10,7 @@ import logger from "../utils/logger.js";
 import { ocr } from "../captcha-ocr.js";
 import { createHmac } from "node:crypto";
 import { createHttpSession, getCookieForSite, htmlToText, pageTitleFromHtml, readText } from "../utils/http-session.js";
-import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { resolveChromiumExecutablePath, launchBrowser } from "../utils/browser.js";
 
 
 const BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -530,7 +530,11 @@ export default class NexusPhpDriver extends WebsiteDriver {
     const totpSecret = getTotpSecret(this.secrets, this.siteConfig);
 
     logger.info(`[NexusPHP] ${this.name} 步骤 1/6：启动 Playwright 浏览器${proxy_url ? `，代理: ${proxy_url}` : ""}`);
-    const browser = await chromium.launch({ executablePath: chromium_executable_path, headless: true, proxy, args: ["--no-sandbox"], timeout });
+    const browser = await launchBrowser({
+      chromium,
+      siteConfig: this.siteConfig,
+      launchOptions: { executablePath: chromium_executable_path, headless: true, proxy, args: ["--no-sandbox"], timeout },
+    });
     try {
       const context = await browser.newContext({
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
@@ -554,7 +558,8 @@ export default class NexusPhpDriver extends WebsiteDriver {
 
       const page = await context.newPage();
       logger.info(`[NexusPHP] ${this.name} 步骤 3/6：打开站点 → ${url}`);
-      const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout });
+      const response = await page.goto(url, { waitUntil: "commit", timeout });
+      await page.waitForLoadState("domcontentloaded", { timeout: Math.min(timeout, 15_000) }).catch(() => {});
       await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
       await page.waitForTimeout(this.siteConfig.playwright_wait_ms || 1500);
       const status = response?.status() || 0;
@@ -575,7 +580,8 @@ export default class NexusPhpDriver extends WebsiteDriver {
         };
       }
       if (initialTotp.passed) {
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout }).catch(() => {});
+        await page.goto(url, { waitUntil: "commit", timeout }).catch(() => {});
+        await page.waitForLoadState("domcontentloaded", { timeout: Math.min(timeout, 15_000) }).catch(() => {});
         await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
         await page.waitForTimeout(this.siteConfig.playwright_wait_ms || 1500);
         text = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
@@ -691,7 +697,12 @@ ${siteExtra.panelText}`);
           const isShowupStyle = await page.locator("#showup").count().catch(() => 0) > 0
             || /image_code_ajax/i.test(page.url())
             || (await page.locator('script').filter({ hasText: /initshowupajax|showup/i }).count().catch(() => 0)) > 0;
-          if (isShowupStyle) {
+          if (siteKey === "pterclub-net") {
+            ajaxPromise = page.waitForResponse(
+              r => r.url().includes("attendance-ajax.php") && r.status() === 200,
+              { timeout: 15_000 }
+            ).then(async r => { try { return JSON.parse(await r.text()); } catch { return null; } }).catch(() => null);
+          } else if (isShowupStyle) {
             ajaxPromise = page.waitForResponse(
               r => r.url().includes("image_code_ajax.php") && r.request().method() === "POST" && r.status() === 200,
               { timeout: 15_000 }
@@ -849,15 +860,17 @@ ${siteExtra.panelText}`);
             if (gain) stats = { ...stats, bonusGain: gain, rewardName: stats.rewardName || "魔力值" };
           }
 
-          // 如果 AJAX 响应明确返回 success，直接标记为已签到
-          if (ajaxSigninResult && ajaxSigninResult.success === true) {
+          // 如果 AJAX 响应明确返回 success/status=1，直接标记为已签到
+          const ajaxSuccess = ajaxSigninResult && (ajaxSigninResult.success === true || ajaxSigninResult.status === "1" || ajaxSigninResult.status === 1);
+          if (ajaxSuccess) {
             already = true;
             blocked = false;
-            const gain2 = bonusDelta(beforeBonus, stats.bonus);
-            if (gain2 && !stats.bonusGain) stats = { ...stats, bonusGain: gain2, rewardName: stats.rewardName || "魔力值" };
+            const ajaxText = String(ajaxSigninResult.message || ajaxSigninResult.data || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ");
+            const gain2 = bonusDelta(beforeBonus, stats.bonus) || ajaxText.match(/(?:获得|已得)\s*([0-9,.]+)\s*(?:克)?(?:猫粮|魔力值)?/)?.[1] || "";
+            if (gain2 && !stats.bonusGain) stats = { ...stats, bonusGain: gain2, rewardName: stats.rewardName || (siteKey === "pterclub-net" ? "猫粮" : "魔力值") };
             stats = {
               ...stats,
-              signText: stats.signText || "签到成功 (AJAX)",
+              signText: stats.signText || ajaxText.match(/(?:这是您的第[^。]+。\s*)?本次签到获得\s*[0-9,.]+\s*(?:克)?[^。；;]*/)?.[0] || ajaxText.match(/签到已得\s*[0-9,.]+/)?.[0] || "签到成功 (AJAX)",
               bonusGain: stats.bonusGain || "",
             };
           } else {
@@ -871,7 +884,7 @@ ${siteExtra.panelText}`);
           if (blocked && turnstileStep && turnstileStep.ok === false && !steps.includes(turnstileStep)) {
             steps.push(turnstileStep);
           }
-          if (blocked && !(ajaxSigninResult && ajaxSigninResult.success === true)) {
+          if (blocked && !ajaxSuccess) {
             // 验证页常包含“首次签到获得 xx”的规则说明，不能当作本次签到收益。
             stats = { ...stats, signText: "", bonusGain: "", rewardName: "" };
             already = false;
