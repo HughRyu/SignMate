@@ -10142,3 +10142,91 @@ input.is-saved-field:focus {
     justify-self: end !important;
   }
 }
+
+/* ---- 2026-05-31: compact mobile top nav + one-line status strip ---- */
+@media (max-width: 760px) {
+  .nav .nav-inner {
+    width: calc(100vw - 12px) !important;
+    max-width: calc(100vw - 12px) !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    box-sizing: border-box !important;
+  }
+  .nav .nav-links {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 2px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+  .nav .nav-btn {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 2px !important;
+    border-radius: 11px !important;
+    font-size: 11px !important;
+    letter-spacing: -.02em !important;
+    white-space: nowrap !important;
+    justify-content: center !important;
+  }
+  .nav-status-area {
+    width: calc(100vw - 12px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .nav-stats-strip {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 4px !important;
+    overflow: hidden !important;
+    justify-content: stretch !important;
+    align-items: center !important;
+    border-radius: 14px !important;
+  }
+  .nav-stat-pill {
+    flex: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 2px !important;
+    gap: 2px !important;
+    border-radius: 10px !important;
+    font-size: 10px !important;
+    letter-spacing: -.02em !important;
+    box-sizing: border-box !important;
+  }
+  .nav-stat-label {
+    font-size: 0 !important;
+    line-height: 1 !important;
+  }
+  .nav-stat-label::after {
+    content: attr(data-short);
+    font-size: 10px !important;
+    line-height: 1 !important;
+  }
+  .nav-stat-pill strong {
+    font-size: 14px !important;
+    min-width: .95em !important;
+  }
+}
+@media (max-width: 360px) {
+  .nav .nav-btn {
+    font-size: 10px !important;
+    padding: 0 1px !important;
+  }
+  .nav-stat-label::after { font-size: 9px !important; }
+  .nav-stat-pill strong { font-size: 13px !important; }
+}
