@@ -10459,3 +10459,26 @@ input.is-saved-field:focus {
     box-sizing: border-box !important;
   }
 }
+
+/* ---- 2026-05-31: compact PC status statistic pills ---- */
+@media (min-width: 981px) {
+  .nav-stats-strip {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 7px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .nav-stats-strip .nav-stat-pill {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 0 0 auto !important;
+    padding-left: 9px !important;
+    padding-right: 9px !important;
+  }
+  .nav-stats-strip .nav-stat-label {
+    max-width: none !important;
+  }
+}
