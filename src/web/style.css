@@ -10622,3 +10622,31 @@ input.is-saved-field:focus {
   }
   #tab-sites .batch-progress-title { padding-left: 2px !important; }
 }
+
+
+/* ---- 2026-05-31: centered home search, credential button wording, verification lock polish ---- */
+#tab-sites .home-site-search-bar > .home-site-search-wrap {
+  justify-self: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: min(420px, 100%) !important;
+}
+#tab-sites .home-site-search-bar .home-site-search {
+  text-align: center !important;
+}
+.credential-actions {
+  justify-content: flex-end !important;
+}
+.credential-actions .btn[type="submit"] {
+  min-width: 96px !important;
+}
+.verification-lock-pass {
+  background: rgba(34, 197, 94, 0.14) !important;
+  border-color: rgba(34, 197, 94, 0.32) !important;
+  color: #16a34a !important;
+}
+.verification-lock-blocked {
+  background: rgba(245, 158, 11, 0.16) !important;
+  border-color: rgba(245, 158, 11, 0.34) !important;
+  color: #d97706 !important;
+}

@@ -991,15 +991,16 @@ function twoFaCornerHtml(site = {}, details = {}) {
 function verificationLockHtml(site = {}, details = {}) {
   const siteKind = site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
   const verificationType = deriveVerificationType(site, details);
+  const hasVerificationMethod = Boolean(verificationType || site.verificationAuto === true || site.signinBlockedByVerification === true);
   const stepsText = Array.isArray(site.steps) ? site.steps.map(step => `${step.label || ""} ${step.detail || ""}`).join(" ") : "";
-  const passedBySteps = site.lastSuccess === true && /通过.*(滑块|验证)|验证.*(通过|token 已生成|页面已继续)/i.test(stepsText);
-  const autoPassed = siteKind === "signin" && (site.verificationAuto === true || passedBySteps) && verificationType;
+  const passedBySteps = site.lastSuccess === true && /通过.*(滑块|验证)|验证.*(通过|token 已生成|页面已继续)|TOTP|2FA|两步验证/i.test(stepsText);
+  const autoPassed = siteKind === "signin" && hasVerificationMethod && (site.verificationAuto === true || passedBySteps || site.lastSuccess === true);
   const blocked = site.signinBlockedByVerification === true || details?.verificationBlocked === true || /Cloudflare\s*Turnstile|SafeLine|雷池|客户端异常|请确认您是合法用户|验证措施/.test(site.lastMessage || "");
   if (autoPassed) {
-    return `<span class="verification-lock verification-lock-pass" title="已自动通过验证：${escAttr(verificationType)}" aria-label="已自动通过验证"></span>`;
+    return `<span class="verification-lock verification-lock-pass" title="有验证手段，且最近可自动通过${verificationType ? `：${escAttr(verificationType)}` : ""}" aria-label="验证可自动通过"></span>`;
   }
-  if (siteKind === "visit" && blocked && verificationType) {
-    return `<span class="verification-lock verification-lock-blocked" title="该站有签到功能，但当前自动化无法通过验证：${escAttr(verificationType)}" aria-label="自动化无法通过验证"></span>`;
+  if (siteKind === "visit" && hasVerificationMethod && (blocked || site.signinBlockedByVerification === true)) {
+    return `<span class="verification-lock verification-lock-blocked" title="该保活站点有签到功能，但当前自动化无法通过验证${verificationType ? `：${escAttr(verificationType)}` : ""}" aria-label="有签到功能但自动化无法通过验证"></span>`;
   }
   return "";
 }
@@ -1111,8 +1112,6 @@ function cleanDailyMessage(message = "", siteKey = "") {
 }
 
 function hasMissedTodaySignin(site = {}) {
-  // Temporary UI preview for Hugh: force Audiences card into missed-signin visual state.
-  if (site?.key === "audiences-me") return true;
   if (!site?.enabled || siteKindOf(site) !== "signin") return false;
   if (site._running || site.lastSuccess === true || !site.lastTime) return false;
   const batchMode = appSettings?.batch?.mode || site.scheduleMode || site.schedule_mode || "fixed";
@@ -1251,6 +1250,7 @@ async function loadCredentials() {
       form?.addEventListener("submit", (event) => saveCredential(event, item.key, item.name));
       document.getElementById(`cookie-title-${item.key}`)?.addEventListener("dblclick", () => markCookieClear(form, form?.elements.cookie, document.getElementById(`cookie-help-${item.key}`), item.name || item.key));
       form?.elements.cookie?.addEventListener("input", () => { if (form.elements.cookie.value.trim()) delete form.dataset.clearCookie; });
+      document.getElementById(`clear-${item.key}-credential`)?.addEventListener("click", () => clearCredentialForm(form, item.name || item.key));
     });
   } catch (err) {
     grid.innerHTML = `<div class="card"><div class="empty-cell">加载失败: ${esc(err.message)}</div></div>`;
@@ -1276,12 +1276,33 @@ function buildCredentialCard(item) {
 
 
         <div class="credential-actions">
-          <button class="btn btn-primary" type="submit">保存 Cookie</button>
-          <button class="btn btn-secondary" type="button" id="signin-${escAttr(item.key)}-from-credential">保存后可回站点页签到</button>
+          <button class="btn btn-secondary" type="button" id="clear-${escAttr(item.key)}-credential">清空</button>
+          <button class="btn btn-primary" type="submit">保存</button>
         </div>
       </form>
     </div>
   `;
+}
+
+function clearCredentialForm(form, name = "该站点") {
+  if (!form) return;
+  const cookie = form.elements.cookie;
+  const sessionOnly = form.elements.sessionOnly;
+  const totpSecret = form.elements.totpSecret;
+  if (cookie) cookie.value = "";
+  if (sessionOnly) sessionOnly.value = "";
+  if (totpSecret) totpSecret.value = "";
+  form.dataset.clearCookie = "1";
+  const cookieHelp = form.querySelector("#modalCookieHelp") || form.querySelector("[id^='cookie-help-']");
+  const totpHelp = form.querySelector("#modalTotpHelp");
+  if (cookieHelp) cookieHelp.innerHTML = `${esc(name)} 已标记清除已保存 Cookie；点击“保存”后生效。粘贴新 Cookie 会覆盖清除标记。`;
+  if (totpSecret || totpHelp) {
+    form.dataset.clearTotpSecret = "1";
+    if (totpHelp) totpHelp.innerHTML = `${esc(name)} 已标记清除已保存 2FA Secret；点击“保存”后生效。`;
+    showToast("已标记清空 Cookie/2FA，保存后生效", "info");
+  } else {
+    showToast("已标记清空 Cookie，保存后生效", "info");
+  }
 }
 
 async function saveCredential(event, key, name) {
@@ -1314,7 +1335,7 @@ async function saveCredential(event, key, name) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = "保存凭据";
+      btn.innerHTML = "保存";
     }
   }
 }
@@ -2839,8 +2860,8 @@ function showCredentialModal(item) {
         <div class="field-help" id="modalTotpHelp">${item.hasTotpSecret ? `已保存：${esc(item.totpSecretMasked || "******")}。` : "当前未保存 2FA Secret。"}用于站点要求两步验证码时自动生成 TOTP；留空保存不会覆盖已有 Secret。</div>
 
         <div class="credential-actions">
-          <button class="btn btn-primary" type="submit">保存凭据</button>
-          <button class="btn btn-secondary" type="button" id="modalCancel">取消</button>
+          <button class="btn btn-secondary" type="button" id="modalClearCredential">清空</button>
+          <button class="btn btn-primary" type="submit">保存</button>
         </div>
       </form>
     </div>
@@ -2852,7 +2873,7 @@ function showCredentialModal(item) {
   const modalTotpSecret = document.getElementById("modalTotpSecret");
   const modalTotpHelp = document.getElementById("modalTotpHelp");
   document.getElementById("modalClose")?.addEventListener("click", closeCredentialModal);
-  document.getElementById("modalCancel")?.addEventListener("click", closeCredentialModal);
+  document.getElementById("modalClearCredential")?.addEventListener("click", () => clearCredentialForm(modalForm, item.name || item.key));
   document.getElementById("modalCookieLabel")?.addEventListener("dblclick", (event) => {
     event.preventDefault();
     markCookieClear(modalForm, modalCookie, modalHelp, item.name || item.key);
@@ -2869,7 +2890,7 @@ function showCredentialModal(item) {
       modalTotpSecret.value = "";
       modalTotpSecret.placeholder = "已标记清除 2FA Secret；点击保存后生效";
     }
-    if (modalTotpHelp) modalTotpHelp.innerHTML = `${esc(item.name || item.key)} 已标记清除已保存 2FA Secret；点击“保存凭据”后才会生效。`;
+    if (modalTotpHelp) modalTotpHelp.innerHTML = `${esc(item.name || item.key)} 已标记清除已保存 2FA Secret；点击“保存”后才会生效。`;
     showToast("已标记清除 2FA Secret，保存后生效", "info");
   });
   modal.addEventListener("click", (event) => {
@@ -2892,7 +2913,7 @@ function markCookieClear(form, textarea, helpEl, name = "该站点") {
     textarea.value = "";
     textarea.placeholder = "已标记清除 Cookie；点击保存后生效";
   }
-  if (helpEl) helpEl.innerHTML = `${esc(name)} 已标记清除已保存 Cookie；点击“保存 Cookie”后才会生效。粘贴新 Cookie 会覆盖清除标记。`;
+  if (helpEl) helpEl.innerHTML = `${esc(name)} 已标记清除已保存 Cookie；点击“保存”后才会生效。粘贴新 Cookie 会覆盖清除标记。`;
   showToast("已标记清除 Cookie，保存后生效", "info");
 }
 

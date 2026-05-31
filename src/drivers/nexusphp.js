@@ -182,7 +182,7 @@ function parsePtStats(text = "", siteKey = "") {
   let seedPoints = "";
   let audiencesBonus = "";
   if (siteKey === "audiences-me") {
-    const audienceRow = normalized.match(/HughRyu\s+(\d+(?:\.\d+)?)\s+([0-9.]+\s*[KMGTPE]?B)\s+([0-9.]+\s*[KMGTPE]?B)\s+([0-9,.]+)\s+([0-9,.]+)/i);
+    const audienceRow = normalized.match(/(?:HugHRyu|HughRyu|HugRyu)\s+(\d+(?:\.\d+)?)\s+([0-9.]+\s*[KMGTPE]?B)\s+([0-9.]+\s*[KMGTPE]?B)\s+([0-9,.]+)\s+([0-9,.]+)/i);
     if (audienceRow) {
       ratio = ratio || audienceRow[1];
       upload = upload || audienceRow[2];
@@ -317,7 +317,7 @@ function buildVisitMessage(ok, stats = {}, signTime = "") {
 async function runNexusApi(siteConfig = {}, secrets = {}, driverName = "NexusPHP") {
   const { base_url, timeout = 60_000, proxy_url } = siteConfig;
   if (!base_url) return { handled: true, result: { success: false, message: "基础 URL 未配置" } };
-  const siteKey = siteConfig.key || siteConfig.id || "";
+  const siteKey = siteConfig.key || siteConfig.id || siteConfig.driver || "";
   if (!supportsNexusApi(siteConfig)) return { handled: false, reason: "site_api_not_supported" };
 
   const signTime = formatTime();
@@ -338,7 +338,7 @@ async function runNexusApi(siteConfig = {}, secrets = {}, driverName = "NexusPHP
   let stats = sanitizeInstructionalSignStats(siteKey, parsePtStats(homeText, siteKey), homeText);
   const extraStatus = await readAdditionalNexusStatusPages(session, siteKey, stats, steps);
   const allStatusText = `${homeText}\n${extraStatus.text || ""}`;
-  stats = sanitizeInstructionalSignStats(siteKey, extraStatus.stats, allStatusText);
+  stats = sanitizeInstructionalSignStats(siteKey, mergeStats(parsePtStats(allStatusText, siteKey), extraStatus.stats), allStatusText);
   const loggedIn = loginOkFromText(allStatusText, stats);
   steps.push({ label: "HTTP 打开站点", ok: homeResp.status >= 200 && homeResp.status < 400, status: homeResp.status, detail: url });
   steps.push({ label: "确认登录态", ok: loggedIn, detail: stats.username ? `用户 ${stats.username}` : "未识别到登录用户" });

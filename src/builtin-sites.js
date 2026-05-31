@@ -201,6 +201,8 @@ export const BUILTIN_SITES = {
     "category": "pt",
     "kind": "signin",
     "login_keyword": "0ff",
+    "verification_type": "简单滑块认证",
+    "verification_auto": true,
     "proxy": "auto",
     "signin_mode": "playwright"
   },
