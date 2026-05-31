@@ -656,6 +656,55 @@ function cookieToHeader(cookies = []) {
   return normalizeCookieValue(pairs.join("; "));
 }
 
+function cookieHeaderNames(cookie = "") {
+  return new Set(String(cookie || "")
+    .split(";")
+    .map(part => part.trim().split("=")[0]?.trim().toLowerCase())
+    .filter(Boolean));
+}
+
+function requiredCookieNamesForSite(site = {}) {
+  const fromConfig = Array.isArray(site.cookie_required_names) ? site.cookie_required_names : [];
+  return fromConfig.map(name => String(name || "").trim()).filter(Boolean);
+}
+
+function missingRequiredCookieNames(cookie = "", required = []) {
+  if (!required.length) return [];
+  const names = cookieHeaderNames(cookie);
+  return required.filter(name => !names.has(String(name).trim().toLowerCase()));
+}
+
+function shouldSkipCookieCloudOverwrite({ item, existingSecret = {} } = {}) {
+  const required = Array.isArray(item?.requiredCookieNames) ? item.requiredCookieNames : [];
+  if (!required.length) return null;
+  const newMissing = missingRequiredCookieNames(item.cookie, required);
+  if (!newMissing.length) return null;
+  const oldCookie = existingSecret?.cookie || "";
+  const oldMissing = missingRequiredCookieNames(oldCookie, required);
+  if (!oldCookie || oldMissing.length) return null;
+  return {
+    key: item.key,
+    name: item.name || item.key,
+    requiredCookieNames: required,
+    missingCookieNames: newMissing,
+    reason: `${item.name || item.key} Cookie 缺少 ${newMissing.join(", ")}，已跳过覆盖，保留现有 Cookie。`,
+  };
+}
+
+function filterCookieCloudWrites(matches = [], secrets = {}) {
+  const updated = [];
+  const skipped = [];
+  for (const item of matches) {
+    const skip = shouldSkipCookieCloudOverwrite({ item, existingSecret: secrets[item.key] || {} });
+    if (skip) {
+      skipped.push(skip);
+      continue;
+    }
+    updated.push(item);
+  }
+  return { updated, skipped };
+}
+
 function buildCookieCloudMatches(cookieData = {}, { includeDisabled = false } = {}) {
   const { sites, secrets = {} } = loadConfig();
   const domainBuckets = Object.entries(cookieData || {}).map(([domain, cookies]) => ({ domain, cookies: Array.isArray(cookies) ? cookies : [] }));
@@ -680,6 +729,8 @@ function buildCookieCloudMatches(cookieData = {}, { includeDisabled = false } = 
       cookieMasked: maskSecret(cookie),
       hasCookie: Boolean(cookie),
       signmateHasCookie: !isPlaceholderSecret((secrets[key] || {}).cookie || (secrets[key] || {}).session_only || (secrets[key] || {}).userInfo || (secrets[key] || {}).userInfoShared || (secrets[key] || {})["userInfo-shared"] || (secrets[key] || {}).accessToken || ""),
+      requiredCookieNames: requiredCookieNamesForSite(site),
+      missingRequiredCookieNames: missingRequiredCookieNames(cookie, requiredCookieNamesForSite(site)),
       cookie,
     };
   }).filter(item => (includeDisabled || item.enabled) && item.hasCookie);
@@ -727,12 +778,14 @@ async function syncCookieCloudFromSavedConfig({ source = "auto" } = {}) {
   const { cookieData } = await fetchCookieCloud({ host: cfg.host, uuid: cfg.uuid, password: env.COOKIECLOUD_PASSWORD });
   const matches = buildCookieCloudMatches(cookieData, { includeDisabled: cfg.includeDisabled });
   const secrets = readSecrets();
+  const { updated, skipped } = filterCookieCloudWrites(matches, secrets);
   const now = new Date().toISOString();
-  for (const item of matches) {
+  for (const item of updated) {
     secrets[item.key] = { ...(secrets[item.key] || {}), cookie: item.cookie, cookiecloud_updated_at: now, cookiecloud_source: source };
   }
   writeSecrets(secrets);
-  return matches;
+  for (const item of skipped) logger.warn(`[CookieCloud] ${item.reason}`);
+  return { updated, skipped, matches };
 }
 
 
@@ -994,9 +1047,9 @@ export async function startServer() {
     return setInterval(async () => {
       try {
         updateMaintenanceState("cookiecloud", { lastAttemptAt: new Date().toISOString(), lastError: "" });
-        const matches = await syncCookieCloudFromSavedConfig({ source: "auto" });
-        updateMaintenanceState("cookiecloud", { lastSuccessAt: new Date().toISOString(), lastUpdatedCount: matches.length, lastSource: "auto", lastError: "" });
-        logger.info(`[CookieCloud] 自动同步完成：${matches.length} 个站点`);
+        const result = await syncCookieCloudFromSavedConfig({ source: "auto" });
+        updateMaintenanceState("cookiecloud", { lastSuccessAt: new Date().toISOString(), lastUpdatedCount: result.updated.length, lastSkippedCount: result.skipped.length, lastSource: "auto", lastError: "" });
+        logger.info(`[CookieCloud] 自动同步完成：更新 ${result.updated.length} 个站点，跳过 ${result.skipped.length} 个站点`);
       } catch (err) {
         updateMaintenanceState("cookiecloud", { lastErrorAt: new Date().toISOString(), lastError: err.message });
         logger.warn(`[CookieCloud] 自动同步失败：${err.message}`);
@@ -1418,8 +1471,9 @@ export async function startServer() {
       const { cookieData } = await fetchCookieCloud({ host, uuid, password });
       const matches = buildCookieCloudMatches(cookieData, { includeDisabled: body.includeDisabled === true });
       const selected = Array.isArray(body.sites) && body.sites.length ? new Set(body.sites.map(String)) : null;
-      const toWrite = matches.filter(item => !selected || selected.has(item.key));
+      const selectedMatches = matches.filter(item => !selected || selected.has(item.key));
       const secrets = readSecrets();
+      const { updated: toWrite, skipped: skippedWrites } = filterCookieCloudWrites(selectedMatches, secrets);
       const now = new Date().toISOString();
       for (const item of toWrite) {
         secrets[item.key] = { ...(secrets[item.key] || {}), cookie: item.cookie, cookiecloud_updated_at: now, cookiecloud_source: "manual" };
@@ -1429,7 +1483,7 @@ export async function startServer() {
       if (body.saveConfig === true) {
         upsertEnvValues({ COOKIECLOUD_ENABLED: body.enabled === false ? "false" : "true", COOKIECLOUD_HOST: normalizeCookieCloudHost(host), COOKIECLOUD_UUID: String(uuid || "").trim(), ...(body.password ? { COOKIECLOUD_PASSWORD: String(body.password).trim() } : {}), COOKIECLOUD_AUTO_SYNC: body.autoSync === true ? "true" : "false", COOKIECLOUD_INCLUDE_DISABLED: body.includeDisabled === true ? "true" : "false", COOKIECLOUD_AUTO_INTERVAL_MINUTES: String(Math.max(15, Number(body.autoIntervalMinutes || 180) || 180)) });
       }
-      res.json({ ok: true, data: { updated: publicCookieCloudMatches(toWrite), skipped: Math.max(0, matches.length - toWrite.length) } });
+      res.json({ ok: true, data: { updated: publicCookieCloudMatches(toWrite), skipped: Math.max(0, matches.length - selectedMatches.length) + skippedWrites.length, skippedItems: skippedWrites } });
     } catch (err) {
       res.status(400).json({ ok: false, error: err.message });
     }

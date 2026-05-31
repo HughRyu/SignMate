@@ -2449,7 +2449,7 @@ function renderCookieCloudMatches(matches = [], mode = "preview") {
   closeCookieCloudPreviewModal();
   const modal = document.createElement("div");
   modal.className = "modal-backdrop"; modal.id = "cookieCloudPreviewModal";
-  modal.innerHTML = `<div class="modal-card cookiecloud-preview-modal" role="dialog" aria-modal="true"><div class="modal-header"><div><h3>CookieCloud 预览匹配</h3><small>默认勾选已在 SignMate 维护 Cookie 的站点，可手动调整。</small></div><button class="modal-close" type="button" id="cookieCloudPreviewClose">×</button></div><div class="cookiecloud-match-list modal-match-list">${matches.map(item => `<label class="cookiecloud-match-row"><input type="checkbox" class="cookiecloud-site-choice" value="${escAttr(item.key)}" ${item.signmateHasCookie ? "checked" : ""}><span><strong>${esc(displaySiteName(item.name || item.key))}</strong><small>${esc(item.host || "-")} · ${esc((item.matchedDomains || []).join(", ") || "-")} · ${item.cookieCount || 0} 枚 · ${esc(item.cookieMasked || "******")}${item.signmateHasCookie ? " · 已维护" : " · 未维护"}</small></span></label>`).join("")}</div><div class="credential-actions modal-actions"><button class="btn btn-secondary" id="cookieCloudSelectAll" type="button">全选</button><button class="btn btn-secondary" id="cookieCloudSelectMaintained" type="button">只选已维护</button><button class="btn btn-primary" id="cookieCloudModalSync" type="button">同步选中 Cookie</button></div></div>`;
+  modal.innerHTML = `<div class="modal-card cookiecloud-preview-modal" role="dialog" aria-modal="true"><div class="modal-header"><div><h3>CookieCloud 预览匹配</h3><small>默认勾选已在 SignMate 维护 Cookie 的站点，可手动调整；缺少站点必需 Cookie 时同步会保护已有完整 Cookie。</small></div><button class="modal-close" type="button" id="cookieCloudPreviewClose">×</button></div><div class="cookiecloud-match-list modal-match-list">${matches.map(item => { const missing = item.missingRequiredCookieNames?.length ? ` · 缺少 ${item.missingRequiredCookieNames.join(", ")}` : ""; return `<label class="cookiecloud-match-row"><input type="checkbox" class="cookiecloud-site-choice" value="${escAttr(item.key)}" ${item.signmateHasCookie ? "checked" : ""}><span><strong>${esc(displaySiteName(item.name || item.key))}</strong><small>${esc(item.host || "-")} · ${esc((item.matchedDomains || []).join(", ") || "-")} · ${item.cookieCount || 0} 枚 · ${esc(item.cookieMasked || "******")}${item.signmateHasCookie ? " · 已维护" : " · 未维护"}${esc(missing)}</small></span></label>`; }).join("")}</div><div class="credential-actions modal-actions"><button class="btn btn-secondary" id="cookieCloudSelectAll" type="button">全选</button><button class="btn btn-secondary" id="cookieCloudSelectMaintained" type="button">只选已维护</button><button class="btn btn-primary" id="cookieCloudModalSync" type="button">同步选中 Cookie</button></div></div>`;
   document.body.appendChild(modal);
   document.getElementById("cookieCloudPreviewClose")?.addEventListener("click", closeCookieCloudPreviewModal);
   document.getElementById("cookieCloudSelectAll")?.addEventListener("click", () => modal.querySelectorAll(".cookiecloud-site-choice").forEach(el => el.checked = true));
@@ -2488,7 +2488,12 @@ async function syncCookieCloud() {
     const payload = { ...cookieCloudPayload(), sites: choices };
     const { data } = await api("/api/cookiecloud/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     renderCookieCloudMatches(data.updated || [], "sync");
-    showToast(`✅ 已同步 ${data.updated?.length || 0} 个站点 Cookie`, "success");
+    const skippedItems = data.skippedItems || [];
+    if (skippedItems.length) {
+      showToast(`✅ 已同步 ${data.updated?.length || 0} 个站点 Cookie，跳过 ${skippedItems.length} 个不完整 Cookie`, "warning");
+    } else {
+      showToast(`✅ 已同步 ${data.updated?.length || 0} 个站点 Cookie`, "success");
+    }
     await loadSites(true);
   } catch (err) {
     showToast(`CookieCloud 同步失败: ${err.message}`, "error");

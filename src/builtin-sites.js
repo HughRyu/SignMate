@@ -371,7 +371,8 @@ export const BUILTIN_SITES = {
     "kind": "signin",
     "login_keyword": "PterClub",
     "proxy": "auto",
-    "signin_mode": "playwright"
+    "signin_mode": "playwright",
+    "cookie_required_names": ["c_secure_pass"]
   },
   "kafan": {
     "enabled": true,
