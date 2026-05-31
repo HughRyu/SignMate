@@ -10244,3 +10244,105 @@ input.is-saved-field:focus {
   min-width: 22px !important;
   max-width: 32px !important;
 }
+
+/* ---- 2026-05-31: PC toolbar aligns Cookie sync with status/search/actions ---- */
+@media (min-width: 761px) {
+  #tab-sites .home-site-search-bar {
+    width: min(1100px, calc(100vw - 32px)) !important;
+    max-width: min(1100px, calc(100vw - 32px)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: grid !important;
+    grid-template-columns: 128px minmax(12px, 1fr) minmax(320px, 460px) minmax(12px, 1fr) 264px !important;
+    grid-template-areas:
+      "cookie . search . actions"
+      "filters filters filters filters filters" !important;
+    column-gap: 0 !important;
+    row-gap: 8px !important;
+    min-height: 88px !important;
+    height: auto !important;
+    align-items: start !important;
+    align-content: start !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    box-sizing: border-box !important;
+  }
+  #tab-sites .home-site-search-bar > .nav-quick-actions {
+    grid-area: cookie !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: start !important;
+    width: 128px !important;
+    min-width: 128px !important;
+    max-width: 128px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+  #tab-sites .home-site-search-bar > .nav-quick-actions .nav-cookie-sync-btn {
+    width: 128px !important;
+    min-width: 128px !important;
+    max-width: 128px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+  #tab-sites .home-site-search-bar > .home-site-search-wrap {
+    grid-area: search !important;
+    justify-self: center !important;
+    align-self: start !important;
+    width: min(460px, 100%) !important;
+    max-width: 460px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions {
+    display: contents !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions #btnManageSites,
+  #tab-sites .home-site-search-bar > .site-header-actions #btnRunAll {
+    grid-area: actions !important;
+    align-self: start !important;
+    width: 128px !important;
+    min-width: 128px !important;
+    max-width: 128px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    transform: none !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions #btnManageSites {
+    justify-self: start !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions #btnRunAll {
+    justify-self: end !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  #tab-sites .home-site-search-bar > .site-header-actions .site-category-actions {
+    grid-area: filters !important;
+    justify-self: end !important;
+    align-self: start !important;
+    margin: 0 !important;
+  }
+}
+@media (min-width: 761px) and (max-width: 980px) {
+  #tab-sites .home-site-search-bar {
+    width: calc(100vw - 64px) !important;
+    max-width: calc(100vw - 64px) !important;
+    grid-template-columns: 124px minmax(8px, 1fr) minmax(280px, 420px) minmax(8px, 1fr) 256px !important;
+  }
+  #tab-sites .home-site-search-bar > .nav-quick-actions,
+  #tab-sites .home-site-search-bar > .nav-quick-actions .nav-cookie-sync-btn,
+  #tab-sites .home-site-search-bar > .site-header-actions #btnManageSites,
+  #tab-sites .home-site-search-bar > .site-header-actions #btnRunAll {
+    width: 124px !important;
+    min-width: 124px !important;
+    max-width: 124px !important;
+  }
+}
