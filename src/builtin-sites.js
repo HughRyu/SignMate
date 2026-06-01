@@ -135,7 +135,8 @@ export const BUILTIN_SITES = {
     "category": "forum",
     "kind": "signin",
     "proxy": "auto",
-    "signin_mode": "playwright"
+    "signin_mode": "playwright",
+    "cookie_required_names": ["*_saltkey", "*_auth"]
   },
   "audiences-me": {
     "enabled": true,

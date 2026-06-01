@@ -9,12 +9,10 @@ import { createHttpSession, getCookieForSite, htmlToText, pageTitleFromHtml, rea
 import { normalizeProxyUrl } from "./proxy.js";
 
 export function wantsHttpMode(siteConfig = {}) {
-  const value = String(
-    siteConfig.experimental_signin_mode
+  const explicit = siteConfig.experimental_signin_mode
     || siteConfig.protocol_mode
-    || process.env.SIGNMATE_EXPERIMENTAL_SIGNIN_MODE
-    || "api-first"
-  ).trim().toLowerCase();
+    || process.env.SIGNMATE_EXPERIMENTAL_SIGNIN_MODE;
+  const value = String(explicit || siteConfig.signin_mode || siteConfig.signinMode || "api-first").trim().toLowerCase();
   return !["playwright", "browser", "off", "false", "0", "disabled"].includes(value);
 }
 

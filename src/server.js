@@ -695,6 +695,24 @@ function cookieHeaderNames(cookie = "") {
     .filter(Boolean));
 }
 
+function cookieRequirementMatchesName(name = "", requirement = "") {
+  const candidate = String(name || "").trim().toLowerCase();
+  const required = String(requirement || "").trim().toLowerCase();
+  if (!candidate || !required) return false;
+  if (required.includes("*")) {
+    const escaped = required.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+    return new RegExp(`^${escaped}$`, "i").test(candidate);
+  }
+  return candidate === required;
+}
+
+function requiredCookiePresent(names = new Set(), requirement = "") {
+  for (const name of names) {
+    if (cookieRequirementMatchesName(name, requirement)) return true;
+  }
+  return false;
+}
+
 function requiredCookieNamesForSite(site = {}) {
   const fromConfig = Array.isArray(site.cookie_required_names) ? site.cookie_required_names : [];
   return fromConfig.map(name => String(name || "").trim()).filter(Boolean);
@@ -703,7 +721,7 @@ function requiredCookieNamesForSite(site = {}) {
 function missingRequiredCookieNames(cookie = "", required = []) {
   if (!required.length) return [];
   const names = cookieHeaderNames(cookie);
-  return required.filter(name => !names.has(String(name).trim().toLowerCase()));
+  return required.filter(name => !requiredCookiePresent(names, name));
 }
 
 function shouldSkipCookieCloudOverwrite({ item, existingSecret = {} } = {}) {
