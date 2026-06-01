@@ -101,19 +101,20 @@ async function verifyV2Redeemed(page, origin, timeout = 60_000) {
 
 function extractCoinStats(text = "") {
   const normalized = String(text || "").replace(/\s+/g, " ");
+  const missionMatch = normalized.match(/(?:Daily Login Bonus|Daily login reward|每日登录奖励|领取每日登录奖励|已领取)[\s\S]{0,220}/i);
+  const source = missionMatch?.[0] || "";
   const pick = (...patterns) => {
     for (const pattern of patterns) {
-      const match = normalized.match(pattern);
+      const match = source.match(pattern);
       const num = match ? Number.parseInt(match[1], 10) : NaN;
       if (Number.isFinite(num)) return num;
     }
     return null;
   };
+  // Do not parse total balances from arbitrary page text: V2EX pages can contain
+  // ads/referral/help blocks mentioning coins. Totals are read only from /balance.
   return {
-    rewardCopper: pick(/(?:获得|奖励|received|reward)\s*(\d+)\s*(?:铜币|bronze)/i, /(\d+)\s*(?:铜币|bronze)\s*(?:奖励|reward)/i),
-    totalGold: pick(/金币[:：]?\s*(\d+)/, /(\d+)\s*(?:金币|gold)/i),
-    totalSilver: pick(/银币[:：]?\s*(\d+)/, /(\d+)\s*(?:银币|silver)/i),
-    totalCopper: pick(/铜币[:：]?\s*(\d+)/, /(\d+)\s*(?:铜币|bronze)/i),
+    rewardCopper: pick(/(?:获得|奖励|received|reward)\s*(\d+)\s*(?:铜币|bronze)/i, /每日登录奖励\s+([0-9]+)(?:\.0)?/i, /(\d+)\s*(?:铜币|bronze)\s*(?:奖励|reward)/i),
   };
 }
 
@@ -134,7 +135,8 @@ async function readBalanceStats(page, origin, timeout = 60_000) {
         return Number.isFinite(n) ? Math.trunc(n) : null;
       };
       const stats = {};
-      const balance = document.querySelector(".balance_area");
+      const balance = Array.from(document.querySelectorAll(".balance_area"))
+        .find(el => /alt=["']G["']/i.test(el.innerHTML) && /alt=["']S["']/i.test(el.innerHTML) && /alt=["']B["']/i.test(el.innerHTML));
       if (balance) {
         const html = balance.innerHTML;
         const g = html.match(/(\d+)\s*<img[^>]+alt=["']G["']/i);
@@ -165,10 +167,12 @@ function parseBalanceAreaStats(html = "") {
   let area = "";
   for (const match of source.matchAll(/<div[^>]+class=["'][^"']*balance_area[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)) {
     const candidate = match[1] || "";
-    // The referral/help blocks can contain small balance_area snippets inside
-    // comments. The real account balance is the one containing bronze (B),
-    // usually alongside G/S/B icons.
-    if (/alt=["']B["']/i.test(candidate)) { area = candidate; break; }
+    // Ads/referral/help blocks may contain a bronze-only balance_area. The real
+    // account balance on /balance has all G/S/B icons; require the full trio.
+    if (/alt=["']G["']/i.test(candidate) && /alt=["']S["']/i.test(candidate) && /alt=["']B["']/i.test(candidate)) {
+      area = candidate;
+      break;
+    }
   }
   const pick = (alt) => {
     const re = new RegExp(`([0-9]+)\\s*<img[^>]+alt=["']${alt}["']`, "i");

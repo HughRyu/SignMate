@@ -292,6 +292,25 @@ function normalizeCategoryKey(value = "") {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
+function defaultCategoryForKey(key = "") {
+  return DEFAULT_SITE_CATEGORIES.find(item => item.key === key) || null;
+}
+
+function sensitiveConfigValues() {
+  const env = parseEnvText(readEnvRaw());
+  return new Set(Object.entries({ ...process.env, ...env })
+    .filter(([key, value]) => /PASSWORD|TOKEN|SECRET|KEY/i.test(key) && String(value || "").trim().length >= 6)
+    .map(([, value]) => String(value || "").trim()));
+}
+
+function sanitizeCategoryLabel(label = "", key = "") {
+  const clean = String(label || key || "").trim();
+  const fallback = defaultCategoryForKey(key)?.label || key || "分类";
+  if (!clean) return fallback;
+  if (sensitiveConfigValues().has(clean)) return fallback;
+  return clean;
+}
+
 function getCategoriesRaw(sitesRaw = readSitesRaw()) {
   const source = Array.isArray(sitesRaw.categories) ? sitesRaw.categories : DEFAULT_SITE_CATEGORIES;
   const out = [];
@@ -300,7 +319,7 @@ function getCategoriesRaw(sitesRaw = readSitesRaw()) {
     const key = normalizeCategoryKey(item?.key);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    out.push({ key, label: String(item.label || key).trim(), emoji: String(item.emoji || "🏷️").trim() });
+    out.push({ key, label: sanitizeCategoryLabel(item.label, key), emoji: String(item.emoji || "🏷️").trim() });
   }
   return out.length ? out : [...DEFAULT_SITE_CATEGORIES];
 }
@@ -313,7 +332,7 @@ function setCategoriesRaw(categories = []) {
     const key = normalizeCategoryKey(item?.key);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    clean.push({ key, label: String(item.label || key).trim(), emoji: String(item.emoji || "🏷️").trim() });
+    clean.push({ key, label: sanitizeCategoryLabel(item.label, key), emoji: String(item.emoji || "🏷️").trim() });
   }
   sitesRaw.categories = clean.length ? clean : DEFAULT_SITE_CATEGORIES;
   writeSitesRaw(sitesRaw);
@@ -1620,7 +1639,7 @@ export async function startServer() {
       if (!key) return res.status(400).json({ ok: false, error: "分类标识不能为空" });
       const categories = getCategoriesRaw();
       if (categories.some(c => c.key === key)) return res.status(409).json({ ok: false, error: `分类 "${key}" 已存在` });
-      categories.push({ key, label: String(body.label || key).trim(), emoji: String(body.emoji || "🏷️").trim() });
+      categories.push({ key, label: sanitizeCategoryLabel(body.label, key), emoji: String(body.emoji || "🏷️").trim() });
       res.json({ ok: true, data: setCategoriesRaw(categories) });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
@@ -1634,7 +1653,7 @@ export async function startServer() {
       const categories = getCategoriesRaw();
       const item = categories.find(c => c.key === key);
       if (!item) return res.status(404).json({ ok: false, error: `分类 "${key}" 不存在` });
-      if (Object.prototype.hasOwnProperty.call(body, "label")) item.label = String(body.label || item.key).trim();
+      if (Object.prototype.hasOwnProperty.call(body, "label")) item.label = sanitizeCategoryLabel(body.label, item.key);
       if (Object.prototype.hasOwnProperty.call(body, "emoji")) item.emoji = String(body.emoji || "🏷️").trim();
       res.json({ ok: true, data: setCategoriesRaw(categories) });
     } catch (err) {

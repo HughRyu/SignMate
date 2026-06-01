@@ -2745,7 +2745,7 @@ function renderCategoryMaintenance(sites = []) {
         return `
         <div class="category-dictionary-row" data-key="${escAttr(c.key)}">
           <select class="field-input category-emoji-input" data-field="emoji" title="分类图标">${categoryEmojiOptions(c.emoji || "🏷️")}</select>
-          <input class="field-input category-label-input" data-field="label" value="${escAttr(c.label || c.key)}" title="分类名称">
+          <input class="field-input category-label-input" data-field="label" value="${escAttr(c.label || c.key)}" title="分类名称" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" readonly>
           <code class="category-key-badge" title="内部标识：配置文件保存用">${esc(c.key)}</code>
           <span class="category-use-count" title="当前使用该分类的站点数量">${count} 个</span>
           <button class="btn ${c.key === "forum" ? "btn-secondary" : "btn-danger"} category-delete" type="button" data-key="${escAttr(c.key)}" data-count="${count}" ${c.key === "forum" ? "disabled" : ""} title="${c.key === "forum" ? "默认分类不能删除" : (count ? `删除后 ${count} 个站点会改为论坛` : "删除分类")}">删除</button>
@@ -2753,22 +2753,31 @@ function renderCategoryMaintenance(sites = []) {
       }).join("")}
     </div>
     <div class="category-add-head"><span>图标</span><span>分类名称</span><span>内部标识</span><span>操作</span></div>
-    <form id="categoryAddForm" class="category-add-form">
+    <form id="categoryAddForm" class="category-add-form" autocomplete="off">
       <select class="field-input category-emoji-input" name="emoji" title="分类图标">${categoryEmojiOptions("🎮")}</select>
-      <input class="field-input category-label-input" name="label" placeholder="例如 游戏" required title="页面显示的中文分类名">
+      <input class="field-input category-label-input" name="label" placeholder="例如 游戏" required title="页面显示的中文分类名" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true">
       <input class="field-input category-key-input" name="key" placeholder="game" required title="内部标识：用于保存配置，建议英文小写，例如 game">
       <button class="btn btn-primary" type="submit">添加</button>
     </form>
     <div class="field-help">内部标识用于配置保存，建议英文小写，例如 <code>game</code>；页面筛选和下拉会显示中文分类名。</div>
   `;
+  box.querySelectorAll(".category-label-input[readonly]").forEach(input => {
+    input.addEventListener("focus", () => { input.readOnly = false; }, { once: true });
+  });
   box.querySelectorAll(".category-dictionary-row input, .category-dictionary-row select").forEach(input => {
+    input.dataset.userEdited = "0";
+    input.addEventListener("input", () => { input.dataset.userEdited = "1"; });
     input.addEventListener("change", async () => {
+      // Password managers may fire change events when autofilling nearby password fields.
+      // Never persist category labels unless the user actually edited this control.
+      if (input.dataset.userEdited !== "1") return;
       const row = input.closest(".category-dictionary-row");
       const key = row?.dataset.key;
       const emoji = row?.querySelector('[data-field="emoji"]')?.value || "🏷️";
       const label = row?.querySelector('[data-field="label"]')?.value || key;
       try {
         await api(`/api/categories/${encodeURIComponent(key)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emoji, label }) });
+        input.dataset.userEdited = "0";
         await loadCategories();
         renderCategoryMaintenance(sites);
     hydrateCookieCloudForm(cookieCloud);
