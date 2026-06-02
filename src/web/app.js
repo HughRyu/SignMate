@@ -383,7 +383,7 @@ function applyBranding(branding = {}) {
   if (titleEl) titleEl.textContent = title;
   document.title = `${title} · 自动签到中心`;
   const logoEl = document.querySelector(".nav-logo");
-  if (logoEl) logoEl.textContent = "✓";
+  if (logoEl && !logoEl.querySelector("img")) logoEl.innerHTML = '<img src="/logo.jpg?v=20260601-0020" alt="SignMate Logo">';
 }
 
 async function api(url, options = {}) {
@@ -850,19 +850,19 @@ function buildAggregateMetrics(details = {}, siteKey = "") {
     ?? (siteKey !== "smzdm" && rewardExp !== null && totalDays !== null ? rewardExp * totalDays : null);
 
   if (details.bonus && siteKey === "audiences-me") items.push(metricItem(`🍿爆米花 ${esc(String(details.bonus))}`, "metric-chip metric-reward", "Audiences 爆米花"));
-  else if (details.bonus && ["pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com"].includes(siteKey)) items.push(metricItem(`🪄魔力值 ${esc(String(details.bonus))}${esc(signedDelta(ptBonusGain(details)))}`, "metric-chip metric-reward", "PT 魔力值（括号内为本次获得）"));
+  else if (details.bonus && ["pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) items.push(metricItem(`🪄魔力值 ${esc(String(details.bonus))}${esc(signedDelta(ptBonusGain(details)))}`, "metric-chip metric-reward", "PT 魔力值（括号内为本次获得）"));
   else if (siteKey === "hhanclub-net" && ptBonusGain(details)) items.push(metricItem(`🪄魔力值 ?${esc(signedDelta(ptBonusGain(details)))}`, "metric-chip metric-reward", "HHanClub 憨豆（等同魔力值）"));
-  if (!details.bonus && ptBonusGain(details) && ["hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com"].includes(siteKey)) {
+  if (!details.bonus && ptBonusGain(details) && ["hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) {
     const rewardName = String(details.rewardName || "").replace(/^[,，。；;)）\]】]+|[,，。；;)）\]】]+$/g, "");
     items.push(metricItem(`🎁签到 +${esc(String(ptBonusGain(details)))}${rewardName && !/^[0]+$/.test(rewardName) ? ` ${esc(rewardName)}` : ""}`, "metric-chip metric-reward", "本次签到获得"));
   }
   if (details.seedPoints && siteKey === "audiences-me") items.push(metricItem(`🌱做种积分 ${esc(String(details.seedPoints))}`, "metric-chip metric-points", "Audiences 做种积分"));
-  if (details.ratio && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com"].includes(siteKey)) items.push(metricItem(`⚖️分享率 ${esc(String(details.ratio))}`, "metric-chip metric-level", "PT 分享率"));
-  if ((details.upload || details.download) && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com"].includes(siteKey)) {
+  if (details.ratio && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) items.push(metricItem(`⚖️分享率 ${esc(String(details.ratio))}`, "metric-chip metric-level", "PT 分享率"));
+  if ((details.upload || details.download) && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) {
     const transfer = [details.upload ? `U: ${esc(String(details.upload))}` : "", details.download ? `D: ${esc(String(details.download))}` : ""].filter(Boolean).join(" / ");
     items.push(metricItem(`↕️${transfer}`, "metric-chip metric-points metric-transfer", "PT 上传/下载量"));
   }
-  if ((details.inviteDisplay || details.invite || details.tempInvite) && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com"].includes(siteKey)) {
+  if ((details.inviteDisplay || details.invite || details.tempInvite) && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) {
     const inviteMetric = formatInviteMetric(details, siteKey);
     if (inviteMetric) items.push(metricItem(`🎟️${esc(inviteMetric.text)}`, "metric-chip metric-level", inviteMetric.title));
   }
@@ -1207,8 +1207,8 @@ function buildSiteCard(site) {
       </div>` : ""}
 
       <div class="site-card-actions">
-        <button class="btn btn-secondary" id="credential-${escAttr(site.key)}" title="${site.hasCookie ? "已Cookie" : "未Cookie"}">
-          ${site.hasCookie ? "🔑" : "🔒"} Cookie
+        <button class="btn btn-secondary" id="credential-${escAttr(site.key)}" title="${credentialPrimaryLabel(site)}：${site.hasCookie ? "已维护" : "未维护"}">
+          ${site.hasCookie ? "🔑" : "🔒"} ${credentialPrimaryLabel(site)}
         </button>
         <button class="btn btn-secondary" id="signin-${escAttr(site.key)}" ${!site.enabled ? "disabled" : ""}>
           ${actionLabel}
@@ -1251,6 +1251,26 @@ async function toggleSite(key, enabled) {
   }
 }
 
+// ---- Credential labels ----
+function isTokenCredentialSite(item = {}) {
+  const key = String(item.key || "").toLowerCase();
+  const driver = String(item.driver || "").toLowerCase();
+  const name = String(item.name || "").toLowerCase();
+  return key === "mteam" || driver === "mteam" || name.includes("m-team");
+}
+
+function credentialPrimaryLabel(item = {}) {
+  return isTokenCredentialSite(item) ? "Token" : "Cookie";
+}
+
+function credentialPairLabel(item = {}) {
+  return `${credentialPrimaryLabel(item)}/2FA`;
+}
+
+function credentialSavedText(item = {}) {
+  return isTokenCredentialSite(item) ? "Token" : "Cookie";
+}
+
 // ---- Cookie / Credentials ----
 async function loadCredentials() {
   const grid = document.getElementById("credentialsGrid");
@@ -1279,7 +1299,10 @@ async function loadCredentials() {
 
 function buildCredentialCard(item) {
   const cookieValue = "";
-  const savedHint = item.hasCookie ? `已保存：${esc(item.cookieMasked || item.sessionOnlyMasked || "******")}` : "未保存 Cookie";
+  const primaryLabel = credentialPrimaryLabel(item);
+  const savedType = credentialSavedText(item);
+  const emptyPlaceholder = isTokenCredentialSite(item) ? "粘贴 M-Team 存取令牌" : "session=你的session值; colors=dark;";
+  const savedHint = item.hasCookie ? `已保存：${esc(item.cookieMasked || item.sessionOnlyMasked || "******")}` : `未保存 ${savedType}`;
   const status = item.hasCookie ? "已配置" : "未配置";
   const statusClass = item.hasCookie ? "tag-active" : "tag-disabled";
 
@@ -1290,9 +1313,9 @@ function buildCredentialCard(item) {
         <span class="site-card-tag ${statusClass}">${status}</span>
       </div>
       <form id="credential-form-${escAttr(item.key)}" class="credential-form">
-        <label class="field-label cookie-clear-title" id="cookie-title-${escAttr(item.key)}" for="cookie-${escAttr(item.key)}" title="双击标记清除已保存 Cookie，保存后生效">完整 Cookie</label>
-        <textarea id="cookie-${escAttr(item.key)}" class="field-textarea" name="cookie" rows="4" placeholder="${escAttr(savedHint)}；粘贴新 Cookie 才会更新">${cookieValue}</textarea>
-        <div class="field-help" id="cookie-help-${escAttr(item.key)}">${savedHint}。为避免泄露，页面不回显完整 Cookie；留空保存不会覆盖已有 Cookie；双击“完整 Cookie”可标记清除，保存后生效。</div>
+        <label class="field-label cookie-clear-title" id="cookie-title-${escAttr(item.key)}" for="cookie-${escAttr(item.key)}" title="双击标记清除已保存 ${savedType}，保存后生效">${primaryLabel}</label>
+        <textarea id="cookie-${escAttr(item.key)}" class="field-textarea" name="cookie" rows="4" placeholder="${escAttr(item.hasCookie ? `${savedHint}；粘贴新 ${savedType} 才会更新` : emptyPlaceholder)}">${cookieValue}</textarea>
+        <div class="field-help" id="cookie-help-${escAttr(item.key)}">${savedHint}。为避免泄露，页面不回显完整 ${savedType}；留空保存不会覆盖已有 ${savedType}；双击“${primaryLabel}”可标记清除，保存后生效。</div>
 
 
         <div class="credential-actions">
@@ -1319,7 +1342,7 @@ function clearCredentialForm(form, name = "该站点") {
   if (totpSecret || totpHelp) {
     form.dataset.clearTotpSecret = "1";
     if (totpHelp) totpHelp.innerHTML = `${esc(name)} 已标记清除已保存 2FA Secret；点击“保存”后生效。`;
-    showToast("已标记清空 Cookie/2FA，保存后生效", "info");
+    showToast("已标记清空凭据/2FA，保存后生效", "info");
   } else {
     showToast("已标记清空 Cookie，保存后生效", "info");
   }
@@ -1346,7 +1369,7 @@ async function saveCredential(event, key, name) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cookie, sessionOnly, clearCookie, totpSecret, clearTotpSecret }),
     });
-    const savedWhat = clearCookie ? "Cookie 已清除" : (clearTotpSecret ? "2FA Secret 已清除" : (totpSecret.trim() ? "Cookie/2FA 已保存" : "Cookie 已保存"));
+    const savedWhat = clearCookie ? "Cookie 已清除" : (clearTotpSecret ? "2FA Secret 已清除" : (totpSecret.trim() ? "凭据/2FA 已保存" : "Cookie 已保存"));
     showToast(`✅ ${name} ${savedWhat}`, "success");
     await loadCredentials();
     await loadSites(true);
@@ -1587,7 +1610,7 @@ function showSiteManageModal(sites, proxy, kind = "signin", batch = {}, options 
         <span class="manage-batch-head"><em>触发</em><input type="checkbox" id="manageBatchAll" title="按当前左上模式全选/取消触发"></span>
         <span>时间 / 随机范围</span>
         <span>代理</span>
-        <span>Cookie维护</span>
+        <span>凭据维护</span>
         <span>操作</span>
       </div>
       <div class="site-manage-list">
@@ -1638,8 +1661,8 @@ function showSiteManageModal(sites, proxy, kind = "signin", batch = {}, options 
                 <option value="on" ${site.proxyMode === "on" ? "selected" : ""}>代理</option>
                 <option value="off" ${site.proxyMode === "off" ? "selected" : ""}>直连</option>
               </select>
-              <span class="mobile-field-label">Cookie/2FA</span>
-              <button class="btn btn-secondary btn-compact manage-cookie credential-state ${site.hasCookie ? "has-cookie" : ""} ${site.hasTotpSecret ? "has-2fa" : ""}" type="button" data-site="${escAttr(site.key)}" data-name="${escAttr(site.name)}" title="Cookie：${site.hasCookie ? "已维护" : "未维护"}；2FA：${site.hasTotpSecret ? "已维护" : "未维护"}"><span class="credential-cookie">Cookie</span><span class="credential-slash">/</span><span class="credential-2fa">2FA</span></button>
+              <span class="mobile-field-label">凭据维护</span>
+              <button class="btn btn-secondary btn-compact manage-cookie credential-state ${site.hasCookie ? "has-cookie" : ""} ${site.hasTotpSecret ? "has-2fa" : ""}" type="button" data-site="${escAttr(site.key)}" data-name="${escAttr(site.name)}" title="${credentialPrimaryLabel(site)}：${site.hasCookie ? "已维护" : "未维护"}；2FA：${site.hasTotpSecret ? "已维护" : "未维护"}"><span class="credential-cookie">${credentialPrimaryLabel(site)}</span><span class="credential-slash">/</span><span class="credential-2fa">2FA</span></button>
               <span class="mobile-field-label">操作</span>
               <button class="btn btn-danger btn-compact manage-delete" type="button" data-site="${escAttr(site.key)}" data-name="${escAttr(site.name)}">删除</button>
             </div>
@@ -2259,7 +2282,7 @@ function maintenanceInnerHtml() {
             <h3>用户数据</h3>
             <div class="maintenance-checklist" id="exportSelectionBox">
               <label class="mini-switch"><input type="checkbox" value="sites" checked><span>站点配置</span></label>
-              <label class="mini-switch"><input type="checkbox" value="secrets" checked><span>Cookie / 凭据</span></label>
+              <label class="mini-switch"><input type="checkbox" value="secrets" checked><span>Cookie / Token / 凭据</span></label>
               <label class="mini-switch"><input type="checkbox" value="notify" checked><span>通知配置</span></label>
               <label class="mini-switch"><input type="checkbox" value="proxy" checked><span>代理设置</span></label>
               <label class="mini-switch"><input type="checkbox" value="cookiecloud" checked><span>CookieCloud</span></label>
@@ -2503,7 +2526,7 @@ async function openMaintenanceModal() {
             <h3>用户数据</h3>
             <div class="maintenance-checklist" id="exportSelectionBox">
               <label class="mini-switch"><input type="checkbox" value="sites" checked><span>站点配置</span></label>
-              <label class="mini-switch"><input type="checkbox" value="secrets" checked><span>Cookie / 凭据</span></label>
+              <label class="mini-switch"><input type="checkbox" value="secrets" checked><span>Cookie / Token / 凭据</span></label>
               <label class="mini-switch"><input type="checkbox" value="notify" checked><span>通知配置</span></label>
               <label class="mini-switch"><input type="checkbox" value="proxy" checked><span>代理设置</span></label>
               <label class="mini-switch"><input type="checkbox" value="history" checked><span>签到历史</span></label>
@@ -2861,12 +2884,16 @@ async function openCredentialModal(key, name) {
     const item = data.find(x => x.key === key) || { key, name, cookie: "", sessionOnly: "" };
     showCredentialModal(item);
   } catch (err) {
-    showToast(`加载 Cookie 配置失败: ${err.message}`, "error");
+    showToast(`加载凭据配置失败: ${err.message}`, "error");
   }
 }
 
 function showCredentialModal(item) {
   closeCredentialModal();
+  const primaryLabel = credentialPrimaryLabel(item);
+  const savedType = credentialSavedText(item);
+  const pairLabel = credentialPairLabel(item);
+  const emptyPlaceholder = isTokenCredentialSite(item) ? "粘贴 M-Team 存取令牌" : "session=你的session值; colors=dark;";
   const modal = document.createElement("div");
   modal.className = "modal-backdrop";
   modal.id = "credentialModal";
@@ -2874,19 +2901,19 @@ function showCredentialModal(item) {
     <div class="modal-card">
       <div class="modal-header">
         <div>
-          <h2 id="modalCredentialTitle">Cookie/2FA</h2>
+          <h2 id="modalCredentialTitle">${pairLabel}</h2>
           <p>${esc(item.name || item.key)}</p>
         </div>
         <button class="modal-close" type="button" id="modalClose">×</button>
       </div>
       <form id="modalCredentialForm" class="credential-form">
-        <label class="field-label cookie-clear-title" id="modalCookieLabel" for="modalCookie" title="双击标记清除已保存 Cookie，保存后生效">完整 Cookie</label>
-        <textarea id="modalCookie" class="field-textarea" name="cookie" rows="5" placeholder="${escAttr(item.hasCookie ? `已保存：${item.cookieMasked || item.sessionOnlyMasked || "******"}；粘贴新 Cookie 才会更新` : "session=你的session值; colors=dark;")}"></textarea>
-        <div class="field-help" id="modalCookieHelp">${item.hasCookie ? `已保存：${esc(item.cookieMasked || item.sessionOnlyMasked || "******")}。` : "当前未保存 Cookie。"}为避免泄露，页面不回显完整 Cookie；留空保存不会覆盖已有 Cookie；双击标题“Cookie”可标记清除，保存后生效。</div>
+        <label class="field-label cookie-clear-title" id="modalCookieLabel" for="modalCookie" title="双击标记清除已保存 ${savedType}，保存后生效">${primaryLabel}</label>
+        <textarea id="modalCookie" class="field-textarea" name="cookie" rows="5" placeholder="${escAttr(item.hasCookie ? `已保存：${item.cookieMasked || item.sessionOnlyMasked || "******"}；粘贴新 ${savedType} 才会更新` : emptyPlaceholder)}"></textarea>
+        <div class="field-help" id="modalCookieHelp">${item.hasCookie ? `已保存：${esc(item.cookieMasked || item.sessionOnlyMasked || "******")}。` : `当前未保存 ${savedType}。`}为避免泄露，页面不回显完整 ${savedType}；留空保存不会覆盖已有 ${savedType}；双击标题“${primaryLabel}”可标记清除，保存后生效。</div>
 
         <label class="field-label cookie-clear-title" id="modalTotpLabel" for="modalTotpSecret" title="双击标记清除已保存 2FA Secret，保存后生效">2FA Secret</label>
         <input id="modalTotpSecret" class="field-input" name="totpSecret" type="password" autocomplete="one-time-code" placeholder="${escAttr(item.hasTotpSecret ? `已保存：${item.totpSecretMasked || "******"}；填写新 Secret 才会更新` : "Base32 TOTP Secret")}">
-        <div class="field-help" id="modalTotpHelp">${item.hasTotpSecret ? `已保存：${esc(item.totpSecretMasked || "******")}。` : "当前未保存 2FA Secret。"}用于站点要求两步验证码时自动生成 TOTP；留空保存不会覆盖已有 Secret。</div>
+        <div class="field-help" id="modalTotpHelp">${item.hasTotpSecret ? `已保存：${esc(item.totpSecretMasked || "******")}。` : "当前未保存 2FA Secret。"}这里填写站点提供的 Base32 TOTP 密钥/种子，用于自动生成 6 位两步验证码；不是当前动态验证码。留空保存不会覆盖已有 Secret。</div>
 
         <div class="credential-actions">
           <button class="btn btn-secondary" type="button" id="modalClearCredential">清空</button>

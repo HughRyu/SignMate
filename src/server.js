@@ -266,8 +266,15 @@ function mergeSiteCatalog(sites = {}) {
 }
 
 function builtinAvailableSites(sites = {}) {
-  const existing = new Set(Object.keys(sites || {}));
-  return Object.entries(BUILTIN_SITES).map(([key, site]) => ({ key, site, added: existing.has(key) }));
+  // Built-in sites removed from the UI are retained as { hidden: true } so any
+  // user-owned overrides can be recovered. They must not count as already added,
+  // otherwise the Add Site dialog can say every adapted site is added while a
+  // removed built-in site cannot be re-added.
+  return Object.entries(BUILTIN_SITES).map(([key, site]) => ({
+    key,
+    site,
+    added: Boolean(sites?.[key]) && sites[key]?.hidden !== true,
+  }));
 }
 
 function mergedSitesRaw(sitesRaw = readSitesRaw()) {
@@ -1278,7 +1285,8 @@ export async function startServer() {
 
       const sitesRaw = readSitesRaw();
       sitesRaw.sites = sitesRaw.sites || {};
-      if (sitesRaw.sites[key]) {
+      const existingSite = sitesRaw.sites[key];
+      if (existingSite && existingSite.hidden !== true) {
         return res.status(409).json({ ok: false, error: `站点 "${key}" 已存在` });
       }
 
@@ -1310,7 +1318,11 @@ export async function startServer() {
         ...(body.loginKeyword ? { login_keyword: String(body.loginKeyword).trim() } : {}),
       };
       applySiteProxyMode(siteConfig, ["auto", "on", "off"].includes(body.proxyMode) ? body.proxyMode : siteProxyMode(siteConfig));
-      sitesRaw.sites[key] = siteConfig;
+      // If this is a previously removed built-in site, preserve harmless user-owned
+      // overrides but explicitly unhide/re-enable it and refresh capability fields
+      // from the current built-in catalog.
+      sitesRaw.sites[key] = { ...(existingSite?.hidden === true ? existingSite : {}), ...siteConfig };
+      delete sitesRaw.sites[key].hidden;
 
       writeSitesRaw(sitesRaw);
       res.json({ ok: true, data: { site: key, config: { ...BUILTIN_SITES[key], ...sitesRaw.sites[key] } } });

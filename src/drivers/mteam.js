@@ -151,8 +151,12 @@ export default class MTeamDriver extends BaseDriver {
     const ratio = Number(downloaded || 0) > 0 ? (Number(uploaded || 0) / Number(downloaded || 1)).toFixed(3) : "∞";
     const seeder = peer?.seeder ?? profile.peerCount?.seeder ?? "-";
     const leecher = peer?.leecher ?? profile.peerCount?.leecher ?? "-";
+    const invite = profile.invites ?? profile.invite ?? profile.invitation ?? "";
+    const tempInvite = profile.limitInvites ?? profile.tempInvites ?? profile.temporaryInvites ?? "";
+    const inviteDisplay = invite !== "" || tempInvite !== "" ? `${invite || 0} + ${tempInvite || 0}` : "";
 
-    const message = `保活完成，API 令牌有效；用户 ${username}；魔力 ${formatNumber(bonus)}；上传 ${formatBytes(uploaded)} / 下载 ${formatBytes(downloaded)}；分享率 ${ratio}；做种 ${seeder} / 下载中 ${leecher}`;
+    const inviteText = inviteDisplay ? `；邀请 ${inviteDisplay}` : "";
+    const message = `保活完成，API 令牌有效；用户 ${username}；魔力 ${formatNumber(bonus)}；上传 ${formatBytes(uploaded)} / 下载 ${formatBytes(downloaded)}；分享率 ${ratio}；做种 ${seeder} / 下载中 ${leecher}${inviteText}`;
     return {
       success: true,
       message,
@@ -163,12 +167,18 @@ export default class MTeamDriver extends BaseDriver {
         tokenLength: token.length,
         username,
         userId: profile.id || null,
-        bonus,
+        bonus: formatNumber(bonus),
+        bonusRaw: bonus,
+        upload: formatBytes(uploaded),
+        download: formatBytes(downloaded),
         uploaded,
         downloaded,
         ratio,
         seeder,
         leecher,
+        invite: invite === "" ? undefined : String(invite),
+        tempInvite: tempInvite === "" ? undefined : String(tempInvite),
+        inviteDisplay: inviteDisplay || undefined,
         allowDownload: profile.allowDownload,
         status: profile.status,
         enabled: profile.enabled,
