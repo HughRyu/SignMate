@@ -1193,7 +1193,7 @@ export async function startServer() {
         const name = site.note || key;
         const status = statusLookup[key] || statusLookup[name] || {};
         const siteSecrets = secrets[key] || {};
-        const hasCredential = !isPlaceholderSecret(siteSecrets.cookie || siteSecrets.session_only || siteSecrets.userInfo || siteSecrets.userInfoShared || siteSecrets["userInfo-shared"] || siteSecrets.accessToken || "");
+        const hasCredential = !isPlaceholderSecret(siteSecrets.cookie || siteSecrets.session_only || siteSecrets.userInfo || siteSecrets.userInfoShared || siteSecrets["userInfo-shared"] || siteSecrets.accessToken || siteSecrets.access_token || siteSecrets.api_key || siteSecrets.apiKey || siteSecrets.token || "");
         const hasCookie = hasCredential;
         const totpSecret = siteSecrets.totp_secret || siteSecrets.twofa_secret || siteSecrets["2fa_secret"] || siteSecrets.otp_secret || "";
         const hasTotpSecret = !isPlaceholderSecret(totpSecret);
@@ -1415,7 +1415,7 @@ export async function startServer() {
         const siteSecrets = secrets[key] || secrets[site.driver] || {};
         const cookie = siteSecrets.cookie || "";
         const sessionOnly = siteSecrets.session_only || "";
-        const localStorageCredential = siteSecrets.userInfo || siteSecrets.userInfoShared || siteSecrets["userInfo-shared"] || siteSecrets.accessToken || "";
+        const localStorageCredential = siteSecrets.userInfo || siteSecrets.userInfoShared || siteSecrets["userInfo-shared"] || siteSecrets.accessToken || siteSecrets.access_token || siteSecrets.api_key || siteSecrets.apiKey || siteSecrets.token || "";
         const totpSecret = siteSecrets.totp_secret || siteSecrets.twofa_secret || siteSecrets["2fa_secret"] || siteSecrets.otp_secret || "";
         return {
           key,
@@ -1462,6 +1462,10 @@ export async function startServer() {
         delete next.userInfoShared;
         delete next["userInfo-shared"];
         delete next.accessToken;
+        delete next.access_token;
+        delete next.api_key;
+        delete next.apiKey;
+        delete next.token;
         delete next.cookiecloud_updated_at;
         delete next.cookiecloud_source;
       }

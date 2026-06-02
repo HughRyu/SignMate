@@ -424,6 +424,23 @@ export const BUILTIN_SITES = {
     "category": "forum",
     "kind": "signin"
   }
+  ,
+  "mteam": {
+    "enabled": true,
+    "driver": "mteam",
+    "schedule": "auto",
+    "note": "M-Team",
+    "notify": true,
+    "retry": 1,
+    "retry_delay_ms": 10000,
+    "timeout": 30000,
+    "base_url": "https://kp.m-team.cc",
+    "api_base_url": "https://api.m-team.cc/api",
+    "signin_mode": "api",
+    "proxy": "auto",
+    "category": "pt",
+    "kind": "visit"
+  }
 };
 
 export default BUILTIN_SITES;
