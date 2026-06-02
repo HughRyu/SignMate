@@ -10874,18 +10874,12 @@ input.is-saved-field:focus {
   .nav-stats-strip .nav-stat-pill strong { font-size: 11px !important; }
 }
 
-/* local: logo-only brand, larger project icon */
-.nav .nav-brand {
-  gap: 0 !important;
-}
+/* project logo polish */
 .nav .nav-logo {
   width: 40px !important;
   height: 40px !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16) !important;
-}
-.nav .nav-title {
-  display: none !important;
 }
 @media (max-width: 640px) {
   .nav .nav-logo {
@@ -10895,7 +10889,7 @@ input.is-saved-field:focus {
   }
 }
 
-/* local: logo-only brand, transparent logo container */
+/* project logo transparent container */
 .nav .nav-logo {
   background: transparent !important;
   box-shadow: none !important;
