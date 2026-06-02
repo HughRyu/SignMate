@@ -1662,7 +1662,7 @@ function showSiteManageModal(sites, proxy, kind = "signin", batch = {}, options 
                 <option value="off" ${site.proxyMode === "off" ? "selected" : ""}>直连</option>
               </select>
               <span class="mobile-field-label">凭据维护</span>
-              <button class="btn btn-secondary btn-compact manage-cookie credential-state ${site.hasCookie ? "has-cookie" : ""} ${site.hasTotpSecret ? "has-2fa" : ""}" type="button" data-site="${escAttr(site.key)}" data-name="${escAttr(site.name)}" title="${credentialPrimaryLabel(site)}：${site.hasCookie ? "已维护" : "未维护"}；2FA：${site.hasTotpSecret ? "已维护" : "未维护"}"><span class="credential-cookie">${credentialPrimaryLabel(site)}</span><span class="credential-slash">/</span><span class="credential-2fa">2FA</span></button>
+              <button class="btn btn-secondary btn-compact manage-cookie credential-state ${isTokenCredentialSite(site) ? "token-credential" : ""} ${site.hasCookie ? "has-cookie" : ""} ${site.hasTotpSecret ? "has-2fa" : ""}" type="button" data-site="${escAttr(site.key)}" data-name="${escAttr(site.name)}" title="${credentialPrimaryLabel(site)}：${site.hasCookie ? "已维护" : "未维护"}；2FA：${site.hasTotpSecret ? "已维护" : "未维护"}"><span class="credential-cookie">${credentialPrimaryLabel(site)}</span><span class="credential-slash">/</span><span class="credential-2fa">2FA</span></button>
               <span class="mobile-field-label">操作</span>
               <button class="btn btn-danger btn-compact manage-delete" type="button" data-site="${escAttr(site.key)}" data-name="${escAttr(site.name)}">删除</button>
             </div>

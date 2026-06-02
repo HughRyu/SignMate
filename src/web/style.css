@@ -10874,3 +10874,26 @@ input.is-saved-field:focus {
   .nav-stats-strip .nav-stat-pill strong { font-size: 11px !important; }
 }
 
+/* 2026-06-02 M-Team Token/2FA credential state: distinguish API Token from Cookie */
+#siteManageModal .manage-cookie.credential-state.token-credential.has-cookie {
+  background: linear-gradient(90deg,
+    #ede9fe 0%,
+    #ede9fe 50%,
+    rgba(255,255,255,.72) 50%,
+    rgba(255,255,255,.72) 100%) !important;
+  border-left-color: rgba(124, 58, 237, .45) !important;
+}
+#siteManageModal .manage-cookie.credential-state.token-credential.has-cookie.has-2fa {
+  background: linear-gradient(90deg,
+    #ede9fe 0%,
+    #ede9fe 50%,
+    #dcfce7 50%,
+    #dcfce7 100%) !important;
+}
+#siteManageModal .manage-cookie.credential-state.token-credential.has-cookie .credential-cookie {
+  color: #6d28d9 !important;
+  font-weight: 900 !important;
+}
+#siteManageModal .manage-cookie.credential-state.token-credential:not(.has-cookie) .credential-cookie {
+  color: #8b5cf6 !important;
+}
