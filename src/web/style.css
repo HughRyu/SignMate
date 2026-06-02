@@ -10891,9 +10891,10 @@ input.is-saved-field:focus {
     #dcfce7 100%) !important;
 }
 #siteManageModal .manage-cookie.credential-state.token-credential.has-cookie .credential-cookie {
-  color: #6d28d9 !important;
+  background: #7c3aed !important;
+  color: #fff !important;
   font-weight: 900 !important;
 }
 #siteManageModal .manage-cookie.credential-state.token-credential:not(.has-cookie) .credential-cookie {
-  color: #8b5cf6 !important;
+  color: #7c3aed !important;
 }
