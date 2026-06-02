@@ -10874,26 +10874,3 @@ input.is-saved-field:focus {
   .nav-stats-strip .nav-stat-pill strong { font-size: 11px !important; }
 }
 
-/* project logo polish */
-.nav .nav-logo {
-  width: 40px !important;
-  height: 40px !important;
-  border-radius: 12px !important;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16) !important;
-}
-@media (max-width: 640px) {
-  .nav .nav-logo {
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 11px !important;
-  }
-}
-
-/* project logo transparent container */
-.nav .nav-logo {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-.nav .nav-logo img {
-  object-fit: contain !important;
-}
