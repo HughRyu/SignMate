@@ -2835,7 +2835,7 @@ input[type="time"].field-input::-webkit-datetime-edit-fields-wrapper {
   user-select: none !important;
 }
 .site-category-corner.cat-forum { background: linear-gradient(135deg, #64748b, #2563eb) !important; }
-.site-category-corner.cat-pt { background: linear-gradient(135deg, #7c3aed, #06b6d4) !important; }
+.site-category-corner.cat-pt { background: linear-gradient(135deg, #8b5cf6, #06b6d4) !important; }
 .site-category-corner.cat-website { background: linear-gradient(135deg, #10b981, #0ea5e9) !important; }
 .site-category-corner.cat-game { background: linear-gradient(135deg, #f97316, #ec4899) !important; }
 
@@ -2921,7 +2921,7 @@ input[type="time"].field-input::-webkit-datetime-edit-fields-wrapper {
   backdrop-filter: blur(6px) !important;
 }
 .site-category-corner.cat-forum { background: linear-gradient(135deg, #2563eb, #60a5fa) !important; }
-.site-category-corner.cat-pt { background: linear-gradient(135deg, #7c3aed, #22d3ee) !important; }
+.site-category-corner.cat-pt { background: linear-gradient(135deg, #8b5cf6, #22d3ee) !important; }
 .site-category-corner.cat-website { background: linear-gradient(135deg, #059669, #38bdf8) !important; }
 .site-category-corner.cat-game { background: linear-gradient(135deg, #f97316, #f43f5e) !important; }
 .site-category-corner:not(.cat-forum):not(.cat-pt):not(.cat-website):not(.cat-game) { background: linear-gradient(135deg, #475569, #a855f7) !important; }
@@ -3189,7 +3189,7 @@ input[type="time"].field-input::-webkit-datetime-edit-fields-wrapper {
 }
 .site-category-corner.cat-pt {
   color: #fff !important;
-  background: linear-gradient(135deg, #7c3aed, #06b6d4) padding-box,
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4) padding-box,
               linear-gradient(135deg, #f97316, #ec4899, #06b6d4) border-box !important;
 }
 .site-category-corner.cat-website {
@@ -3315,7 +3315,7 @@ input[type="time"].field-input::-webkit-datetime-edit-fields-wrapper {
 
 /* ---- 2026-05-22 15:13: lighter PT badge with pale yellow outline ---- */
 .site-category-corner.cat-pt {
-  color: #6d28d9 !important;
+  color: #7c3aed !important;
   background: linear-gradient(135deg, rgba(245,243,255,.98), rgba(224,242,254,.98)) padding-box,
               linear-gradient(135deg, #fde68a, #fef3c7, #facc15) border-box !important;
   border-color: transparent !important;
@@ -5032,7 +5032,7 @@ input.is-saved-field:focus {
   background: linear-gradient(135deg, #475569 0%, #334155 52%, #1e293b 100%) !important;
 }
 .site-category-corner.cat-pt {
-  background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 52%, #0f766e 100%) !important;
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 52%, #0f766e 100%) !important;
 }
 .site-category-corner.cat-website {
   background: linear-gradient(135deg, #047857 0%, #0f766e 54%, #0369a1 100%) !important;
@@ -5061,7 +5061,7 @@ input.is-saved-field:focus {
 }
 .site-category-corner.cat-pt {
   color: #4c1d95 !important;
-  background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 58%, #e0f2fe 100%) !important;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 58%, #e0f2fe 100%) !important;
   border-color: rgba(124, 58, 237, .34) !important;
 }
 .site-category-corner.cat-website {
@@ -10877,24 +10877,24 @@ input.is-saved-field:focus {
 /* 2026-06-02 M-Team Token/2FA credential state: distinguish API Token from Cookie */
 #siteManageModal .manage-cookie.credential-state.token-credential.has-cookie {
   background: linear-gradient(90deg,
-    #ede9fe 0%,
-    #ede9fe 50%,
+    #f3e8ff 0%,
+    #f3e8ff 50%,
     rgba(255,255,255,.72) 50%,
     rgba(255,255,255,.72) 100%) !important;
   border-left-color: rgba(124, 58, 237, .45) !important;
 }
 #siteManageModal .manage-cookie.credential-state.token-credential.has-cookie.has-2fa {
   background: linear-gradient(90deg,
-    #ede9fe 0%,
-    #ede9fe 50%,
+    #f3e8ff 0%,
+    #f3e8ff 50%,
     #dcfce7 50%,
     #dcfce7 100%) !important;
 }
 #siteManageModal .manage-cookie.credential-state.token-credential.has-cookie .credential-cookie {
-  background: #7c3aed !important;
+  background: #8b5cf6 !important;
   color: #fff !important;
   font-weight: 900 !important;
 }
 #siteManageModal .manage-cookie.credential-state.token-credential:not(.has-cookie) .credential-cookie {
-  color: #7c3aed !important;
+  color: #8b5cf6 !important;
 }
