@@ -86,19 +86,49 @@ function inferResultStatus(result = {}) {
   return siteKind === "visit" ? "✗ 保活失败" : "✗ 签到失败";
 }
 
-function compactResultForNotify(result = {}) {
+function compactNotifyHead(result = {}, lines = []) {
+  const icon = result.success ? "✅" : "❌";
+  const site = String(result.site || result.name || result.key || result.siteKey || "站点").trim();
+  if (site && site !== "站点") return `${icon} ${site}`;
+  const first = String(lines[0] || "").trim();
+  const match = first.match(/^([✅❌⚠️⚠✗✓]\s*)?([^:：\n]+)[:：]/);
+  return match ? `${icon} ${match[2].trim()}` : (first || `${icon} 站点`);
+}
+
+function compactMTeamResultForNotify(result = {}, status = "✓ 保活成功") {
+  const details = result.details || {};
+  if (!result.success) return null;
+  const site = String(result.site || result.name || result.key || result.siteKey || "M-Team").trim() || "M-Team";
+  const username = details.username || "-";
+  const bonus = details.bonus || "-";
+  return [`✅ ${site}: 保活完成，API 令牌有效；用户 ${username}；魔力 ${bonus}；`, `📝 ${status}`].join("\n");
+}
+
+export function compactResultForNotify(result = {}) {
   const formatted = String(result.formatted || "");
   const lines = formatted.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-  const head = lines[0] || `${result.success ? "✅" : "❌"} ${result.site || "站点"}`;
+  const head = compactNotifyHead(result, lines);
   const detailLine = lines.find(line => line.startsWith("📝")) || `📝 ${result.message || ""}`;
   const detail = detailLine.replace(/^📝\s*/, "").trim();
   const details = result.details || {};
   const status = inferResultStatus(result);
 
+  if (details.checkinAction === "api_token_keepalive") {
+    const mteam = compactMTeamResultForNotify(result, status);
+    if (mteam) return mteam;
+  }
+
+  const seenParts = new Set();
   const parts = detail.split(/[；;]+/).map(part => part.trim()).filter(Boolean)
-    .filter(part => part !== status && !/^✓\s*(签到成功|今日已签到)$/.test(part));
+    .filter(part => part !== status && !/^✓\s*(签到成功|今日已签到|保活成功|保活完成)$/.test(part))
+    .filter(part => {
+      const normalized = part.replace(/\s+/g, " ");
+      if (seenParts.has(normalized)) return false;
+      seenParts.add(normalized);
+      return true;
+    });
   const picked = [];
-  const prefer = [/连续签到|累计签到|已签到\s*\d+\s*天/, /总签到/, /魔力值|分享率|积分|金币|鸡腿|经验|碎银子|等级|用户|活跃|能量/, /检查时间|签到时间/];
+  const prefer = [/连续签到|累计签到|已签到\s*\d+\s*天/, /总签到/, /魔力值|魔力|分享率|积分|金币|鸡腿|经验|碎银子|等级|用户|活跃|能量/, /检查时间|签到时间/];
   for (const re of prefer) {
     const idx = parts.findIndex(part => re.test(part) && !picked.includes(part));
     if (idx >= 0) picked.push(parts[idx]);

@@ -365,14 +365,14 @@ export function startScheduler(enabledSites, secrets) {
 
     // 异步导入 runner，避免循环依赖
     cron.schedule(schedule, async () => {
-      const { runSingle } = await import("./runner.js");
+      const { runSingle, compactResultForNotify } = await import("./runner.js");
       logger.info(`[定时触发] ${site.note || site.driver}`);
       const result = await runSingle(site, secrets);
       await store.addEntry(result.site || site.note || site.driver, result);
       const notifyConfig = loadNotifyConfigSafe();
       const onlyFailures = notifyConfig.signin?.only_failures === true;
       if (result.formatted && (!onlyFailures || !result.success)) {
-        await notifier.send(`自动签到：${result.site || site.note || site.driver}`, [result.formatted], "signin");
+        await notifier.send(`自动签到：${result.site || site.note || site.driver}`, [compactResultForNotify(result)], "signin");
       }
     });
 
