@@ -23,6 +23,7 @@ SignMate 使用两个 Docker 发布通道：
    - Docker/依赖变更：确认镜像构建、浏览器检查和容器启动。
 6. 不存在已知 false-positive：无法确认实际签到成功时，不得报告“签到成功”。
 7. README、版本号、Docker tag 文案与实际行为一致。
+8. `CHANGELOG.md` 已补充本次版本的用户可读变更说明。
 
 ## 发布前检查
 
@@ -55,14 +56,16 @@ npm version 0.1.13 --no-git-tag-version
 # 3. 如果 README 固定版本示例有旧版本号，同步更新
 # 例如 ghcr.io/hughryu/signmate:v0.1.13
 
-# 4. 发布检查
+# 4. 更新 CHANGELOG.md，补充本次版本的用户可读变更
+
+# 5. 发布检查
 npm run release:check
 
-# 5. 提交版本号变更
-git add package.json package-lock.json README.md
+# 6. 提交版本号和变更记录
+git add package.json package-lock.json README.md CHANGELOG.md
 git commit -m "Release v0.1.13"
 
-# 6. 打 tag 并推送
+# 7. 打 tag 并推送
 git tag -a v0.1.13 -m "Release v0.1.13"
 git push origin main
 git push origin v0.1.13
