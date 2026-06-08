@@ -1,4 +1,8 @@
 node_modules/
+.codegraph/
+.understand-anything/intermediate/
+.understand-anything/tmp/
+.understand-anything/fingerprints.json
 .env
 .env.*
 !.env.example
@@ -6,8 +10,11 @@ config/*.yaml
 !config/*.yaml.example
 config/settings.env
 data/
+__pycache__/
 logs/
 backups/
+*.log
+*.tmp
 src/backup-*/
 src/web/backup-*/
 inspect_*.mjs

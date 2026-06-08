@@ -1,0 +1,18 @@
+# .understandignore — SignMate analysis exclusions
+# Syntax follows .gitignore-style globs.
+
+node_modules/
+.git/
+.github/
+.understand-anything/intermediate/
+.understand-anything/tmp/
+.understand-anything/fingerprints.json
+.codegraph/
+data/
+config/*.json
+config/*.yaml
+config/*.yml
+*.log
+*.tmp
+.env
+.env.*

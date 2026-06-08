@@ -1,0 +1,19 @@
+{
+  "projectName": "SignMate",
+  "gitCommitHash": "54719b8f4664ebd17db98ea0c4706a57dd4bdde3",
+  "generatedAt": "2026-06-08T03:47:41.404Z",
+  "language": "zh",
+  "autoUpdate": false,
+  "sharedArtifacts": [
+    "knowledge-graph.json",
+    "config.json",
+    "meta.json",
+    ".understandignore"
+  ],
+  "localOnly": [
+    ".codegraph/",
+    "intermediate/",
+    "tmp/",
+    "fingerprints.json"
+  ]
+}
