@@ -485,7 +485,7 @@ function applyBranding(branding = {}) {
   if (titleEl) titleEl.textContent = title;
   document.title = `${title} · 自动签到中心`;
   const logoEl = document.querySelector(".nav-logo");
-  if (logoEl && !logoEl.querySelector("img")) logoEl.innerHTML = '<img src="/logo.jpg?v=20260601-0020" alt="SignMate Logo">';
+  if (logoEl && !logoEl.querySelector("img")) logoEl.innerHTML = '<img src="/logo.jpg?v=20260609-logo" alt="SignMate Logo">';
 }
 
 async function api(url, options = {}) {

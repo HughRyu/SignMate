@@ -4,6 +4,14 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本的 patch 递增节奏。
 
+## [0.1.19] - 2026-06-09
+
+### 修复
+
+- 登录页改用 SignMate 项目 Logo，不再显示默认蓝底对勾。
+- 更新主面板 favicon、导航栏 Logo 与前端兜底 Logo 的缓存版本，确保浏览器加载当前 Logo。
+- README 顶部增加 SignMate Logo 展示。
+
 ## [0.1.18] - 2026-06-09
 
 ### 修复
@@ -146,6 +154,7 @@
 
 - 动态解析 Chromium 可执行路径，提升不同环境下的浏览器兼容性。
 
+[0.1.19]: https://github.com/HughRyu/SignMate/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/HughRyu/SignMate/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/HughRyu/SignMate/compare/v0.1.16...v0.1.17
 [0.1.16]: https://github.com/HughRyu/SignMate/compare/v0.1.15...v0.1.16
