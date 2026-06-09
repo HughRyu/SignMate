@@ -4,6 +4,13 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本的 patch 递增节奏。
 
+## [0.1.18] - 2026-06-09
+
+### 修复
+
+- 更新前端静态资源缓存版本，确保管理面板加载最新 `app.js` 与 `style.css`。
+- 延续 `v0.1.17` 的可访问性增强与运行时版本显示修复。
+
 ## [0.1.17] - 2026-06-09
 
 ### 修复
@@ -139,6 +146,7 @@
 
 - 动态解析 Chromium 可执行路径，提升不同环境下的浏览器兼容性。
 
+[0.1.18]: https://github.com/HughRyu/SignMate/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/HughRyu/SignMate/compare/v0.1.16...v0.1.17
 [0.1.16]: https://github.com/HughRyu/SignMate/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/HughRyu/SignMate/compare/v0.1.14...v0.1.15
