@@ -25,6 +25,15 @@ import { startServer } from "./server.js";
 import { getGlobalProxy, selectProxyUrl, testProxyPool } from "./utils/proxy.js";
 import * as store from "./store.js";
 
+function readPackageMeta() {
+  try {
+    const pkgPath = join(import.meta.dirname, "..", "package.json");
+    return existsSync(pkgPath) ? JSON.parse(readFileSync(pkgPath, "utf-8")) : {};
+  } catch {
+    return {};
+  }
+}
+
 // ---- 注册所有内置 Driver ----
 import NodeSeekDriver from "./drivers/nodeseek.js";
 import TemplateDriver from "./drivers/template.js";
@@ -111,9 +120,10 @@ function initNotifier() {
 
 // ---- 启动 ----
 async function main() {
+  const pkg = readPackageMeta();
   logger.info("");
   logger.info("=".repeat(50));
-  logger.info("  signmate — 签伴 SignMate v1.0.0");
+  logger.info(`  signmate — 签伴 SignMate v${pkg.version || "unknown"}`);
   logger.info("=".repeat(50));
   logger.info("");
 

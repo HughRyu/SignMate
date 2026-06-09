@@ -4,6 +4,15 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本的 patch 递增节奏。
 
+## [0.1.17] - 2026-06-09
+
+### 修复
+
+- 增强管理面板弹窗可访问性：新增焦点初始化、Tab 焦点循环、Esc 关闭和关闭后焦点恢复。
+- 增加全局 `focus-visible` 兜底，避免历史样式覆盖导致键盘焦点不可见。
+- 增加 `prefers-reduced-motion` 支持，降低动效对敏感用户的影响。
+- 统一运行时版本展示，启动日志和 `/api/info` 现在读取 `package.json` 版本。
+
 ## [0.1.16] - 2026-06-07
 
 ### 优化
@@ -130,6 +139,7 @@
 
 - 动态解析 Chromium 可执行路径，提升不同环境下的浏览器兼容性。
 
+[0.1.17]: https://github.com/HughRyu/SignMate/compare/v0.1.16...v0.1.17
 [0.1.16]: https://github.com/HughRyu/SignMate/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/HughRyu/SignMate/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/HughRyu/SignMate/compare/v0.1.13...v0.1.14

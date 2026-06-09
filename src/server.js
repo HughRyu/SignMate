@@ -2310,10 +2310,11 @@ export async function startServer() {
   // API: Server 信息
   // ========================================
   app.get("/api/info", (_req, res) => {
+    const pkg = readPackageMeta();
     res.json({
       ok: true,
       data: {
-        version: "1.0.0",
+        version: pkg.version || "unknown",
         uptime: Math.floor(process.uptime()),
         timezone: process.env.TZ || "UTC",
         nodeVersion: process.version,
