@@ -19,6 +19,16 @@ const DEFAULT_CATEGORIES = [
 ];
 let siteCategories = [...DEFAULT_CATEGORIES];
 let appSettings = { auth: {}, branding: { title: "SignMate" } };
+const MODAL_FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+const modalFocusState = new WeakMap();
+let modalObserver = null;
 
 function orderedCategories() {
   const homeOrder = ["forum", "pt"];
@@ -36,6 +46,7 @@ const runningSites = new Map();
 
 // ---- Init ----
 document.addEventListener("DOMContentLoaded", () => {
+  initModalAccessibility();
   loadAppSettings().catch(() => {});
   updateClock();
   refreshNavTimeTooltip();
@@ -231,6 +242,97 @@ function resetSiteViewToAll({ clearSearch = false } = {}) {
   switchTab("sites");
   loadSites(true);
 }
+
+function initModalAccessibility() {
+  if (modalObserver) return;
+  document.querySelectorAll(".modal-backdrop").forEach(enhanceModalAccessibility);
+  modalObserver = new MutationObserver(records => {
+    records.forEach(record => {
+      record.addedNodes.forEach(node => {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.matches(".modal-backdrop")) enhanceModalAccessibility(node);
+        node.querySelectorAll?.(".modal-backdrop").forEach(enhanceModalAccessibility);
+      });
+      record.removedNodes.forEach(node => {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.matches(".modal-backdrop")) restoreModalFocus(node);
+        node.querySelectorAll?.(".modal-backdrop").forEach(restoreModalFocus);
+      });
+    });
+  });
+  modalObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+function enhanceModalAccessibility(modal) {
+  if (!modal || modalFocusState.has(modal)) return;
+  const dialog = modal.querySelector('[role="dialog"], .modal-card');
+  if (!dialog) return;
+  if (!dialog.hasAttribute("role")) dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  if (!dialog.hasAttribute("tabindex")) dialog.setAttribute("tabindex", "-1");
+
+  modalFocusState.set(modal, { previouslyFocused: document.activeElement instanceof HTMLElement ? document.activeElement : null });
+  window.setTimeout(() => focusFirstModalElement(modal), 0);
+}
+
+function modalStack() {
+  return Array.from(document.querySelectorAll(".modal-backdrop"));
+}
+
+function isTopModal(modal) {
+  const stack = modalStack();
+  return stack[stack.length - 1] === modal;
+}
+
+function modalFocusableElements(modal) {
+  return Array.from(modal.querySelectorAll(MODAL_FOCUSABLE_SELECTOR))
+    .filter(element => {
+      if (element.hasAttribute("hidden")) return false;
+      const style = window.getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden" && element.getClientRects().length > 0;
+    });
+}
+
+function focusFirstModalElement(modal) {
+  const focusable = modalFocusableElements(modal);
+  const preferred = modal.querySelector("[autofocus], .modal-close, .site-manage-search, input, select, textarea, button");
+  const target = focusable.includes(preferred) ? preferred : (focusable[0] || modal.querySelector('[role="dialog"], .modal-card'));
+  target?.focus?.({ preventScroll: true });
+}
+
+function restoreModalFocus(modal) {
+  const state = modalFocusState.get(modal);
+  modalFocusState.delete(modal);
+  if (!state?.previouslyFocused?.isConnected) return;
+  window.setTimeout(() => state.previouslyFocused.focus?.({ preventScroll: true }), 0);
+}
+
+document.addEventListener("keydown", event => {
+  const stack = modalStack();
+  const modal = stack[stack.length - 1];
+  if (!modal) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    modal.querySelector(".modal-close")?.click?.() || modal.remove();
+    return;
+  }
+  if (event.key !== "Tab" || !isTopModal(modal)) return;
+  const focusable = modalFocusableElements(modal);
+  if (!focusable.length) {
+    event.preventDefault();
+    modal.querySelector('[role="dialog"], .modal-card')?.focus?.({ preventScroll: true });
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus({ preventScroll: true });
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
+  }
+}, true);
 
 // ---- Clock ----
 function updateClock() {

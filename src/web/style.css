@@ -10898,3 +10898,40 @@ input.is-saved-field:focus {
 #siteManageModal .manage-cookie.credential-state.token-credential:not(.has-cookie) .credential-cookie {
   color: #8b5cf6 !important;
 }
+
+/* ---- Accessibility hardening: focus + reduced motion ---- */
+:where(a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid rgba(0, 113, 227, .58) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, .12) !important;
+}
+
+.modal-card:focus-visible {
+  outline: 2px solid rgba(0, 113, 227, .42) !important;
+  outline-offset: 4px !important;
+}
+
+.modal-backdrop {
+  overscroll-behavior: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  .spinner,
+  .is-running .status-dot,
+  .missed-signin-flow,
+  [class*="pulse"],
+  [class*="spin"] {
+    animation: none !important;
+  }
+}
