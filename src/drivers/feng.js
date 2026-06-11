@@ -97,13 +97,24 @@ export default class FengDriver extends BaseDriver {
     const rawCookie = siteSecrets.cookie || "";
     // 威锋登录态在浏览器里通常是 userInfo / userInfo-shared 两个 Cookie；
     // 面板手动粘贴完整 Cookie、CookieCloud 同步都只会写入 cookie 字段。
-    // 因此 Driver 不能只读取拆出来的 userInfo 字段，否则新部署用户会提示未配置。
-    const rawUserInfo = siteSecrets.userInfo || siteSecrets.userinfo || siteSecrets["userInfo"] || cookieValue(rawCookie, "userInfo") || "";
-    const rawShared = siteSecrets.userInfoShared || siteSecrets["userInfo-shared"] || cookieValue(rawCookie, "userInfo-shared") || "";
-    const parsed = parseUserInfo(rawUserInfo) || parseUserInfo(rawShared);
-    const token = String(parsed?.accessToken || siteSecrets.accessToken || "").trim();
+    // CookieCloud 更新后只会刷新 cookie；如果旧的拆分字段仍残留，必须让 cookie
+    // 优先，否则会继续使用过期 token，接口返回“先登录”。拆分字段仅作为历史兜底。
+    const candidates = [
+      { raw: cookieValue(rawCookie, "userInfo"), source: "cookie" },
+      { raw: cookieValue(rawCookie, "userInfo-shared"), source: "cookie" },
+      { raw: siteSecrets.userInfo || siteSecrets.userinfo || siteSecrets["userInfo"], source: "legacy" },
+      { raw: siteSecrets.userInfoShared || siteSecrets["userInfo-shared"], source: "legacy" },
+    ];
+    for (const candidate of candidates) {
+      const parsed = parseUserInfo(candidate.raw || "");
+      const token = String(parsed?.accessToken || "").trim();
+      if (token && !token.includes("<YOUR_")) {
+        return { token, profile: parsed?.userInfo || {}, cookie: candidate.source === "cookie" ? rawCookie : "" };
+      }
+    }
+    const token = String(siteSecrets.accessToken || "").trim();
     if (!token || token.includes("<YOUR_")) return null;
-    return { token, profile: parsed?.userInfo || {} };
+    return { token, profile: {}, cookie: "" };
   }
 
   async api(path, { method = "GET" } = {}) {
@@ -118,6 +129,7 @@ export default class FengDriver extends BaseDriver {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
       "X-Access-Token": account.token,
       "X-Request-Id": makeRequestId(path),
+      ...(account.cookie ? { "Cookie": account.cookie } : {}),
     };
     const res = await request(`${API_BASE}${path}`, {
       method,
