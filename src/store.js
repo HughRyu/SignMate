@@ -55,7 +55,7 @@ function mergePreferredSigninEntry(preferred = {}, latest = {}) {
   const latestDetails = latest.details || {};
   const rewardKeys = ["rewardExp", "rewardAmount", "rewardUnit", "rewardPoints", "rewardPbCoins", "rewardCopper", "rewardChickenLegs", "bonusGain", "nextRewardAmount"];
   const details = { ...preferredDetails, ...latestDetails };
-  for (const key of ["userGroup", "points", "experience", "totalExp", "vitality", "username", "proxyModeUsed", "proxyUsed", "proxyReason", "fengLevel", "level", "levelTitle", "currentExperience", "creditsLower", "creditsHigher", "fengCoins", "totalCoins", "joinDays", "totalDays", "signInDays", "streakDays"]) {
+  for (const key of ["userGroup", "points", "experience", "totalExp", "vitality", "username", "proxyModeUsed", "proxyUsed", "proxyReason", "fengLevel", "level", "levelTitle", "currentExperience", "creditsLower", "creditsHigher", "fengCoins", "totalCoins", "totalPoints", "totalPbCoins", "dailyTask", "replyTask", "joinDays", "totalDays", "signInDays", "streakDays"]) {
     if ((details[key] === null || details[key] === undefined || details[key] === "") && latestDetails[key] !== undefined) details[key] = latestDetails[key];
   }
   for (const key of rewardKeys) {
@@ -130,7 +130,7 @@ export async function getHistory(siteName = null, limit = 50) {
   await load();
   let entries = cache;
   if (siteName) {
-    entries = entries.filter(e => e.site === siteName);
+    entries = entries.filter(e => e.site === siteName || e.siteKey === siteName);
   }
   return entries.slice(0, limit);
 }
@@ -141,23 +141,24 @@ export async function getSitesStatus() {
   const statusMap = new Map();
 
   for (const entry of cache) {
-    const current = statusMap.get(entry.site);
+    const statusKey = entry.siteKey || entry.site;
+    const current = statusMap.get(statusKey);
     if (!current) {
-      statusMap.set(entry.site, entry);
+      statusMap.set(statusKey, entry);
       continue;
     }
     // 不允许同一天后续调试/重复运行的失败覆盖已经成功的签到状态。
     // 同一天重复签到如果只返回“今日已签到”，也不要覆盖第一次真正签到时的奖励信息。
     const currentKind = current.details?.kind || current.kind || "signin";
     if (currentKind !== "visit" && isSameBusinessDay(current, entry) && isSuccessfulSignin(entry) && !isSuccessfulSignin(current)) {
-      statusMap.set(entry.site, entry);
+      statusMap.set(statusKey, entry);
     } else if (currentKind !== "visit" && isSameBusinessDay(current, entry) && isSuccessfulSignin(entry) && isSuccessfulSignin(current) && !hasSignReward(current) && hasSignReward(entry)) {
-      statusMap.set(entry.site, mergePreferredSigninEntry(entry, current));
+      statusMap.set(statusKey, mergePreferredSigninEntry(entry, current));
     }
   }
 
-  return Array.from(statusMap.entries()).map(([site, entry]) => ({
-    site,
+  return Array.from(statusMap.entries()).map(([, entry]) => ({
+    site: entry.site,
     siteKey: entry.siteKey || null,
     kind: entry.kind || null,
     category: entry.category || null,

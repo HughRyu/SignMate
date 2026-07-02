@@ -712,7 +712,17 @@ function formatDetailHtml(value) {
   const text = formatDetailValue(value);
   const linkOnly = String(text).match(/^\[([^\]]{1,80})\]\((https?:\/\/[^\s)]+)\)$/);
   if (linkOnly) return `<a href="${escAttr(linkOnly[2])}" target="_blank" rel="noopener noreferrer">${esc(linkOnly[1])}</a>`;
-  return esc(text);
+  const raw = String(text);
+  const re = /\[([^\]]{1,80})\]\((https?:\/\/[^\s)]+)\)/g;
+  let html = "";
+  let last = 0;
+  let match;
+  while ((match = re.exec(raw))) {
+    html += esc(raw.slice(last, match.index));
+    html += `<a href="${escAttr(match[2])}" target="_blank" rel="noopener noreferrer">${esc(match[1])}</a>`;
+    last = match.index + match[0].length;
+  }
+  return html ? html + esc(raw.slice(last)) : esc(raw);
 }
 
 function detailLabel(key = "") {
