@@ -1030,14 +1030,14 @@ function buildAggregateMetrics(details = {}, siteKey = "") {
   }
 
   if (siteKey === "pcbeta") {
+    const parts = [];
     if (totalPoints !== null || rewardPoints !== null) {
-      const base = totalPoints !== null ? totalPoints : "?";
-      items.push(metricItem(`💎积分 ${esc(String(base))}${esc(signedDelta(rewardPoints))}`, "metric-chip metric-points", "PCBeta 积分（括号内为本次获得）"));
+      parts.push(`💎积分 ${esc(String(totalPoints !== null ? totalPoints : "?"))}${esc(signedDelta(rewardPoints))}`);
     }
     if (totalPbCoins !== null || rewardPbCoins !== null) {
-      const base = totalPbCoins !== null ? totalPbCoins : "?";
-      items.push(metricItem(`🪙PB币 ${esc(String(base))}${esc(signedDelta(rewardPbCoins))}`, "metric-chip metric-coin", "PCBeta PB币（括号内为本次获得）"));
+      parts.push(`🪙PB币 ${esc(String(totalPbCoins !== null ? totalPbCoins : "?"))}${esc(signedDelta(rewardPbCoins))}`);
     }
+    if (parts.length) items.push(metricItem(parts.join(" / "), "metric-chip metric-points metric-coin", "PCBeta 积分 / PB币（括号内为本次获得）"));
     return items.join("");
   }
 

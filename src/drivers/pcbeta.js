@@ -193,8 +193,8 @@ function taskDetails({ signTime, pageTitle, reward = "", stats = {}, taskUrl = "
     rewardPbCoins,
     totalPoints: stats.totalPoints,
     totalPbCoins: stats.totalPbCoins,
-    dailyTask: taskUrl ? `[每日打卡 ${pbCoinText(dailyPbCoins)}](${taskUrl})` : `每日打卡 ${pbCoinText(dailyPbCoins)}`,
-    replyTask: replyUrl ? `${replyLabel} [${pbCoinText(replyPbCoins)}](${replyUrl})` : `${replyLabel} ${pbCoinText(replyPbCoins)}`,
+    dailyTask: taskUrl ? `每日打卡 获得 [${pbCoinText(dailyPbCoins)}](${taskUrl})` : `每日打卡 获得 ${pbCoinText(dailyPbCoins)}`,
+    replyTask: replyUrl ? `${replyLabel} 获得 [${pbCoinText(replyPbCoins)}](${replyUrl})` : `${replyLabel} 获得 ${pbCoinText(replyPbCoins)}`,
     pageTitle,
     ...extra,
   };
