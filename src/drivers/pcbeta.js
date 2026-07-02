@@ -200,6 +200,18 @@ function taskDetails({ signTime, pageTitle, reward = "", stats = {}, taskUrl = "
   };
 }
 
+function stripMarkdownLinks(text = "") {
+  return String(text).replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1");
+}
+
+function successMessage(details = {}, signTime = "") {
+  const parts = [details.dailyTask, details.replyTask]
+    .filter(Boolean)
+    .map(stripMarkdownLinks);
+  const summary = parts.length ? parts.join("；") : "PCBeta 签到任务已完成";
+  return `${summary}${signTime ? `；签到时间：${signTime}` : ""}`;
+}
+
 function taskProgress(text = "") {
   const hit = compactText(text).match(/已完成\s*(\d+)\s*%/);
   const value = hit ? Number.parseInt(hit[1], 10) : NaN;
@@ -272,7 +284,8 @@ export default class PCBetaDriver extends BaseDriver {
       const drawUrl = findTaskActionUrl(taskPage.html, taskUrl, "draw");
       if (!drawUrl) {
         steps.push({ label: "HTTP 检查任务状态", ok: true, detail: "页面显示任务已完成或已领取" });
-        return { success: true, message: `今天已完成 PCBeta 签到任务；签到时间：${signTime}`, details: taskDetails({ signTime, pageTitle: taskPage.title, stats: taskStats, taskUrl: dailyTaskUrl, extra: { alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed" } }), steps };
+        const details = taskDetails({ signTime, pageTitle: taskPage.title, stats: taskStats, taskUrl: dailyTaskUrl, extra: { alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed" } });
+        return { success: true, message: successMessage(details, signTime), details, steps };
       }
     } else {
       logger.info("[PCBeta/API] 步骤 2/6：任务页未发现申请入口，继续检查进行中任务");
@@ -288,7 +301,8 @@ export default class PCBetaDriver extends BaseDriver {
       return await this.drawReward({ session, drawUrl: immediateDrawUrl, taskUrl, steps, signTime, taskUrlForDetails: dailyTaskUrl, priorStats: mergeCreditStats(doingStats, taskStats) });
     }
     if (alreadyDone(doing.text) && !/回帖|回复|进行中|领取/.test(compactText(doing.text).slice(0, 2000))) {
-      return { success: true, message: `今天已完成 PCBeta 签到任务；签到时间：${signTime}`, details: taskDetails({ signTime, pageTitle: doing.title, stats: mergeCreditStats(doingStats, taskStats), taskUrl: dailyTaskUrl, extra: { alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed" } }), steps };
+      const details = taskDetails({ signTime, pageTitle: doing.title, stats: mergeCreditStats(doingStats, taskStats), taskUrl: dailyTaskUrl, extra: { alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed" } });
+      return { success: true, message: successMessage(details, signTime), details, steps };
     }
 
     const taskDetailUrl = findTaskTopicUrl(doing.html, doingUrl);
@@ -302,10 +316,11 @@ export default class PCBetaDriver extends BaseDriver {
           const reward = parseReward(done.text);
           const stats = mergeCreditStats(parseCreditStats(done.text), doingStats, taskStats);
           const taskRewards = parseDoneTaskRewards(done.text);
+          const details = taskDetails({ signTime, pageTitle: done.title || doing.title, reward, stats, taskUrl: dailyTaskUrl, dailyPbCoins: taskRewards.dailyPbCoins, replyPbCoins: taskRewards.replyPbCoins, extra: { alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed" } });
           return {
             success: true,
-            message: `今天已完成 PCBeta 签到任务${reward ? `，奖励 ${reward}` : ""}；签到时间：${signTime}`,
-            details: taskDetails({ signTime, pageTitle: done.title || doing.title, reward, stats, taskUrl: dailyTaskUrl, dailyPbCoins: taskRewards.dailyPbCoins, replyPbCoins: taskRewards.replyPbCoins, extra: { alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed" } }),
+            message: successMessage(details, signTime),
+            details,
             steps,
           };
         }
@@ -341,10 +356,11 @@ export default class PCBetaDriver extends BaseDriver {
         const reward = parseReward(completed.text);
         const stats = mergeCreditStats(parseCreditStats(completed.text), parseCreditStats(verifyDoing.text), parseCreditStats(thread.text), parseCreditStats(taskDetail.text), doingStats, taskStats);
         const taskRewards = parseDoneTaskRewards(completed.text);
+        const details = taskDetails({ signTime, pageTitle: completed.title || verifyDoing.title, reward, stats, taskUrl: dailyTaskUrl, threadUrl, threadTitle, dailyPbCoins: taskRewards.dailyPbCoins, replyPbCoins: taskRewards.replyPbCoins, extra: { alreadySigned: false, clickedSignIn: true, submitted: true, checkinAction: "api_signed" } });
         return {
           success: true,
-          message: `签到成功${reward ? `，奖励 ${reward}` : ""}；签到时间：${signTime}`,
-          details: taskDetails({ signTime, pageTitle: completed.title || verifyDoing.title, reward, stats, taskUrl: dailyTaskUrl, threadUrl, threadTitle, dailyPbCoins: taskRewards.dailyPbCoins, replyPbCoins: taskRewards.replyPbCoins, extra: { alreadySigned: false, clickedSignIn: true, submitted: true, checkinAction: "api_signed" } }),
+          message: successMessage(details, signTime),
+          details,
           steps,
         };
       }
@@ -354,7 +370,8 @@ export default class PCBetaDriver extends BaseDriver {
       const verify = await openText(session, taskUrl, steps, "HTTP 复查 PCBeta 任务页面");
       const fallbackDrawUrl = findTaskActionUrl(`${verify.html}\n${verifyDoing.html}`, taskUrl, "draw");
       if (!fallbackDrawUrl && alreadyDone(`${verify.text} ${verifyDoing.text}`)) {
-        return { success: true, message: `签到成功；任务已完成；签到时间：${signTime}`, details: taskDetails({ signTime, pageTitle: verify.title || verifyDoing.title, stats: mergeCreditStats(parseCreditStats(verify.text), parseCreditStats(verifyDoing.text), parseCreditStats(thread.text), parseCreditStats(taskDetail.text), doingStats, taskStats), taskUrl: dailyTaskUrl, threadUrl, threadTitle, extra: { alreadySigned: true, clickedSignIn: true, submitted: true, checkinAction: "api_signed" } }), steps };
+        const details = taskDetails({ signTime, pageTitle: verify.title || verifyDoing.title, stats: mergeCreditStats(parseCreditStats(verify.text), parseCreditStats(verifyDoing.text), parseCreditStats(thread.text), parseCreditStats(taskDetail.text), doingStats, taskStats), taskUrl: dailyTaskUrl, threadUrl, threadTitle, extra: { alreadySigned: true, clickedSignIn: true, submitted: true, checkinAction: "api_signed" } });
+        return { success: true, message: successMessage(details, signTime), details, steps };
       }
       if (!fallbackDrawUrl) return { success: false, message: `回帖已提交，但未找到 PCBeta 领奖入口：${compactText(verifyDoing.text).slice(0, 160)}`, details: taskDetails({ signTime, pageTitle: verify.title || verifyDoing.title, stats: mergeCreditStats(parseCreditStats(verify.text), parseCreditStats(verifyDoing.text), parseCreditStats(thread.text), parseCreditStats(taskDetail.text), doingStats, taskStats), taskUrl: dailyTaskUrl, threadUrl, threadTitle }), steps };
       return await this.drawReward({ session, drawUrl: fallbackDrawUrl, taskUrl, steps, signTime, replySubmitted: true, taskUrlForDetails: dailyTaskUrl, threadUrl, threadTitle, priorStats: mergeCreditStats(parseCreditStats(verify.text), parseCreditStats(verifyDoing.text), parseCreditStats(thread.text), parseCreditStats(taskDetail.text), doingStats, taskStats) });
@@ -370,11 +387,11 @@ export default class PCBetaDriver extends BaseDriver {
     const stats = mergeCreditStats(parseCreditStats(combined), priorStats);
     const taskRewards = parseDoneTaskRewards(combined);
     const ok = draw.res.status < 400 && (/领取|奖励|获得|完成|已完成|已领取|今天已|今日已/.test(combined)) && !/请先登录|登录后|失败|错误/.test(compactText(combined).slice(0, 1000));
-    const prefix = replySubmitted ? "签到成功" : "今天已完成 PCBeta 签到任务";
+    const details = taskDetails({ signTime, pageTitle: finalPage?.title || draw.title, reward, stats, taskUrl: taskUrlForDetails || taskUrl, threadUrl, threadTitle, dailyPbCoins: taskRewards.dailyPbCoins, replyPbCoins: taskRewards.replyPbCoins, extra: { alreadySigned: !replySubmitted, clickedSignIn: replySubmitted, submitted: replySubmitted, checkinAction: replySubmitted ? "api_signed" : "api_already_signed" } });
     return {
       success: ok,
-      message: ok ? `${prefix}${reward ? `，奖励 ${reward}` : ""}；签到时间：${signTime}` : `领取奖励失败：${compactText(combined).slice(0, 180)}`,
-      details: taskDetails({ signTime, pageTitle: finalPage?.title || draw.title, reward, stats, taskUrl: taskUrlForDetails || taskUrl, threadUrl, threadTitle, dailyPbCoins: taskRewards.dailyPbCoins, replyPbCoins: taskRewards.replyPbCoins, extra: { alreadySigned: !replySubmitted, clickedSignIn: replySubmitted, submitted: replySubmitted, checkinAction: replySubmitted ? "api_signed" : "api_already_signed" } }),
+      message: ok ? successMessage(details, signTime) : `领取奖励失败：${compactText(combined).slice(0, 180)}`,
+      details,
       steps,
     };
   }
