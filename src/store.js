@@ -36,7 +36,7 @@ function isSuccessfulSignin(entry = {}) {
 
 function signRewardValue(entry = {}) {
   const details = entry.details || {};
-  const candidates = [details.rewardExp, details.rewardAmount, details.rewardPoints, details.rewardCopper, details.rewardChickenLegs, details.bonusGain];
+  const candidates = [details.rewardExp, details.rewardAmount, details.rewardPoints, details.rewardPbCoins, details.rewardCopper, details.rewardChickenLegs, details.bonusGain];
   for (const value of candidates) {
     const num = Number(String(value ?? "").replace(/,/g, ""));
     if (Number.isFinite(num) && num > 0) return num;
@@ -53,7 +53,7 @@ function hasSignReward(entry = {}) {
 function mergePreferredSigninEntry(preferred = {}, latest = {}) {
   const preferredDetails = preferred.details || {};
   const latestDetails = latest.details || {};
-  const rewardKeys = ["rewardExp", "rewardAmount", "rewardUnit", "rewardPoints", "rewardCopper", "rewardChickenLegs", "bonusGain", "nextRewardAmount"];
+  const rewardKeys = ["rewardExp", "rewardAmount", "rewardUnit", "rewardPoints", "rewardPbCoins", "rewardCopper", "rewardChickenLegs", "bonusGain", "nextRewardAmount"];
   const details = { ...preferredDetails, ...latestDetails };
   for (const key of ["userGroup", "points", "experience", "totalExp", "vitality", "username", "proxyModeUsed", "proxyUsed", "proxyReason", "fengLevel", "level", "levelTitle", "currentExperience", "creditsLower", "creditsHigher", "fengCoins", "totalCoins", "joinDays", "totalDays", "signInDays", "streakDays"]) {
     if ((details[key] === null || details[key] === undefined || details[key] === "") && latestDetails[key] !== undefined) details[key] = latestDetails[key];

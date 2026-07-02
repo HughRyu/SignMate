@@ -485,7 +485,7 @@ function applyBranding(branding = {}) {
   if (titleEl) titleEl.textContent = title;
   document.title = `${title} · 自动签到中心`;
   const logoEl = document.querySelector(".nav-logo");
-  if (logoEl && !logoEl.querySelector("img")) logoEl.innerHTML = '<img src="/logo.jpg?v=20260609-logo" alt="SignMate Logo">';
+  if (logoEl && !logoEl.querySelector("img")) logoEl.innerHTML = '<img src="/logo.jpg?v=20260702-logo-jpg" alt="SignMate Logo">';
 }
 
 async function api(url, options = {}) {
@@ -708,10 +708,17 @@ function formatDetailValue(value) {
   return String(value);
 }
 
+function formatDetailHtml(value) {
+  const text = formatDetailValue(value);
+  const linkOnly = String(text).match(/^\[([^\]]{1,80})\]\((https?:\/\/[^\s)]+)\)$/);
+  if (linkOnly) return `<a href="${escAttr(linkOnly[2])}" target="_blank" rel="noopener noreferrer">${esc(linkOnly[1])}</a>`;
+  return esc(text);
+}
+
 function detailLabel(key = "") {
   const labels = {
-    signTime: "签到时间", pageTitle: "页面标题", alreadySigned: "已签到", reward: "奖励", rewardPoints: "奖励积分",
-    streakDays: "连续签到", totalDays: "累计签到/访问", totalPoints: "总积分", rewardCopper: "奖励铜币",
+    signTime: "签到时间", pageTitle: "页面标题", alreadySigned: "已签到", reward: "奖励", rewardPoints: "奖励积分", rewardPbCoins: "奖励 PB币",
+    streakDays: "连续签到", totalDays: "累计签到/访问", totalPoints: "总积分", totalPbCoins: "PB币", dailyTask: "每日打卡", replyTask: "回帖打卡", rewardCopper: "奖励铜币",
     totalGold: "金币", totalSilver: "银币", totalCopper: "铜币", rewardChickenLegs: "奖励鸡腿", totalChickenLegs: "总鸡腿",
     nodeSeekLevel: "NodeSeek 等级", nodeSeekLevelProgress: "等级进度", attendanceRank: "签到排名", attendanceTotalParticipants: "参与人数",
     username: "用户名", totalEnergy: "总能量", rewardEnergy: "今日能量", postCount: "帖子", likesReceived: "获赞", trustLevel: "信任等级",
@@ -740,7 +747,7 @@ function formatDetailsPanel(details = {}) {
     const lineCount = detailVisualLineCount(value);
     const isLongText = lineCount > 3 || String(value).length > 420;
     const extraClass = index >= 12 ? "extra-detail-row" : "";
-    return `<div class="process-detail-row ${extraClass} ${isLongText ? "long-text-row" : ""}" data-lines="${lineCount}"><span>${esc(detailLabel(key))}</span><code class="${isLongText ? "collapsible-detail" : ""}" title="${isLongText ? "双击展开/收起全部内容" : ""}">${esc(formatDetailValue(value))}</code></div>`;
+    return `<div class="process-detail-row ${extraClass} ${isLongText ? "long-text-row" : ""}" data-lines="${lineCount}"><span>${esc(detailLabel(key))}</span><code class="${isLongText ? "collapsible-detail" : ""}" title="${isLongText ? "双击展开/收起全部内容" : ""}">${formatDetailHtml(value)}</code></div>`;
   }).join("");
   return `<div class="process-details-panel ${folded ? "is-folded" : ""}"><div class="process-details-title-row"><h4>详细信息</h4>${folded ? `<button class="detail-expand-btn" type="button" data-action="toggle-details">展开全部 ${entries.length} 项</button>` : ""}</div><div class="process-detail-grid">${rows}</div></div>`;
 }
@@ -939,8 +946,10 @@ function buildAggregateMetrics(details = {}, siteKey = "") {
   const rewardCopper = finiteNumber(details.rewardCopper);
   const totalCoins = finiteNumber(details.totalWuAiCoins);
   const totalPoints = finiteNumber(details.totalPoints);
+  const totalPbCoins = finiteNumber(details.totalPbCoins);
+  const rewardPbCoins = finiteNumber(details.rewardPbCoins);
   const totalEnergy = finiteNumber(details.totalEnergy) ?? (siteKey === "nodeloc" ? totalPoints : null);
-  const explicitPointSites = new Set(["right", "pojie52", "pceva"]);
+  const explicitPointSites = new Set(["right", "pojie52", "pceva", "pcbeta"]);
   const totalDays = finiteNumber(details.totalDays);
   const streakDays = finiteNumber(details.streakDays);
   const totalGold = finiteNumber(details.totalGold);
@@ -1007,6 +1016,18 @@ function buildAggregateMetrics(details = {}, siteKey = "") {
     }
     if (shieldedCount !== null && shieldedCount > 0) items.push(metricItem(`🛡️屏蔽 ${esc(String(shieldedCount))}`, "metric-chip metric-level", "被屏蔽贴吧数量"));
     if (failedCount !== null && failedCount > 0) items.push(metricItem(`⚠️失败 ${esc(String(failedCount))}`, "metric-chip metric-error", "签到失败贴吧数量"));
+    return items.join("");
+  }
+
+  if (siteKey === "pcbeta") {
+    if (totalPoints !== null || rewardPoints !== null) {
+      const base = totalPoints !== null ? totalPoints : "?";
+      items.push(metricItem(`💎积分 ${esc(String(base))}${esc(signedDelta(rewardPoints))}`, "metric-chip metric-points", "PCBeta 积分（括号内为本次获得）"));
+    }
+    if (totalPbCoins !== null || rewardPbCoins !== null) {
+      const base = totalPbCoins !== null ? totalPbCoins : "?";
+      items.push(metricItem(`🪙PB币 ${esc(String(base))}${esc(signedDelta(rewardPbCoins))}`, "metric-chip metric-coin", "PCBeta PB币（括号内为本次获得）"));
+    }
     return items.join("");
   }
 

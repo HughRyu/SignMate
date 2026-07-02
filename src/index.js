@@ -51,6 +51,7 @@ import KafanDriver from "./drivers/kafan.js";
 import FengDriver from "./drivers/feng.js";
 import TiebaDriver from "./drivers/tieba.js";
 import MTeamDriver from "./drivers/mteam.js";
+import PCBetaDriver from "./drivers/pcbeta.js";
 
 registerDriver("nodeseek", NodeSeekDriver);
 registerDriver("template", TemplateDriver);
@@ -69,6 +70,7 @@ registerDriver("kafan", KafanDriver);
 registerDriver("feng", FengDriver);
 registerDriver("tieba", TiebaDriver);
 registerDriver("mteam", MTeamDriver);
+registerDriver("pcbeta", PCBetaDriver);
 
 function loadNotifyConfig() {
   const path = join(import.meta.dirname, "..", "config", "notify.yaml");

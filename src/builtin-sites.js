@@ -138,6 +138,22 @@ export const BUILTIN_SITES = {
     "signin_mode": "playwright",
     "cookie_required_names": ["*_saltkey", "*_auth"]
   },
+  "pcbeta": {
+    "enabled": true,
+    "driver": "pcbeta",
+    "schedule": "auto",
+    "note": "PCBeta",
+    "notify": true,
+    "retry": 1,
+    "retry_delay_ms": 10000,
+    "timeout": 60000,
+    "base_url": "https://i.pcbeta.com",
+    "signin_mode": "api",
+    "category": "forum",
+    "kind": "signin",
+    "proxy": "auto",
+    "cookie_required_names": ["*_saltkey", "*_auth"]
+  },
   "audiences-me": {
     "enabled": true,
     "driver": "nexusphp",

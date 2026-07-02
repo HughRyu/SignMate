@@ -16,6 +16,7 @@ import QianmojuDriver from "../src/drivers/qianmoju.js";
 import KafanDriver from "../src/drivers/kafan.js";
 import FengDriver from "../src/drivers/feng.js";
 import TiebaDriver from "../src/drivers/tieba.js";
+import PCBetaDriver from "../src/drivers/pcbeta.js";
 
 registerDriver("nodeseek", NodeSeekDriver);
 registerDriver("template", TemplateDriver);
@@ -33,6 +34,7 @@ registerDriver("qianmoju", QianmojuDriver);
 registerDriver("kafan", KafanDriver);
 registerDriver("feng", FengDriver);
 registerDriver("tieba", TiebaDriver);
+registerDriver("pcbeta", PCBetaDriver);
 
 function usage() {
   console.log(`Usage:
