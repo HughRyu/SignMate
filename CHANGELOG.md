@@ -4,6 +4,22 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本的 patch 递增节奏。
 
+## [0.1.20] - 2026-07-02
+
+### 新增
+
+- 新增 PCBeta 签到驱动，支持远景论坛每日任务申请、回帖打卡、奖励领取与已完成状态识别。
+- PCBeta 支持读取累计积分、累计 PB币、本次每日打卡 PB币和回帖打卡 PB币，并在面板累计栏与详情中展示。
+
+### 优化
+
+- PCBeta 内置站点显示名简化为 `PCBeta`。
+- PCBeta 执行摘要按每日打卡与回帖打卡分别展示获得的 PB币。
+
+### 修复
+
+- 修复登录页未登录状态下 Logo 静态资源被鉴权重定向导致无法正确显示的问题。
+
 ## [0.1.19] - 2026-06-09
 
 ### 修复
@@ -154,6 +170,7 @@
 
 - 动态解析 Chromium 可执行路径，提升不同环境下的浏览器兼容性。
 
+[0.1.20]: https://github.com/HughRyu/SignMate/compare/v0.1.19...v0.1.20
 [0.1.19]: https://github.com/HughRyu/SignMate/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/HughRyu/SignMate/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/HughRyu/SignMate/compare/v0.1.16...v0.1.17
