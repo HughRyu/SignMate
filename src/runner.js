@@ -7,6 +7,7 @@ import { parse, stringify } from "yaml";
 import { dirname } from "node:path";
 import logger from "./utils/logger.js";
 import notifier from "./notify.js";
+import * as store from "./store.js";
 import { getGlobalProxy, siteProxyMode, testDirect, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
 import BUILTIN_SITES from "./builtin-sites.js";
 
@@ -41,6 +42,44 @@ function loadCategoryMetaSafe() {
 
 function siteCategory(siteConfig = {}) {
   return normalizeCategoryKey(siteConfig.category || (siteConfig.kind === "visit" ? "pt" : "forum")) || "forum";
+}
+
+function localDateKey(value = Date.now()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: process.env.TZ || "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(value instanceof Date ? value : new Date(value || Date.now()));
+}
+
+function siteKind(site = {}) {
+  return site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
+}
+
+function siteMatchNames(site = {}) {
+  return [site.key, site.driver, site.note, site.name].filter(Boolean).map(v => String(v));
+}
+
+async function successfulSiteKeysToday(sites = []) {
+  const today = localDateKey();
+  const nameToKey = new Map();
+  const kindByKey = new Map();
+  for (const site of sites) {
+    const key = String(site.key || site.driver || "");
+    if (!key) continue;
+    kindByKey.set(key, siteKind(site));
+    for (const name of siteMatchNames(site)) nameToKey.set(name, key);
+  }
+  if (!nameToKey.size) return new Set();
+
+  const successful = new Set();
+  const history = await store.getHistory(null, 800);
+  for (const entry of history) {
+    if (entry.success !== true) continue;
+    if (localDateKey(entry.timestamp || entry.time || Date.now()) !== today) continue;
+    const matchedKey = [entry.siteKey, entry.key, entry.site].filter(Boolean).map(v => String(v)).map(v => nameToKey.get(v) || "").find(Boolean);
+    if (!matchedKey) continue;
+    const entryKind = entry.kind || entry.details?.kind || "signin";
+    if (entryKind !== kindByKey.get(matchedKey)) continue;
+    successful.add(matchedKey);
+  }
+  return successful;
 }
 
 function stripUserCapabilityFields(sitesRaw = {}) {
@@ -466,7 +505,7 @@ export async function runSingle(siteConfig, secrets) {
 
   if (!DriverClass) {
     logger.warn(`[跳过] Driver "${driverName}" 未注册，请确认已 import`);
-    return { success: false, message: `Driver "${driverName}" 未注册`, site: siteConfig.note || driverName, kind: siteConfig.kind || "signin" };
+    return { success: false, message: `Driver "${driverName}" 未注册`, site: siteConfig.note || driverName, siteKey: siteConfig.key || driverName, kind: siteConfig.kind || "signin" };
   }
 
   let effectiveSiteConfig = await resolveProxyForSite(siteConfig);
@@ -475,7 +514,7 @@ export async function runSingle(siteConfig, secrets) {
   }
   if (effectiveSiteConfig.site_offline) {
     return { success: false, message: effectiveSiteConfig.offline_reason || "站点离线：直连和代理均不可用", site: siteConfig.note || driverName, formatted: `❌ ${siteConfig.note || driverName}
-📝 ${effectiveSiteConfig.offline_reason || "站点离线"}`, kind: siteConfig.kind || "signin", category: siteCategory(siteConfig), categoryLabel: (loadCategoryMetaSafe().get(siteCategory(siteConfig))?.label || siteCategory(siteConfig)), details: { proxyModeUsed: "offline", proxyUsed: false, proxyReason: effectiveSiteConfig.proxy_reason }, steps: [{ label: "判断站点连通性", ok: false, detail: effectiveSiteConfig.offline_reason || "站点离线" }] };
+📝 ${effectiveSiteConfig.offline_reason || "站点离线"}`, siteKey: siteConfig.key || driverName, kind: siteConfig.kind || "signin", category: siteCategory(siteConfig), categoryLabel: (loadCategoryMetaSafe().get(siteCategory(siteConfig))?.label || siteCategory(siteConfig)), details: { proxyModeUsed: "offline", proxyUsed: false, proxyReason: effectiveSiteConfig.proxy_reason }, steps: [{ label: "判断站点连通性", ok: false, detail: effectiveSiteConfig.offline_reason || "站点离线" }] };
   }
   let driver = new DriverClass(effectiveSiteConfig, secrets);
   let result = await driver.runWithRetry();
@@ -508,12 +547,14 @@ export async function runAll(options = {}) {
   const kind = options.kind || null;
   const autoOnly = options.autoOnly === true;
   const skipKeys = new Set(Array.isArray(options.skipKeys) ? options.skipKeys.map(String) : []);
-  const enabled = sites.filter(s => {
+  const onlyKeys = Array.isArray(options.onlyKeys) && options.onlyKeys.length ? new Set(options.onlyKeys.map(String)) : null;
+  const candidates = sites.filter(s => {
     if (s.enabled === false) return false;
     const key = String(s.key || s.driver || "");
     if (skipKeys.has(key)) return false;
-    const siteKind = s.kind || (s.driver === "website" || s.driver === "visit" ? "visit" : "signin");
-    if (kind && siteKind !== kind) return false;
+    if (onlyKeys && !onlyKeys.has(key) && !onlyKeys.has(String(s.driver || "")) && !onlyKeys.has(String(s.note || ""))) return false;
+    const currentKind = siteKind(s);
+    if (kind && currentKind !== kind) return false;
     if (autoOnly && s.schedule && s.schedule !== "auto") return false;
     if (autoOnly && options.scheduleMode) {
       const defaultMode = options.defaultScheduleMode === "random" ? "random" : "fixed";
@@ -522,15 +563,21 @@ export async function runAll(options = {}) {
       if (mode !== options.scheduleMode) return false;
     }
     return true;
-  }).sort((a, b) => {
+  });
+
+  const todaySuccessfulKeys = options.skipTodaySuccess === false ? new Set() : await successfulSiteKeysToday(candidates);
+  const enabled = candidates.filter(s => !todaySuccessfulKeys.has(String(s.key || s.driver || ""))).sort((a, b) => {
     if (kind) return 0;
-    const kindOf = site => site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin");
-    const rank = site => kindOf(site) === "signin" ? 0 : 1;
+    const rank = site => siteKind(site) === "signin" ? 0 : 1;
     return rank(a) - rank(b);
   });
 
+  if (todaySuccessfulKeys.size) {
+    logger.info(`[${kind === "visit" ? "保活" : "签到"}] 今日已有成功记录，自动跳过: ${[...todaySuccessfulKeys].join(", ")}`);
+  }
+
   if (enabled.length === 0) {
-    logger.info("[签到] 没有已启用的站点");
+    logger.info(todaySuccessfulKeys.size ? "[签到] 候选站点今日均已有成功记录，跳过执行" : "[签到] 没有已启用的站点");
     return [];
   }
 
@@ -542,8 +589,8 @@ export async function runAll(options = {}) {
     kind: kind === "visit" ? "visit" : (kind === "signin" ? "signin" : "all"),
     startedAt: new Date().toISOString(),
     scheduleMode: options.scheduleMode || options.manualScheduleMode || null,
-    total: Number(options.originalTotal || 0) || enabled.length,
-    done: skipKeys.size,
+    total: Number(options.originalTotal || 0) || candidates.length,
+    done: skipKeys.size + todaySuccessfulKeys.size,
     successCount: 0,
     failureCount: 0,
     currentSite: "",
@@ -551,7 +598,8 @@ export async function runAll(options = {}) {
     results: [],
     completedKeys: [],
     ...(options.resumedFromBatchId ? { resumedFromBatchId: options.resumedFromBatchId } : {}),
-    ...(skipKeys.size ? { skippedKeys: [...skipKeys] } : {}),
+    ...((skipKeys.size || todaySuccessfulKeys.size) ? { skippedKeys: [...skipKeys, ...todaySuccessfulKeys] } : {}),
+    ...(todaySuccessfulKeys.size ? { skippedTodaySuccessKeys: [...todaySuccessfulKeys] } : {}),
   };
   activeBatchRun = batchState;
   batchInterruptedNotified = false;
@@ -594,12 +642,12 @@ export async function runAll(options = {}) {
       });
     } finally {
       const latest = results[results.length - 1];
-      batchState.done = skipKeys.size + results.length;
+      batchState.done = skipKeys.size + todaySuccessfulKeys.size + results.length;
       batchState.successCount = results.filter(r => r.success).length;
       batchState.failureCount = results.length - batchState.successCount;
       if (latest) {
         batchState.results = results.slice(-20).map(r => ({ site: r.site, key: r.key || r.siteKey, siteKey: r.siteKey || r.key, success: !!r.success, message: String(r.message || "").slice(0, 200), time: r.time || Date.now() }));
-        batchState.completedKeys = [...skipKeys, ...results.map(r => r.key || r.siteKey).filter(Boolean)];
+        batchState.completedKeys = [...skipKeys, ...todaySuccessfulKeys, ...results.map(r => r.key || r.siteKey).filter(Boolean)];
       }
       writeBatchStateSafe(batchState);
     }

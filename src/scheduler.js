@@ -221,6 +221,18 @@ async function runBatchJob(mode, label, defaultBatchMode, options = {}) {
       r.scheduleMode = mode;
       await store.addEntry(r.site, r);
     }
+    if (options.retryFailures !== false) {
+      const failedKeys = results.filter(r => !r.success).map(r => r.key || r.siteKey).filter(Boolean).map(String);
+      if (failedKeys.length) {
+        logger.info(`[定时触发] ${label} 失败站点补跑: ${failedKeys.join(", ")}`);
+        const retryResults = await runAll({ autoOnly: true, scheduleMode: mode, defaultScheduleMode: defaultBatchMode, onlyKeys: failedKeys, ...(options.kind ? { kind: options.kind } : {}) });
+        for (const r of retryResults) {
+          r.details = { ...(r.details || {}), scheduleMode: mode, retryOfFailedBatch: true };
+          r.scheduleMode = mode;
+          await store.addEntry(r.site, r);
+        }
+      }
+    }
     return true;
   } catch (err) {
     if (err?.code === "BATCH_ALREADY_RUNNING") {
@@ -230,6 +242,53 @@ async function runBatchJob(mode, label, defaultBatchMode, options = {}) {
     throw err;
   } finally {
     runningBatchKinds.delete(runKey);
+  }
+}
+
+async function failedAutoSiteKeysToday(enabledSites, kind = null) {
+  const today = localParts().date;
+  const eligible = enabledSites
+    .filter(site => (!site.schedule || site.schedule === "auto") && (!kind || siteAutoKind(site) === kind));
+  const nameToKey = new Map();
+  const kindByKey = new Map();
+  for (const site of eligible) {
+    const key = String(site.key || site.driver || "");
+    if (!key) continue;
+    kindByKey.set(key, siteAutoKind(site));
+    for (const name of siteNamesForMatch(site)) nameToKey.set(name, key);
+  }
+  if (!nameToKey.size) return [];
+  const latest = new Map();
+  const successful = new Set();
+  const history = await store.getHistory(null, 800);
+  for (const entry of history) {
+    const p = localParts(new Date(entry.timestamp || entry.time || Date.now()));
+    if (p.date !== today) continue;
+    const key = [entry.siteKey, entry.key, entry.site].filter(Boolean).map(v => String(v)).map(v => nameToKey.get(v) || "").find(Boolean);
+    if (!key) continue;
+    const entryKind = entry.kind || entry.details?.kind || "signin";
+    if (entryKind !== kindByKey.get(key)) continue;
+    if (entry.success === true) successful.add(key);
+    if (!latest.has(key)) latest.set(key, entry);
+  }
+  return [...latest.entries()].filter(([key, entry]) => entry.success !== true && !successful.has(key)).map(([key]) => key);
+}
+
+async function retryTodayFailures(enabledSites) {
+  const failedKeys = await failedAutoSiteKeysToday(enabledSites);
+  if (!failedKeys.length) {
+    logger.info("[失败补跑] 今日没有需要 23:00 补跑的失败站点");
+    return;
+  }
+  const batch = loadBatchConfigSafe();
+  const defaultBatchMode = batch.mode === "independent" ? "independent" : (batch.mode === "fixed" ? "fixed" : "random");
+  const { runAll } = await import("./runner.js");
+  logger.info(`[失败补跑] 23:00 补跑今日失败站点: ${failedKeys.join(", ")}`);
+  const results = await runAll({ autoOnly: true, manualScheduleMode: "failure-retry", defaultScheduleMode: defaultBatchMode, onlyKeys: failedKeys });
+  for (const r of results) {
+    r.details = { ...(r.details || {}), scheduleMode: "failure-retry", retryOfTodayFailure: true };
+    r.scheduleMode = "failure-retry";
+    await store.addEntry(r.site, r);
   }
 }
 
@@ -351,6 +410,13 @@ export function startScheduler(enabledSites, secrets) {
   });
   taskCount++;
   logger.info("[调度] 动态批量调度已启用（支持每天重新随机）");
+
+  cron.schedule("0 23 * * *", async () => {
+    try { await retryTodayFailures(enabledSites); }
+    catch (err) { logger.warn(`[失败补跑] ${err.message}`); }
+  });
+  taskCount++;
+  logger.info("[调度] 每天 23:00 失败站点补跑已启用");
 
   for (const site of enabledSites) {
     const schedule = site.schedule;

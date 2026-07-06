@@ -215,7 +215,7 @@ function includesV2Login(body = "") {
 }
 
 function v2AlreadyRedeemed(body = "") {
-  return /already redeemed|已领取|每日登录奖励已领取|Daily login reward already redeemed/i.test(body);
+  return /already redeemed|has been redeemed|reward redeemed|已领取|每日登录奖励已领取|每日登录奖励已发放|Daily login reward already redeemed/i.test(body);
 }
 
 function extractCoinStats(text = "") {
@@ -302,7 +302,7 @@ function findV2RedeemHref(html = "") {
 }
 
 function v2RedeemConfirmed(text = "") {
-  return /already redeemed|Daily login reward already redeemed|每日登录奖励已领取|已领取|每日登录奖励\s+\d+|获得\s*\d+\s*(?:铜币|bronze)|奖励\s*\d+\s*(?:铜币|bronze)/i.test(String(text || ""));
+  return /already redeemed|has been redeemed|reward redeemed|Daily login reward already redeemed|每日登录奖励已领取|每日登录奖励已发放|已领取|每日登录奖励\s+\d+|获得\s*\d+\s*(?:铜币|bronze)|奖励\s*\d+\s*(?:铜币|bronze)/i.test(String(text || ""));
 }
 
 async function readV2Balance(session, origin, steps) {
@@ -339,7 +339,8 @@ async function runV2EX(siteConfig = {}, secrets = {}) {
   const coinStats = mergeCoinStats(extractCoinStats(daily.text), extractCoinStats(redeem.text), extractCoinStats(verify.text), await readV2Balance(session, origin, steps));
   const extra = coinMessage(coinStats);
   const combined = `${redeem.text} ${verify.text} ${daily.text}`;
-  const ok = redeem.res.status >= 200 && redeem.res.status < 400 && v2RedeemConfirmed(combined);
+  const balanceConfirmed = Number.isFinite(coinStats.rewardCopper);
+  const ok = redeem.res.status >= 200 && redeem.res.status < 400 && (balanceConfirmed || v2RedeemConfirmed(combined));
   return { success: ok, message: ok ? `签到成功${extra ? `；${extra}` : ""}；签到时间：${signTime}` : "签到未确认：领取后未看到 V2EX 已领取状态", details: { signTime, clickedSignIn: true, checkinAction: ok ? "api_signed" : "api_unconfirmed", ...coinStats, pageTitle: verify.title || redeem.title || daily.title }, raw: compactText(combined).slice(0, 220), steps };
 }
 

@@ -67,7 +67,7 @@ function includesLogin(body = "") {
 }
 
 function alreadyRedeemed(body = "") {
-  return /already redeemed|已领取|每日登录奖励已领取|Daily login reward already redeemed/i.test(body);
+  return /already redeemed|has been redeemed|reward redeemed|已领取|每日登录奖励已领取|每日登录奖励已发放|Daily login reward already redeemed/i.test(body);
 }
 
 function dailyMissionText(body = "") {
@@ -78,7 +78,7 @@ function dailyMissionText(body = "") {
 }
 
 function hasRedeemSignal(text = "") {
-  return /Daily login reward already redeemed|每日登录奖励已领取|已领取|already redeemed|获得\s*\d+\s*(?:铜币|bronze)|每日登录奖励\s+\d+/i.test(text);
+  return /Daily login reward already redeemed|has been redeemed|reward redeemed|每日登录奖励已领取|每日登录奖励已发放|已领取|already redeemed|获得\s*\d+\s*(?:铜币|bronze)|每日登录奖励\s+\d+/i.test(text);
 }
 
 function isAdOrExternalUrl(url = "", origin = "") {
@@ -339,7 +339,8 @@ export default class V2EXDriver extends BaseDriver {
       const finalPreview = dailyMissionText(`${finalText} ${verify.text}`).replace(/\s+/g, " ").slice(0, 220);
       const coinStats = mergeCoinStats(extractCoinStats(bodyText), extractCoinStats(finalText), extractCoinStats(verify.text), await readBalanceStats(page, origin, timeout));
       const extra = coinMessage(coinStats);
-      const ok = redeem?.status() && redeem.status() < 400 && (verify.ok || hasRedeemSignal(`${finalText} ${verify.text}`));
+      const balanceConfirmed = Number.isFinite(coinStats.rewardCopper);
+      const ok = redeem?.status() && redeem.status() < 400 && (verify.ok || balanceConfirmed || hasRedeemSignal(`${finalText} ${verify.text}`));
       const message = ok ? `签到成功${extra ? `；${extra}` : ""}；签到时间：${signTime}` : `签到未确认：领取后未看到 V2EX 已领取状态`;
 
       return {

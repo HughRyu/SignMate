@@ -53,6 +53,11 @@ function alreadyDone(text = "") {
   return /已经领取|已领取奖励|任务已完成|今天已完成|今日已完成|今天已领取|今日已领取|明天再来|下次再来/.test(normalized);
 }
 
+function completedToday(text = "") {
+  const normalized = compactText(text);
+  return alreadyDone(normalized) || /完成于|已完成|已经完成|任务完成|再次申请|暂无进行中的任务|没有进行中的任务/.test(normalized);
+}
+
 function formHash(html = "", text = "") {
   return decodeHtml(
     String(html || "").match(/formhash=([a-z0-9]+)/i)?.[1]
@@ -382,11 +387,17 @@ export default class PCBetaDriver extends BaseDriver {
   async drawReward({ session, drawUrl, taskUrl, steps, signTime, replySubmitted = false, taskUrlForDetails = "", threadUrl = "", threadTitle = "", priorStats = {} }) {
     const draw = await openText(session, drawUrl, steps, "HTTP 领取 PCBeta 任务奖励");
     const finalPage = await openText(session, taskUrl, steps, "HTTP 复查 PCBeta 奖励状态").catch(() => null);
-    const combined = `${draw.text} ${finalPage?.text || ""}`;
+    const donePage = await openText(session, `${new URL(taskUrl).origin}/home.php?mod=task&item=done`, steps, "HTTP 复查 PCBeta 已完成任务").catch(() => null);
+    const combined = `${draw.text} ${finalPage?.text || ""} ${donePage?.text || ""}`;
     const reward = parseReward(combined);
     const stats = mergeCreditStats(parseCreditStats(combined), priorStats);
     const taskRewards = parseDoneTaskRewards(combined);
-    const ok = draw.res.status < 400 && (/领取|奖励|获得|完成|已完成|已领取|今天已|今日已/.test(combined)) && !/请先登录|登录后|失败|错误/.test(compactText(combined).slice(0, 1000));
+    const drawPreview = compactText(draw.text).slice(0, 1000);
+    const loginExpired = /请先登录|登录后/.test(compactText(combined).slice(0, 1000));
+    const drawFailed = /失败|错误|异常/.test(drawPreview);
+    const postDrawConfirmed = completedToday(`${finalPage?.text || ""} ${donePage?.text || ""}`) || todayTaskDone(donePage?.text || "");
+    const drawConfirmed = /领取成功|成功领取|获得\s*\d+|已领取|任务完成|领取奖励|奖励已发放/.test(drawPreview) && !drawFailed;
+    const ok = draw.res.status < 400 && !loginExpired && (postDrawConfirmed || drawConfirmed);
     const details = taskDetails({ signTime, pageTitle: finalPage?.title || draw.title, reward, stats, taskUrl: taskUrlForDetails || taskUrl, threadUrl, threadTitle, dailyPbCoins: taskRewards.dailyPbCoins, replyPbCoins: taskRewards.replyPbCoins, extra: { alreadySigned: !replySubmitted, clickedSignIn: replySubmitted, submitted: replySubmitted, checkinAction: replySubmitted ? "api_signed" : "api_already_signed" } });
     return {
       success: ok,

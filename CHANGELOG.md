@@ -4,6 +4,25 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本的 patch 递增节奏。
 
+## [0.1.21] - 2026-07-06
+
+### 新增
+
+- 自动批量执行失败后会立即按失败站点列表补跑一次，避免重新执行已经成功的站点。
+- 新增每天 23:00 失败站点补跑，只补跑当天失败且当天没有后续成功记录的自动站点。
+
+### 优化
+
+- 全部签到/保活执行前会读取当天历史，自动跳过当天已经成功的同类站点。
+- 失败补跑和当天成功跳过支持按 `key`、`driver`、`note`、`name`、`siteKey`、`site` 多种名称匹配历史记录。
+- V2EX 成功识别增加 `has been redeemed`、`reward redeemed`、`每日登录奖励已发放` 等状态，并支持通过铜币余额变化确认领取成功。
+
+### 修复
+
+- 收紧 PCBeta 领奖成功判定，需由领奖响应或已完成任务页确认，避免泛匹配“奖励/完成”造成误报。
+- 修复 driver 未注册和站点离线这类早退失败缺少 `siteKey`，导致失败补跑无法定位站点的问题。
+- 修正批量状态进度统计，把当天已成功跳过的站点纳入 `done` 和 `completedKeys`。
+
 ## [0.1.20] - 2026-07-02
 
 ### 新增
@@ -170,6 +189,7 @@
 
 - 动态解析 Chromium 可执行路径，提升不同环境下的浏览器兼容性。
 
+[0.1.21]: https://github.com/HughRyu/SignMate/compare/v0.1.20...v0.1.21
 [0.1.20]: https://github.com/HughRyu/SignMate/compare/v0.1.19...v0.1.20
 [0.1.19]: https://github.com/HughRyu/SignMate/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/HughRyu/SignMate/compare/v0.1.17...v0.1.18
