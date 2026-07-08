@@ -48,6 +48,9 @@ export function setGlobalProxy(sitesRaw, settings = {}) {
   const current = sitesRaw.proxy || {};
   const urls = splitLines(settings.urls ?? settings.url ?? current.urls ?? current.url).map(normalizeProxyUrl).filter(Boolean);
   const testUrls = splitLines(settings.testUrls ?? settings.testUrl ?? current.test_urls ?? current.test_url ?? DEFAULT_CONNECTIVITY_URLS);
+  const currentUrls = splitLines(current.urls ?? current.url).map(normalizeProxyUrl).filter(Boolean);
+  const currentTestUrls = splitLines(current.test_urls ?? current.test_url ?? DEFAULT_CONNECTIVITY_URLS);
+  const changed = JSON.stringify(urls) !== JSON.stringify(currentUrls) || JSON.stringify(testUrls) !== JSON.stringify(currentTestUrls);
   sitesRaw.proxy = {
     ...current,
     enabled: urls.length > 0,
@@ -57,6 +60,7 @@ export function setGlobalProxy(sitesRaw, settings = {}) {
     test_url: testUrls[0] || DEFAULT_CONNECTIVITY_URL,
     test_urls: testUrls.length ? testUrls : [DEFAULT_CONNECTIVITY_URL],
   };
+  if (changed) delete sitesRaw.proxy.health;
   return sitesRaw;
 }
 
@@ -101,6 +105,28 @@ export function selectProxyUrl(proxy = {}, preferred = "") {
   if (preferredUrl && (!healthUrls.length || healthUrls.includes(preferredUrl))) return preferredUrl;
   if (healthUrls.length) return healthUrls[0];
   return (proxy.urls && proxy.urls[0]) || proxy.url || "";
+}
+
+export function hasUsableProxyCandidate(proxy = {}, preferred = "") {
+  const candidate = normalizeProxyUrl(selectProxyUrl(proxy, preferred));
+  if (!candidate) return false;
+
+  const health = proxy.health || null;
+  if (!health) return true;
+
+  const testedUrls = Array.isArray(health.proxies)
+    ? health.proxies.map(p => normalizeProxyUrl(p?.url || "")).filter(Boolean)
+    : [];
+  if (!testedUrls.includes(candidate)) return true;
+
+  const usableUrls = Array.isArray(health.usableUrls)
+    ? health.usableUrls.map(normalizeProxyUrl).filter(Boolean)
+    : [];
+  if (usableUrls.length) return usableUrls.includes(candidate);
+
+  const tested = Array.isArray(health.proxies) ? health.proxies.find(p => normalizeProxyUrl(p?.url || "") === candidate) : null;
+  if (tested) return tested.ok === true;
+  return health.ok !== false;
 }
 
 export async function testDirect(url = DEFAULT_CONNECTIVITY_URL, timeoutMs = 8000) {

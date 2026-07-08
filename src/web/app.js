@@ -3586,7 +3586,7 @@ function setBatchNotice(message = "", type = "info") {
 function applyBackendBatchState(state = {}) {
   if (!state) return false;
   const results = Array.isArray(state.results) ? state.results : [];
-  const hasInterruptedState = !state.completedAt && !!state.interruptedNotifiedAt && Number(state.total || 0) > 0;
+  const hasInterruptedState = !state.completedAt && (!!state.interruptedNotifiedAt || !!state.interruptedAt || !!state.fatalError) && Number(state.total || 0) > 0;
   const cancelled = !state.active && (!!state.cancelRequestedAt || !!state.cancelledAt);
   const notifyFailed = !!state.notifyFailedAt || !!state.notifyError;
   if ((hasInterruptedState || cancelled || notifyFailed) && state.id && dismissedInterruptedBatchIds.has(state.id)) {
@@ -3646,7 +3646,7 @@ function applyBackendBatchState(state = {}) {
 async function refreshBackendBatchState(silent = false) {
   try {
     const { data } = await api("/api/batch-state");
-    if (data?.active || data?.cancelRequestedAt || data?.cancelledAt || data?.notifyFailedAt || data?.notifyError || (!data?.completedAt && data?.interruptedNotifiedAt && Number(data?.total || 0) > 0)) {
+    if (data?.active || data?.cancelRequestedAt || data?.cancelledAt || data?.notifyFailedAt || data?.notifyError || (!data?.completedAt && (data?.interruptedNotifiedAt || data?.interruptedAt || data?.fatalError) && Number(data?.total || 0) > 0)) {
       applyBackendBatchState(data);
       return true;
     }

@@ -8,7 +8,7 @@ import { dirname } from "node:path";
 import logger from "./utils/logger.js";
 import notifier from "./notify.js";
 import * as store from "./store.js";
-import { getGlobalProxy, siteProxyMode, testDirect, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
+import { getGlobalProxy, siteProxyMode, selectProxyUrl, hasUsableProxyCandidate } from "./utils/proxy.js";
 import BUILTIN_SITES from "./builtin-sites.js";
 
 // Driver 注册表: name → class
@@ -326,7 +326,7 @@ export async function notifyActiveBatchBeforeExit(signal = "SIGTERM") {
 export function getBatchState() {
   const state = activeBatchRun || readBatchStateSafe();
   if (!state) return { active: false };
-  const active = !!activeBatchRun || (!state.completedAt && !state.interruptedNotifiedAt && !state.cancelledAt);
+  const active = !!activeBatchRun || (!state.completedAt && !state.interruptedNotifiedAt && !state.cancelledAt && !state.interruptedAt && !state.fatalError);
   return { ...state, active };
 }
 
@@ -408,7 +408,7 @@ export function loadConfig() {
   const sites = Object.entries(mergedSites).filter(([, site]) => site.hidden !== true).map(([key, site]) => {
     const rawProxyMode = siteProxyMode(site);
     const proxyUrl = site.proxy_url || selectProxyUrl(proxy) || "";
-    const hasUsableProxy = Boolean(proxyUrl) && (proxy.health?.usableUrls?.length ? true : !proxy.health || proxy.health.ok !== false);
+    const hasUsableProxy = hasUsableProxyCandidate(proxy, site.proxy_url || "");
     return {
       key,
       ...site,
@@ -605,87 +605,103 @@ export async function runAll(options = {}) {
   batchInterruptedNotified = false;
   writeBatchStateSafe(batchState);
 
-  for (const site of enabled) {
-    if (batchState.cancelRequestedAt) {
-      logger.warn(`[${kind === "visit" ? "保活" : "签到"}] 已终止，跳过剩余站点: ${batchState.done}/${batchState.total}`);
-      break;
+  let fatalError = null;
+  try {
+    for (const site of enabled) {
+      if (batchState.cancelRequestedAt) {
+        logger.warn(`[${kind === "visit" ? "保活" : "签到"}] 已终止，跳过剩余站点: ${batchState.done}/${batchState.total}`);
+        break;
+      }
+      logger.info(`[${"-".repeat(40)}]`);
+      batchState.currentSite = site.note || site.key || site.driver || "未知站点";
+      batchState.currentKey = site.key || site.driver || "";
+      writeBatchStateSafe(batchState);
+      try {
+        const result = await runSingle(site, secrets);
+        const runScheduleMode = options.scheduleMode || options.manualScheduleMode || null;
+        if (runScheduleMode) {
+          result.details = { ...(result.details || {}), scheduleMode: runScheduleMode };
+          result.scheduleMode = runScheduleMode;
+        }
+        results.push(result);
+      } catch (err) {
+        const siteName = site.note || site.key || site.driver || "未知站点";
+        const message = `执行异常：${err?.message || String(err)}`;
+        logger.error(`[${siteName}] ${message}`);
+        results.push({
+          site: siteName,
+          key: site.key,
+          category: siteCategory(site),
+          kind: site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin"),
+          success: false,
+          message,
+          details: { error: err?.stack || err?.message || String(err), ...((options.scheduleMode || options.manualScheduleMode) ? { scheduleMode: options.scheduleMode || options.manualScheduleMode } : {}) },
+          scheduleMode: options.scheduleMode || options.manualScheduleMode || null,
+          steps: [{ label: "执行异常", ok: false, detail: err?.message || String(err) }],
+          formatted: `❌ ${siteName}\n📝 ${message}`,
+          timestamp: new Date().toISOString(),
+          time: Date.now(),
+        });
+      } finally {
+        const latest = results[results.length - 1];
+        batchState.done = skipKeys.size + todaySuccessfulKeys.size + results.length;
+        batchState.successCount = results.filter(r => r.success).length;
+        batchState.failureCount = results.length - batchState.successCount;
+        if (latest) {
+          batchState.results = results.slice(-20).map(r => ({ site: r.site, key: r.key || r.siteKey, siteKey: r.siteKey || r.key, success: !!r.success, message: String(r.message || "").slice(0, 200), time: r.time || Date.now() }));
+          batchState.completedKeys = [...skipKeys, ...todaySuccessfulKeys, ...results.map(r => r.key || r.siteKey).filter(Boolean)];
+        }
+        writeBatchStateSafe(batchState);
+      }
     }
-    logger.info(`[${"-".repeat(40)}]`);
-    batchState.currentSite = site.note || site.key || site.driver || "未知站点";
-    batchState.currentKey = site.key || site.driver || "";
+
+    batchState.currentSite = "";
+    batchState.currentKey = "";
+    batchState.completedAt = new Date().toISOString();
+    if (batchState.cancelRequestedAt) batchState.cancelledAt = batchState.completedAt;
     writeBatchStateSafe(batchState);
-    try {
-      const result = await runSingle(site, secrets);
-      const runScheduleMode = options.scheduleMode || options.manualScheduleMode || null;
-      if (runScheduleMode) {
-        result.details = { ...(result.details || {}), scheduleMode: runScheduleMode };
-        result.scheduleMode = runScheduleMode;
+
+    logger.info(`[${kind === "visit" ? "保活" : "签到"}] ${batchState.cancelRequestedAt ? "已终止" : "完成"}: ${results.filter(r => r.success).length}/${results.length} 成功`);
+
+    // 发送通知
+    if (results.some(r => r.formatted)) {
+      const successCount = results.filter(r => r.success).length;
+      const totalCount = results.length;
+      const title = `${batchState.cancelRequestedAt ? "已终止 · " : ""}${kind === "visit" ? "访问保活报告" : (kind ? "自动签到报告" : "全部签到/保活报告")} (${successCount}/${totalCount})`;
+      const notifyConfig = loadNotifyConfigSafe();
+      const signinNotify = notifyConfig.signin || {};
+      const onlyFailures = signinNotify.only_failures === true;
+      const notifyResults = onlyFailures ? results.filter(r => !r.success) : results;
+      const out = buildCategorizedNotifyMessages(notifyResults);
+      if (out.length > 0) {
+        try {
+          await notifier.send(title, out, "signin");
+        } catch (err) {
+          batchState.notifyFailedAt = new Date().toISOString();
+          batchState.notifyError = err?.message || String(err);
+          writeBatchStateSafe(batchState);
+          logger.error(`[通知] 批量结果通知失败，保留批量状态供前台提示: ${batchState.notifyError}`);
+        }
       }
-      results.push(result);
-    } catch (err) {
-      const siteName = site.note || site.key || site.driver || "未知站点";
-      const message = `执行异常：${err?.message || String(err)}`;
-      logger.error(`[${siteName}] ${message}`);
-      results.push({
-        site: siteName,
-        key: site.key,
-        category: siteCategory(site),
-        kind: site.kind || (site.driver === "website" || site.driver === "visit" ? "visit" : "signin"),
-        success: false,
-        message,
-        details: { error: err?.stack || err?.message || String(err), ...((options.scheduleMode || options.manualScheduleMode) ? { scheduleMode: options.scheduleMode || options.manualScheduleMode } : {}) },
-        scheduleMode: options.scheduleMode || options.manualScheduleMode || null,
-        steps: [{ label: "执行异常", ok: false, detail: err?.message || String(err) }],
-        formatted: `❌ ${siteName}\n📝 ${message}`,
-        timestamp: new Date().toISOString(),
-        time: Date.now(),
-      });
-    } finally {
-      const latest = results[results.length - 1];
-      batchState.done = skipKeys.size + todaySuccessfulKeys.size + results.length;
-      batchState.successCount = results.filter(r => r.success).length;
-      batchState.failureCount = results.length - batchState.successCount;
-      if (latest) {
-        batchState.results = results.slice(-20).map(r => ({ site: r.site, key: r.key || r.siteKey, siteKey: r.siteKey || r.key, success: !!r.success, message: String(r.message || "").slice(0, 200), time: r.time || Date.now() }));
-        batchState.completedKeys = [...skipKeys, ...todaySuccessfulKeys, ...results.map(r => r.key || r.siteKey).filter(Boolean)];
-      }
+    }
+  } catch (err) {
+    fatalError = err;
+    batchState.currentSite = "";
+    batchState.currentKey = "";
+    batchState.interruptedAt = new Date().toISOString();
+    batchState.interruptReason = err?.message || String(err);
+    batchState.fatalError = err?.stack || err?.message || String(err);
+    writeBatchStateSafe(batchState);
+    throw err;
+  } finally {
+    activeBatchRun = null;
+    if (!fatalError && !batchState.notifyFailedAt) {
+      // Cancelled batches should stop cleanly without leaving a persistent “知道了” task card.
+      // Keep state only when notification failed, so the frontend can surface that problem.
+      clearBatchStateSafe();
+    } else {
       writeBatchStateSafe(batchState);
     }
   }
-
-  batchState.currentSite = "";
-  batchState.currentKey = "";
-  batchState.completedAt = new Date().toISOString();
-  if (batchState.cancelRequestedAt) batchState.cancelledAt = batchState.completedAt;
-  writeBatchStateSafe(batchState);
-  activeBatchRun = null;
-
-  logger.info(`[${kind === "visit" ? "保活" : "签到"}] ${batchState.cancelRequestedAt ? "已终止" : "完成"}: ${results.filter(r => r.success).length}/${results.length} 成功`);
-
-  // 发送通知
-  if (results.some(r => r.formatted)) {
-    const successCount = results.filter(r => r.success).length;
-    const totalCount = results.length;
-    const title = `${batchState.cancelRequestedAt ? "已终止 · " : ""}${kind === "visit" ? "访问保活报告" : (kind ? "自动签到报告" : "全部签到/保活报告")} (${successCount}/${totalCount})`;
-    const notifyConfig = loadNotifyConfigSafe();
-    const signinNotify = notifyConfig.signin || {};
-    const onlyFailures = signinNotify.only_failures === true;
-    const notifyResults = onlyFailures ? results.filter(r => !r.success) : results;
-    const out = buildCategorizedNotifyMessages(notifyResults);
-    if (out.length > 0) {
-      try {
-        await notifier.send(title, out, "signin");
-      } catch (err) {
-        batchState.notifyFailedAt = new Date().toISOString();
-        batchState.notifyError = err?.message || String(err);
-        writeBatchStateSafe(batchState);
-        logger.error(`[通知] 批量结果通知失败，保留批量状态供前台提示: ${batchState.notifyError}`);
-      }
-    }
-  }
-
-  // Cancelled batches should stop cleanly without leaving a persistent “知道了” task card.
-  // Keep state only when notification failed, so the frontend can surface that problem.
-  if (!batchState.notifyFailedAt) clearBatchStateSafe();
   return results;
 }
