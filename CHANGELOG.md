@@ -4,6 +4,18 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本的 patch 递增节奏。
 
+## [0.1.22] - 2026-07-08
+
+### 修复
+
+- 修复代理链接更新后仍沿用旧健康检查失败缓存，导致手动签到继续报“没有健康可用的代理”的问题。
+- 修复全部签到/保活批量任务在外层异常或通知失败状态下可能残留主页进度的问题。
+
+### 优化
+
+- 代理可用性判断现在会确认健康缓存是否对应当前代理地址，避免旧代理失败状态误伤新配置。
+- 批量任务状态收尾增加外层保护，确保异常时释放 active 状态并向前端展示明确中断信息。
+
 ## [0.1.21] - 2026-07-06
 
 ### 新增
@@ -189,6 +201,7 @@
 
 - 动态解析 Chromium 可执行路径，提升不同环境下的浏览器兼容性。
 
+[0.1.22]: https://github.com/HughRyu/SignMate/compare/v0.1.21...v0.1.22
 [0.1.21]: https://github.com/HughRyu/SignMate/compare/v0.1.20...v0.1.21
 [0.1.20]: https://github.com/HughRyu/SignMate/compare/v0.1.19...v0.1.20
 [0.1.19]: https://github.com/HughRyu/SignMate/compare/v0.1.18...v0.1.19
