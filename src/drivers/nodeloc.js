@@ -8,7 +8,7 @@
 
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
-import { ProxyAgent } from "undici";
+import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { resolveChromiumExecutablePath } from "../utils/browser.js";
 import { wantsHttpMode, allowsHttpFallback, runSiteHttp } from "../utils/site-http.js";
 
@@ -58,7 +58,7 @@ async function fetchJson(url, cookie, proxyUrl, timeout = 30_000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(url, {
+    const res = await undiciFetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
         "Accept": "application/json, text/plain, */*",

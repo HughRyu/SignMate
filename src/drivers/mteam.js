@@ -9,7 +9,7 @@
 
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
-import { ProxyAgent } from "undici";
+import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { normalizeProxyUrl } from "../utils/proxy.js";
 
 const DEFAULT_API_BASE = "https://api.m-team.cc/api";
@@ -88,7 +88,7 @@ export default class MTeamDriver extends BaseDriver {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-      const response = await fetch(`${this.apiBase()}${path}`, {
+      const response = await undiciFetch(`${this.apiBase()}${path}`, {
         method: "POST",
         headers: {
           "user-agent": DEFAULT_UA,

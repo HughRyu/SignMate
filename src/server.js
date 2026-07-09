@@ -9,7 +9,7 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, unlink
 import { join, basename } from "node:path";
 import { parse, stringify } from "yaml";
 import logger from "./utils/logger.js";
-import { loadConfig, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState, BatchAlreadyRunningError } from "./runner.js";
+import { loadConfig, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState, dismissCompletedBatchState, BatchAlreadyRunningError } from "./runner.js";
 import { notifier, TelegramChannel, BarkChannel } from "./notify.js";
 import * as store from "./store.js";
 import { applySiteProxyMode, getGlobalProxy, setGlobalProxy, siteProxyMode, testDirect, testProxy, normalizeProxyUrl, testProxyPool, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
@@ -2218,6 +2218,16 @@ export async function startServer() {
   app.get("/api/batch-state", (_req, res) => {
     try {
       res.json({ ok: true, data: getBatchState() });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
+  app.delete("/api/batch-state", (req, res) => {
+    try {
+      const result = dismissCompletedBatchState(String(req.body?.id || req.query?.id || ""));
+      if (!result.ok) return res.status(409).json({ ok: false, error: result.error, data: result.state });
+      res.json({ ok: true, data: result });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
     }

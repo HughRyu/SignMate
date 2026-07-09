@@ -15,7 +15,7 @@
 ```text
 ghcr.io/hughryu/signmate:latest   # 最新稳定版（随 v* 正式版本标签更新）
 ghcr.io/hughryu/signmate:edge     # main 分支最新构建，包含尚未发版的新功能/修复
-ghcr.io/hughryu/signmate:v0.1.22  # 固定正式版本
+ghcr.io/hughryu/signmate:v0.1.23  # 固定正式版本
 ```
 
 创建目录与配置文件：

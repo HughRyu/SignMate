@@ -4,7 +4,7 @@
 // ============================================================
 
 import logger from "./logger.js";
-import { ProxyAgent } from "undici";
+import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { normalizeProxyUrl } from "./proxy.js";
 
 const DEFAULT_TIMEOUT = 30_000;
@@ -32,7 +32,7 @@ export async function request(url, options = {}, timeout = DEFAULT_TIMEOUT, retr
       fetchOptions.dispatcher = new ProxyAgent(proxyUrl);
     }
 
-    const response = await fetch(url, {
+    const response = await undiciFetch(url, {
       ...fetchOptions,
       signal: controller.signal,
     });

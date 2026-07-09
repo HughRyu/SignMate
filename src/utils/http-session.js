@@ -7,7 +7,7 @@
 // parsing. Do not log Cookie values.
 // ============================================================
 
-import { ProxyAgent } from "undici";
+import { ProxyAgent, fetch as undiciFetch } from "undici";
 import { normalizeProxyUrl } from "./proxy.js";
 
 const DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
@@ -52,7 +52,7 @@ export function createHttpSession({ baseUrl, cookie = "", proxyUrl = "", timeout
         ...(options.headers || {}),
       };
       const url = /^https?:\/\//i.test(String(path || "")) ? String(path) : buildUrl(path);
-      return await fetch(url, {
+      return await undiciFetch(url, {
         method: options.method || "GET",
         headers,
         body: options.body,

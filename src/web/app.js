@@ -148,12 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("click", event => {
     const dismissBtn = event.target.closest("#btnDismissBatchProgress");
     if (dismissBtn) {
-      if (batchRunState?.id) {
-        dismissedInterruptedBatchIds.add(batchRunState.id);
-        localStorage.setItem("dismissedInterruptedBatchIds", JSON.stringify([...dismissedInterruptedBatchIds]));
-      }
-      batchRunState = { active: false };
-      renderBatchProgress(latestAllSites);
+      dismissBatchProgress();
       return;
     }
     if (event.target.closest("#btnCancelBatchProgress")) {
@@ -3542,6 +3537,7 @@ function renderBatchProgress(sites = latestAllSites) {
   const today = todaySuccessfulSigninCount(sites);
   const percent = batchProgressPercent();
   const interrupted = batchRunState.interrupted === true;
+  const notifyFailed = batchRunState.notifyFailed === true;
   const current = batchRunState.active
     ? `${batchRunState.currentName ? `正在签到：${batchRunState.currentName}` : "准备批量签到"}${batchRunState.currentStep ? ` · ${batchRunState.currentStep}` : ""}`
     : (batchRunState.summary || `批量签到完成：${ok}/${total} 成功`);
@@ -3549,10 +3545,10 @@ function renderBatchProgress(sites = latestAllSites) {
   const noticeType = batchRunState.noticeType || (batchRunState.active ? "info" : (failed ? "error" : "success"));
   const longNoticeClass = notice.length > 28 || /中断|未完成|服务重启/.test(notice) ? "is-plain" : "";
   const stopping = batchRunState.stopping === true;
-  const titleText = interrupted ? "上次批量任务已中断" : (batchRunState.cancelled ? "批量任务已终止" : (stopping ? "正在终止批量任务" : "全部签到进度"));
+  const titleText = interrupted ? "上次批量任务已中断" : (notifyFailed ? "批量通知发送失败" : (batchRunState.cancelled ? "批量任务已终止" : (stopping ? "正在终止批量任务" : "全部签到进度")));
   const actionHtml = interrupted
     ? `<button class="btn btn-primary btn-compact batch-progress-action" id="btnResumeBatchProgress" type="button">继续剩余站点</button><button class="btn btn-secondary btn-compact batch-progress-action" id="btnDismissBatchProgress" type="button">知道了</button>`
-    : (batchRunState.active && !stopping ? `<button class="btn btn-danger btn-compact batch-progress-action" id="btnCancelBatchProgress" type="button">终止签到</button>` : (batchRunState.cancelled ? `<button class="btn btn-secondary btn-compact batch-progress-action" id="btnDismissBatchProgress" type="button">知道了</button>` : ""));
+    : (batchRunState.active && !stopping ? `<button class="btn btn-danger btn-compact batch-progress-action" id="btnCancelBatchProgress" type="button">终止签到</button>` : ((batchRunState.cancelled || notifyFailed) ? `<button class="btn btn-secondary btn-compact batch-progress-action" id="btnDismissBatchProgress" type="button">知道了</button>` : ""));
   el.classList.remove("hidden");
   el.innerHTML = `
     <div class="batch-progress-head">
@@ -3663,6 +3659,23 @@ async function refreshBackendBatchState(silent = false) {
     if (!silent) console.debug?.("batch-state refresh failed", err);
   }
   return false;
+}
+
+async function dismissBatchProgress() {
+  const stateId = batchRunState?.id || "";
+  const shouldClearBackend = batchRunState?.notifyFailed || batchRunState?.cancelled;
+  if (stateId) {
+    dismissedInterruptedBatchIds.add(stateId);
+    localStorage.setItem("dismissedInterruptedBatchIds", JSON.stringify([...dismissedInterruptedBatchIds]));
+  }
+  batchRunState = { active: false };
+  renderBatchProgress(latestAllSites);
+  if (!shouldClearBackend) return;
+  try {
+    await api(`/api/batch-state${stateId ? `?id=${encodeURIComponent(stateId)}` : ""}`, { method: "DELETE" });
+  } catch (err) {
+    console.debug?.("batch-state dismiss failed", err);
+  }
 }
 
 async function waitForBatchCompletion(maxWaitMs = 30 * 60 * 1000) {

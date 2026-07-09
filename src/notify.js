@@ -7,7 +7,7 @@
 //   - 可扩展更多通知渠道
 // ============================================================
 
-import { ProxyAgent } from "undici";
+import { ProxyAgent, fetch as undiciFetch } from "undici";
 import logger from "./utils/logger.js";
 
 export class Notifier {
@@ -164,7 +164,7 @@ export class TelegramChannel {
             signal: AbortSignal.timeout(25_000),
           };
           if (attempt.dispatcher) fetchOptions.dispatcher = attempt.dispatcher;
-          const response = await fetch(url, fetchOptions);
+          const response = await undiciFetch(url, fetchOptions);
           if (!response.ok) {
             const err = await response.text().catch(() => "unknown");
             lastError = `HTTP ${response.status} — ${err.slice(0, 200)}`;
@@ -209,7 +209,7 @@ export class BarkChannel {
   async send(title, messages) {
     const text = messages.join("\n\n");
     const endpoint = `${this.#url}/${encodeURIComponent(title)}/${encodeURIComponent(text)}?automaticallyCopy=1`;
-    const response = await fetch(endpoint, { method: "GET" });
+    const response = await undiciFetch(endpoint, { method: "GET" });
     const body = await response.text().catch(() => "");
     if (!response.ok) {
       logger.warn(`[Bark] 通知发送失败: HTTP ${response.status} — ${(body || "unknown").slice(0, 200)}`);

@@ -270,6 +270,25 @@ function clearBatchStateSafe() {
   }
 }
 
+export function dismissCompletedBatchState(expectedId = "") {
+  const state = readBatchStateSafe();
+  if (!state) return { ok: true, cleared: false, state: { active: false }, message: "当前没有可清理的批量状态" };
+  if (activeBatchRun || state.active === true) {
+    return { ok: false, cleared: false, state: getBatchState(), error: "批量任务仍在执行，不能清理状态" };
+  }
+  if (expectedId && state.id && expectedId !== state.id) {
+    return { ok: false, cleared: false, state: getBatchState(), error: "批量状态已变化，请刷新后重试" };
+  }
+  const completed = !!state.completedAt;
+  const cancelled = !!state.cancelledAt || !!state.cancelRequestedAt;
+  const notifyFailed = !!state.notifyFailedAt || !!state.notifyError;
+  if (!completed && !cancelled && !notifyFailed) {
+    return { ok: false, cleared: false, state: getBatchState(), error: "该批量状态仍可继续处理，不能清理" };
+  }
+  clearBatchStateSafe();
+  return { ok: true, cleared: true, state: { active: false }, message: "批量状态已清理" };
+}
+
 function batchKindLabel(kind) {
   return kind === "visit" ? "访问保活" : "全部签到";
 }

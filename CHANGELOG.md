@@ -4,6 +4,19 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本的 patch 递增节奏。
 
+## [0.1.23] - 2026-07-09
+
+### 修复
+
+- 修复 Node.js 24 内置 fetch 与项目依赖 `undici` 的 `ProxyAgent` 混用导致代理请求报 `UND_ERR_INVALID_ARG` 的问题。
+- 修复 Telegram/Bark 通知在代理模式下可能因 fetch/dispatcher 版本不兼容发送失败的问题。
+- 修复批量任务已完成但通知发送失败后，主页进度卡缺少“知道了”清理入口而长期残留的问题。
+
+### 优化
+
+- 代理 HTTP 请求统一使用同一 `undici` 实例的 `fetch` 与 `ProxyAgent`，避免 Node 运行时内置 Undici 版本变化引发兼容问题。
+- 新增安全的批量完成态清理接口，仅允许清理已完成、已终止或通知失败的非运行中状态。
+
 ## [0.1.22] - 2026-07-08
 
 ### 修复
@@ -201,6 +214,7 @@
 
 - 动态解析 Chromium 可执行路径，提升不同环境下的浏览器兼容性。
 
+[0.1.23]: https://github.com/HughRyu/SignMate/compare/v0.1.22...v0.1.23
 [0.1.22]: https://github.com/HughRyu/SignMate/compare/v0.1.21...v0.1.22
 [0.1.21]: https://github.com/HughRyu/SignMate/compare/v0.1.20...v0.1.21
 [0.1.20]: https://github.com/HughRyu/SignMate/compare/v0.1.19...v0.1.20
