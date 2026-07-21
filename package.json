@@ -9,12 +9,13 @@
     "start:dev": "node --watch src/index.js",
     "check": "node --check src/server.js && node --check src/runner.js && node --check src/scheduler.js && node --check src/index.js && node --check src/web/app.js",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
-    "test": "npm run check && npm run test:feng && npm run check:browser && npm run audit:prod",
+    "test": "npm run check && npm run test:feng && npm run test:naixi && npm run check:browser && npm run audit:prod",
     "test:nodeseek": "node src/drivers/nodeseek.js",
     "check:browser": "node scripts/check-browser.js",
     "release:check": "node scripts/release-check.js",
     "smoke:sites": "node scripts/smoke-sites.js",
-    "test:feng": "node scripts/test-feng-credentials.js"
+    "test:feng": "node scripts/test-feng-credentials.js",
+    "test:naixi": "node scripts/test-naixi-sign.js"
   },
   "dependencies": {
     "chalk": "^5.4.1",

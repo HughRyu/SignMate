@@ -7,6 +7,7 @@
 
 import logger from "./logger.js";
 import { createHttpSession, getCookieForSite, htmlToText, pageTitleFromHtml, readText } from "./http-session.js";
+import { isNaixiAlreadySigned } from "./naixi-sign.js";
 
 export function wantsHttpMode(siteConfig = {}) {
   const explicit = siteConfig.experimental_signin_mode
@@ -281,7 +282,7 @@ async function runNaixi(siteConfig, secrets) {
   const page = await openText(session, `${origin}/k_misign-sign.html`, steps, "HTTP 打开奶昔签到页面");
   if (!loggedIn(page.text, page.title)) return { success: false, message: "奶昔论坛登录态无效或 Cookie 不完整，请重新维护 Cookie", details: { signTime, pageTitle: page.title }, steps };
   let stats = parseNaixiStats(page.text, page.html);
-  if (alreadySigned(page.text)) {
+  if (isNaixiAlreadySigned(page.text)) {
     steps.push({ label: "HTTP 读取签到状态", ok: true, detail: "页面显示今天已签到" });
     return { success: true, message: `今天已完成签到${stats.reward ? `，奖励 ${stats.reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}`, details: { signTime, alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed", ...stats, pageTitle: page.title }, steps };
   }

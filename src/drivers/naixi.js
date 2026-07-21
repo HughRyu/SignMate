@@ -10,6 +10,7 @@ import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
 import { resolveChromiumExecutablePath } from "../utils/browser.js";
 import { wantsHttpMode, allowsHttpFallback, runDiscuzHttp } from "../utils/discuz-http.js";
+import { isNaixiAlreadySigned, isNaixiNotSigned } from "../utils/naixi-sign.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -51,14 +52,6 @@ function formatSignTime(date = new Date()) {
 
 function isLoggedIn(text = "") {
   return /HughRyu|退出|个人资料|我的|积分|消息|提醒/.test(text) && !/登录|立即登录/.test(text.slice(0, 500));
-}
-
-function alreadySigned(text = "") {
-  return /今天已签|已经签到|已签到|今日已签|您今天已经签到|您的签到排名|连续签到/.test(text);
-}
-
-function notSigned(text = "") {
-  return /今天还没有签到|还没有签到|立即签到|点击签到/.test(text);
 }
 
 function extractReward(text = "") {
@@ -176,7 +169,7 @@ export default class NaixiDriver extends BaseDriver {
         };
       }
 
-      if (alreadySigned(bodyText)) {
+      if (isNaixiAlreadySigned(bodyText)) {
         const stats = await readSignStats(page);
         const reward = buildReward(stats, bodyText);
         return {
@@ -225,13 +218,13 @@ export default class NaixiDriver extends BaseDriver {
 
       return {
         success: ok,
-        message: ok ? `${alreadySigned(finalPreview) ? "今天已完成签到" : "签到成功"}${reward ? `，奖励 ${reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}` : `签到失败：${finalPreview || `HTTP ${signed?.status() || "unknown"}`}`,
+        message: ok ? `${isNaixiAlreadySigned(finalPreview) ? "今天已完成签到" : "签到成功"}${reward ? `，奖励 ${reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}` : `签到失败：${finalPreview || `HTTP ${signed?.status() || "unknown"}`}`,
         raw: finalPreview,
         details: { signTime, reward, rewardExp: stats.rewardExp, streakDays: stats.streakDays, totalDays: stats.totalDays, pageTitle: await page.title().catch(() => title) },
         steps: [
           { label: "启动 Playwright 浏览器", ok: true },
           { label: "注入 Cookie 并准备浏览器上下文", ok: true },
-          { label: "打开奶昔签到页面", ok: true, status: signPage?.status() || null, detail: notSigned(preview) ? "页面显示今天还没有签到" : preview },
+          { label: "打开奶昔签到页面", ok: true, status: signPage?.status() || null, detail: isNaixiNotSigned(preview) ? "页面显示今天还没有签到" : preview },
           { label: "找到签到链接", ok: true, detail: signHref },
           { label: "访问签到链接", ok, status: signed?.status() || null, detail: ok ? `${finalPreview}${reward ? `；奖励 ${reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续 ${stats.streakDays} 天` : ""}` : finalPreview },
         ],
