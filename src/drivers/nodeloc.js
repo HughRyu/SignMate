@@ -150,12 +150,38 @@ export default class NodeLocDriver extends BaseDriver {
       logger.info(`[NodeLoc] 步骤 3/5：打开首页 → ${origin}/`);
       const home = await page.goto(`${origin}/`, { waitUntil: "domcontentloaded", timeout });
       await page.waitForTimeout(this.siteConfig.playwright_wait_ms || 2000);
+
+      // Cloudflare 'Just a moment...' JS challenge: give the browser time to solve it.
+      // Static cf_clearance cookies bind to the original IP/UA; when the proxy IP differs,
+      // CF re-challenges. Poll until the interstitial title is gone (or budget exhausted).
+      const cfBudgetMs = Number(this.siteConfig.cf_challenge_wait_ms || 25000);
+      const cfDeadline = Date.now() + cfBudgetMs;
+      let cfTitle = await page.title().catch(() => "");
+      const looksLikeChallenge = t => /just a moment|attention required|请稍候|checking your browser|cf-browser-verification/i.test(String(t || ""));
+      let cfLoops = 0;
+      while (looksLikeChallenge(cfTitle) && Date.now() < cfDeadline) {
+        cfLoops++;
+        logger.info(`[NodeLoc] 检测到 Cloudflare 质询页「${cfTitle}」，等待自动通过 (${cfLoops})…`);
+        await page.waitForTimeout(3000);
+        await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
+        cfTitle = await page.title().catch(() => "");
+      }
+
       const title = await page.title().catch(() => "");
       const bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
       logger.info(`[NodeLoc] 步骤 4/5：页面状态 ${home?.status() || "unknown"} | ${title} | ${bodyText.replace(/\s+/g, " ").slice(0, 260)}`);
 
+      // Re-sync cookies from the browser context back into the raw Cookie header, so any
+      // fresh cf_clearance obtained by solving the challenge is used by the direct fetch calls.
+      let effectiveCookie = cookie;
+      try {
+        const ctxCookies = await context.cookies(origin);
+        const merged = ctxCookies.filter(c => c && c.name).map(c => `${c.name}=${c.value}`).join("; ");
+        if (merged) effectiveCookie = merged;
+      } catch {}
+
       logger.info("[NodeLoc] 步骤 5/5：读取当前用户与活跃数据");
-      let currentRes = await fetchJson(`${origin}/session/current.json`, cookie, proxy_url, timeout);
+      let currentRes = await fetchJson(`${origin}/session/current.json`, effectiveCookie, proxy_url, timeout);
       let current = currentRes.json?.current_user;
       let username = pickUserName(current);
       if (!current?.id || !username) {
