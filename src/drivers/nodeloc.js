@@ -9,7 +9,7 @@
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
 import { ProxyAgent, fetch as undiciFetch } from "undici";
-import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { resolveChromiumExecutablePath, launchBrowser } from "../utils/browser.js";
 import { wantsHttpMode, allowsHttpFallback, runSiteHttp } from "../utils/site-http.js";
 
 function normalizeCookieHeader(value = "") {
@@ -124,13 +124,17 @@ export default class NodeLocDriver extends BaseDriver {
     const signTime = formatSignTime();
     const proxy = proxy_url ? { server: proxy_url } : undefined;
 
-    logger.info(`[NodeLoc] 步骤 1/5：启动 Playwright 浏览器${proxy_url ? `，代理: ${proxy_url}` : ""}`);
-    const browser = await chromium.launch({
-      executablePath: chromium_executable_path,
-      headless: true,
-      proxy,
-      args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
-      timeout,
+    logger.info(`[NodeLoc] 步骤 1/5：启动 Playwright/CloakBrowser 浏览器${proxy_url ? `，代理: ${proxy_url}` : ""}`);
+    const browser = await launchBrowser({
+      chromium,
+      siteConfig: this.siteConfig,
+      launchOptions: {
+        executablePath: chromium_executable_path,
+        headless: true,
+        proxy,
+        args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+        timeout,
+      },
     });
 
     try {
