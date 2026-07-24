@@ -456,6 +456,22 @@ export const BUILTIN_SITES = {
     "proxy": "auto",
     "category": "pt",
     "kind": "visit"
+  },
+  "linux-do": {
+    "enabled": true,
+    "driver": "nodeloc",
+    "schedule": "auto",
+    "note": "Linux.do 保活",
+    "notify": true,
+    "retry": 1,
+    "retry_delay_ms": 10000,
+    "timeout": 60000,
+    "base_url": "https://linux.do",
+    "signin_mode": "playwright",
+    "playwright_wait_ms": 2500,
+    "proxy": "auto",
+    "category": "forum",
+    "kind": "visit"
   }
 };
 

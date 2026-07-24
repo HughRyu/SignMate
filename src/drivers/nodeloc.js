@@ -81,9 +81,22 @@ function findDirectoryItem(directory = {}, userId, username) {
   return items.find(item => item.id === userId || item.user?.id === userId || item.user?.username === username) || null;
 }
 
+function domainFromBaseUrl(baseUrl = "", fallback = ".nodeloc.com") {
+  try {
+    const host = new URL(baseUrl).hostname;
+    if (!host) return fallback;
+    // registrable-ish domain: strip a leading "www." so cookie applies to whole site
+    const bare = host.replace(/^www\./i, "");
+    return "." + bare;
+  } catch {
+    return fallback;
+  }
+}
+
 export default class NodeLocDriver extends BaseDriver {
   getCookie() {
-    const secrets = this.secrets?.nodeloc || {};
+    const key = this.siteConfig.key || "nodeloc";
+    const secrets = this.secrets?.[key] || this.secrets?.nodeloc || {};
     const cookie = normalizeCookieHeader(secrets.cookie || "");
     if (!cookie || cookie.includes("<YOUR_")) return "";
     if (/[^\x00-\xff]/.test(cookie)) throw new Error("Cookie 含非法字符，请重新从浏览器复制原始 Cookie");

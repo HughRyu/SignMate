@@ -10834,6 +10834,23 @@ input.is-saved-field:focus {
 .home-site-search-wrap .home-site-search {
   padding-right: 38px !important;
 }
+/* ---- 2026-07-24: search box focus ring on wrapper, not clipped input outline ---- */
+.home-site-search-bar .home-site-search-wrap {
+  position: relative !important;
+  overflow: visible !important;
+  transition: border-color .15s ease, box-shadow .15s ease !important;
+}
+.home-site-search-bar .home-site-search-wrap:focus-within {
+  border-color: var(--accent, #0071e3) !important;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, .16), 0 8px 20px rgba(15,23,42,.06) !important;
+}
+/* Suppress the inner input's own focus outline/ring so the top line is not clipped by the pill edge. */
+.home-site-search-bar .home-site-search:focus,
+.home-site-search-bar .home-site-search:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
 @media (max-width: 760px) {
   .nav-stats-strip .nav-all-filter {
     display: none !important;
