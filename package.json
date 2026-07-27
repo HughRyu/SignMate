@@ -1,6 +1,6 @@
 {
   "name": "signmate",
-  "version": "0.1.23",
+  "version": "0.1.24",
   "private": true,
   "description": "SignMate 签伴 - 多站点签到与保活管理",
   "type": "module",
@@ -21,11 +21,12 @@
     "chalk": "^5.4.1",
     "cloakbrowser": "^0.3.31",
     "crypto-js": "^4.2.0",
-    "express": "^4.21.0",
+    "express": "^4.22.2",
     "iconv-lite": "^0.6.3",
     "node-cron": "^4.2.1",
     "playwright-core": "1.57.0",
-    "sharp": "^0.33.0",
+    "sharp": "^0.35.3",
+    "tar": "^7.5.22",
     "tesseract.js": "^6.0.0",
     "undici": "8.5.0",
     "yaml": "^2.7.0"

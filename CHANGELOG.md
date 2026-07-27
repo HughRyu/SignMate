@@ -4,6 +4,20 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本遵循语义化版本的 patch 递增节奏。
 
+## [0.1.24] - 2026-07-27
+
+### 修复
+
+- 修复 Playwright Chromium 在 Docker 生产环境中因 crashpad dump 目录缺失导致启动阶段 `SIGTRAP` 崩溃的问题。
+- 修复容器以 `pwuser` 运行应用时仍继承 `HOME=/root`，导致浏览器缓存目录不可写的问题。
+- 移除 Linux.do 内置站点配置，避免已废弃站点继续参与自动保活。
+- 升级 `express`、`sharp`、`tar` 相关依赖，修复发布审计中的 high/moderate 级漏洞告警。
+
+### 优化
+
+- 统一 Playwright 直接启动路径的默认浏览器参数，确保各站点 driver 使用一致的 Chromium 启动配置。
+- 容器入口会初始化 `HOME`、`XDG_CACHE_HOME`、`XDG_CONFIG_HOME` 与 Chromium crash dump 目录，提升浏览器运行稳定性。
+
 ## [0.1.23] - 2026-07-09
 
 ### 修复
@@ -232,3 +246,4 @@
 [0.1.7]: https://github.com/HughRyu/SignMate/releases/tag/v0.1.7
 [0.1.6]: https://github.com/HughRyu/SignMate/releases/tag/v0.1.6
 [0.1.5]: https://github.com/HughRyu/SignMate/releases/tag/v0.1.5
+[0.1.24]: https://github.com/HughRyu/SignMate/compare/v0.1.23...v0.1.24

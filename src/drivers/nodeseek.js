@@ -13,7 +13,7 @@
 import BaseDriver from "./base.js";
 import { postJSON } from "../utils/http.js";
 import logger from "../utils/logger.js";
-import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { resolveChromiumExecutablePath, buildPlaywrightLaunchOptions } from "../utils/browser.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -195,13 +195,13 @@ export default class NodeSeekDriver extends BaseDriver {
     const proxy = proxy_url ? { server: proxy_url } : undefined;
     logger.info(`[NodeSeek] 步骤 1/5：启动 Playwright 浏览器${proxy_url ? `，代理: ${proxy_url}` : ""}`);
 
-    const browser = await chromium.launch({
+    const browser = await chromium.launch(buildPlaywrightLaunchOptions({
       executablePath: chromium_executable_path,
       headless: true,
       proxy,
       args: ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
       timeout,
-    });
+    }));
 
     try {
       const context = await browser.newContext({
