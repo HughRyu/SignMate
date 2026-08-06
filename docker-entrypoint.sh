@@ -4,9 +4,12 @@ set -euo pipefail
 # Ensure bind-mounted writable directories are owned by the runtime user.
 # This makes fresh deployments robust when ./config, ./data or ./logs were
 # created by root or another host user before the container starts.
-mkdir -p /app/config /app/data /app/logs
-chown -R pwuser:pwuser /app/config /app/data /app/logs 2>/dev/null || true
-chmod -R u+rwX,g+rwX /app/config /app/data /app/logs 2>/dev/null || true
+mkdir -p /app/config /app/data /app/logs /tmp/signmate-chrome-crashes /home/pwuser/.cache /home/pwuser/.config
+chown -R pwuser:pwuser /app/config /app/data /app/logs /tmp/signmate-chrome-crashes /home/pwuser/.cache /home/pwuser/.config 2>/dev/null || true
+chmod -R u+rwX,g+rwX /app/config /app/data /app/logs /tmp/signmate-chrome-crashes /home/pwuser/.cache /home/pwuser/.config 2>/dev/null || true
+export HOME=/home/pwuser
+export XDG_CACHE_HOME=/home/pwuser/.cache
+export XDG_CONFIG_HOME=/home/pwuser/.config
 
 # Optional virtual display for non-headless stealth browsing (e.g. cloak engine on
 # heavy-Cloudflare sites). Enabled when SIGNMATE_XVFB=1. Starts Xvfb and exports DISPLAY

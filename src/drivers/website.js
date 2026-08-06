@@ -8,7 +8,7 @@
 
 import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
-import { resolveChromiumExecutablePath } from "../utils/browser.js";
+import { resolveChromiumExecutablePath, buildPlaywrightLaunchOptions } from "../utils/browser.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -80,7 +80,7 @@ export default class WebsiteDriver extends BaseDriver {
     const proxy = proxy_url ? { server: proxy_url } : undefined;
 
     logger.info(`[网站探活] 步骤 1/4：启动 Playwright 浏览器${proxy_url ? `，代理: ${proxy_url}` : ""}`);
-    const browser = await chromium.launch({ executablePath: chromium_executable_path, headless: true, proxy, args: ["--no-sandbox"], timeout });
+    const browser = await chromium.launch(buildPlaywrightLaunchOptions({ executablePath: chromium_executable_path, headless: true, proxy, args: ["--no-sandbox"], timeout }));
     try {
       const context = await browser.newContext({
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",

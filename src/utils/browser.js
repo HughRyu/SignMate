@@ -46,6 +46,28 @@ function truthy(value = "") {
   return ["1", "true", "yes", "on", "cloak"].includes(String(value || "").trim().toLowerCase());
 }
 
+const DEFAULT_BROWSER_ARGS = [
+  "--disable-crashpad",
+  "--disable-crash-reporter",
+  "--disable-breakpad",
+  "--crash-dumps-dir=/tmp/signmate-chrome-crashes",
+];
+
+function mergeBrowserArgs(args = []) {
+  const merged = [];
+  for (const arg of [...DEFAULT_BROWSER_ARGS, ...(Array.isArray(args) ? args : [])]) {
+    if (arg && !merged.includes(arg)) merged.push(arg);
+  }
+  return merged;
+}
+
+export function buildPlaywrightLaunchOptions(launchOptions = {}) {
+  return {
+    ...launchOptions,
+    args: mergeBrowserArgs(launchOptions.args),
+  };
+}
+
 export function browserEngine() {
   return String(process.env.SIGNMATE_BROWSER_ENGINE || "playwright").trim().toLowerCase();
 }
@@ -57,7 +79,7 @@ export function shouldUseCloakBrowser(siteConfig = {}) {
 }
 
 export function buildCloakLaunchOptions({ headless = true, proxy, args = [], timeout, siteConfig = {} } = {}) {
-  const mergedArgs = [...(Array.isArray(args) ? args : [])];
+  const mergedArgs = mergeBrowserArgs(args);
   if (process.env.SIGNMATE_CLOAK_ARGS) mergedArgs.push(...process.env.SIGNMATE_CLOAK_ARGS.split(/\s+/).filter(Boolean));
   const options = {
     headless: String(process.env.SIGNMATE_CLOAK_HEADLESS || "").trim() === "false" ? false : headless,
@@ -77,5 +99,5 @@ export async function launchBrowser({ chromium, siteConfig = {}, launchOptions =
     const cloak = await import("cloakbrowser");
     return cloak.launch(buildCloakLaunchOptions({ ...launchOptions, siteConfig }));
   }
-  return chromium.launch(launchOptions);
+  return chromium.launch(buildPlaywrightLaunchOptions(launchOptions));
 }
