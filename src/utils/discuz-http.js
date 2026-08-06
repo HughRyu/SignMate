@@ -41,6 +41,11 @@ function compactText(text = "") {
   return String(text || "").replace(/\s+/g, " ").trim();
 }
 
+export function isHumanVerificationPage(text = "", title = "") {
+  const source = `${title}\n${text}`;
+  return /滑动验证|请按住滑块|验证您是真人|阿里云ESA|性能和安全由阿里云ESA|人机验证|Request ID[:：]/i.test(source);
+}
+
 function decodeHtml(value = "") {
   return String(value || "")
     .replace(/&amp;/gi, "&")
@@ -336,6 +341,15 @@ async function runRight(siteConfig, secrets) {
   const signPageUrl = `${base}/erling_qd-sign_in.html`;
   logger.info(`[恩山/API] HTTP 打开签到页 → ${signPageUrl}`);
   const page = await openText(session, signPageUrl, steps, "HTTP 打开恩山签到页面");
+  if (isHumanVerificationPage(page.text, page.title)) {
+    steps.push({ label: "检测恩山人机验证", ok: false, status: page.res.status, detail: "阿里云 ESA 滑块验证" });
+    return {
+      success: false,
+      message: "恩山无线论坛触发了阿里云 ESA 滑块验证，请在浏览器中完成验证后再重试；Cookie 暂未判定为失效",
+      details: { signTime, pageTitle: page.title, checkinAction: "human_verification", verificationType: "aliyun_esa_slider" },
+      steps,
+    };
+  }
   if (!loggedIn(page.text, page.title)) return { success: false, message: "恩山无线论坛登录态无效或 Cookie 不完整，请重新维护 Cookie", details: { signTime, pageTitle: page.title }, steps };
   let stats = parseRightStats(page.text);
   if (alreadySigned(page.text) && !/signin-btn|签到中|立即签到/.test(page.text)) {
