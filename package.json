@@ -1,13 +1,13 @@
 {
   "name": "signmate",
-  "version": "0.1.24",
+  "version": "0.1.25",
   "private": true,
   "description": "SignMate 签伴 - 多站点签到与保活管理",
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
     "start:dev": "node --watch src/index.js",
-    "check": "node --check src/server.js && node --check src/runner.js && node --check src/scheduler.js && node --check src/index.js && node --check src/web/app.js",
+    "check": "node --check src/server.js && node --check src/runner.js && node --check src/scheduler.js && node --check src/index.js && node --check src/web/app.js && node --check src/utils/site-http.js && node --check src/drivers/v2ex-utils.js && node --check src/drivers/v2ex.js",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "test": "npm run check && npm run test:v2ex && npm run test:feng && npm run test:naixi && npm run check:browser && npm run audit:prod",
     "test:v2ex": "node --test test/v2ex.test.js",
@@ -29,7 +29,7 @@
     "sharp": "^0.35.3",
     "tar": "^7.5.22",
     "tesseract.js": "^6.0.0",
-    "undici": "8.5.0",
+    "undici": "8.10.0",
     "yaml": "^2.7.0"
   },
   "displayName": "SignMate",
