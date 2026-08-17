@@ -12,6 +12,7 @@ import BaseDriver from "./base.js";
 import logger from "../utils/logger.js";
 import { launchBrowser, resolveChromiumExecutablePath } from "../utils/browser.js";
 import { wantsHttpMode, allowsHttpFallback, runSiteHttp } from "../utils/site-http.js";
+import { findV2EXDailyRedeemHref } from "./v2ex-utils.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -261,8 +262,8 @@ export default class V2EXDriver extends BaseDriver {
       await page.waitForTimeout(this.siteConfig.playwright_wait_ms || 2500);
 
       const title = await page.title().catch(() => "");
-      const bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
-      const preview = bodyText.replace(/\s+/g, " ").slice(0, 220);
+      let bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
+      let preview = bodyText.replace(/\s+/g, " ").slice(0, 220);
       logger.info(`[V2EX] 步骤 4/5：页面状态 ${daily?.status() || "unknown"} | ${title} | ${preview}`);
 
       if (!includesLogin(bodyText)) {
@@ -296,24 +297,90 @@ export default class V2EXDriver extends BaseDriver {
       }
 
       logger.info("[V2EX] 步骤 5/5：查找并访问领取奖励链接");
-      const redeemHref = await page.$$eval("a", links => {
-        const hit = links.find(a => {
-          const href = a.getAttribute("href") || "";
-          return /^\/mission\/daily\/redeem\?once=/.test(href) || /^https?:\/\/www\.v2ex\.com\/mission\/daily\/redeem\?once=/.test(a.href || "");
+      const findRedeemHref = async () => {
+        const candidates = await page.evaluate(() => {
+          const values = [
+            ...Array.from(document.querySelectorAll("[href], form[action], [onclick], [data-href], [data-url]"), node => (
+              node.getAttribute("href")
+              || node.getAttribute("action")
+              || node.getAttribute("onclick")
+              || node.getAttribute("data-href")
+              || node.getAttribute("data-url")
+            )),
+          ].filter(Boolean);
+          const htmlMatches = document.documentElement.innerHTML.match(/\/?mission\/daily\/redeem\?once=[^"' <>)]*/gi) || [];
+          return [...values, ...htmlMatches];
         });
-        return hit?.href || "";
-      });
+        return findV2EXDailyRedeemHref(candidates, origin);
+      };
+      let redeemHref = await findRedeemHref();
+      let linkRetry = false;
 
       if (!redeemHref) {
+        linkRetry = true;
+        logger.info("[V2EX] 未发现领取入口，等待后刷新每日任务页面重试");
+        await page.waitForTimeout(this.siteConfig.redeem_retry_delay_ms || 4000);
+        const retryDaily = await page.goto(dailyUrl, { waitUntil: "domcontentloaded", timeout });
+        await page.waitForTimeout(this.siteConfig.playwright_wait_ms || 2500);
+        bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
+        preview = bodyText.replace(/\s+/g, " ").slice(0, 220);
+        if (!includesLogin(bodyText)) {
+          return {
+            success: false,
+            message: "V2EX 登录态无效或 Cookie 不完整，请重新维护 Cookie",
+            details: { signTime, pageTitle: await page.title().catch(() => title) },
+            steps: [
+              { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
+              { label: "注入 Cookie 并准备浏览器上下文", ok: true },
+              { label: "打开 V2EX 每日任务页面", ok: false, status: retryDaily?.status() || null, detail: "刷新后未识别到登录状态" },
+            ],
+          };
+        }
+        if (alreadyRedeemed(bodyText)) {
+          const coinStats = mergeCoinStats(extractCoinStats(bodyText), await readBalanceStats(page, origin, timeout));
+          const extra = coinMessage(coinStats);
+          return {
+            success: true,
+            message: `今天已完成签到${extra ? `；${extra}` : ""}；签到时间：${signTime}`,
+            details: { signTime, alreadySigned: true, retryAfterMissingLink: true, ...coinStats, pageTitle: await page.title().catch(() => title) },
+            steps: [
+              { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
+              { label: "注入 Cookie 并准备浏览器上下文", ok: true },
+              { label: "打开 V2EX 每日任务页面", ok: true, status: retryDaily?.status() || null },
+              { label: "刷新后读取签到状态", ok: true, detail: `页面显示 Daily login reward already redeemed${extra ? `；${extra}` : ""}` },
+            ],
+          };
+        }
+        redeemHref = await findRedeemHref();
+      }
+
+      if (!redeemHref) {
+        const coinStats = await readBalanceStats(page, origin, timeout);
+        const extra = coinMessage(coinStats);
+        if (Number.isFinite(coinStats.rewardCopper)) {
+          return {
+            success: true,
+            message: `今天已完成签到${extra ? `；${extra}` : ""}；签到时间：${signTime}`,
+            details: { signTime, alreadySigned: true, confirmedFromBalance: true, ...coinStats, pageTitle: await page.title().catch(() => title) },
+            steps: [
+              { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
+              { label: "注入 Cookie 并准备浏览器上下文", ok: true },
+              { label: "打开 V2EX 每日任务页面", ok: true, status: daily?.status() || null },
+              { label: "查找领取链接", ok: false, detail: "刷新后仍未发现领取入口" },
+              { label: "核对 V2EX 今日奖励记录", ok: true, detail: extra },
+            ],
+          };
+        }
         return {
           success: false,
-          message: "未找到 V2EX 每日奖励领取链接，可能页面结构变化或已无可领取奖励",
-          details: { signTime, pageTitle: title },
+          message: "V2EX 暂未下发每日奖励领取入口，已刷新并核对余额记录；稍后可再次重试",
+          details: { signTime, checkinAction: "redeem_link_unavailable", retryAfterMissingLink: linkRetry, pageTitle: title },
           steps: [
             { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
             { label: "注入 Cookie 并准备浏览器上下文", ok: true },
             { label: "打开 V2EX 每日任务页面", ok: true, status: daily?.status() || null },
-            { label: "查找领取链接", ok: false, detail: preview },
+            { label: "刷新后查找领取链接", ok: false, detail: preview },
+            { label: "核对 V2EX 今日奖励记录", ok: false, detail: extra || "未发现今日奖励记录" },
           ],
         };
       }
