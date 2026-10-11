@@ -11,6 +11,7 @@ import logger from "../utils/logger.js";
 import { resolveChromiumExecutablePath, buildPlaywrightLaunchOptions } from "../utils/browser.js";
 import { wantsHttpMode, allowsHttpFallback, runDiscuzHttp } from "../utils/discuz-http.js";
 import { isNaixiAlreadySigned, isNaixiNotSigned } from "../utils/naixi-sign.js";
+import { prepareNaixiPage } from "../utils/naixi-page.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -145,6 +146,7 @@ export default class NaixiDriver extends BaseDriver {
       logger.info("[奶昔论坛] 步骤 2/5：注入 Cookie，准备浏览器上下文");
       await context.addCookies(parseCookieHeader(cookie));
       const page = await context.newPage();
+      await prepareNaixiPage(page);
 
       const signPageUrl = `${origin}/k_misign-sign.html`;
       logger.info(`[奶昔论坛] 步骤 3/5：打开签到页面 → ${signPageUrl}`);

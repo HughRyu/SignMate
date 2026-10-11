@@ -13,6 +13,7 @@ import logger from "../utils/logger.js";
 import { launchBrowser, resolveChromiumExecutablePath } from "../utils/browser.js";
 import { wantsHttpMode, allowsHttpFallback, runSiteHttp } from "../utils/site-http.js";
 import { findV2EXDailyRedeemHref } from "./v2ex-utils.js";
+import { waitForV2EXPage } from "./v2ex-page.js";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -63,8 +64,10 @@ function formatSignTime(date = new Date()) {
   });
 }
 
-function includesLogin(body = "") {
-  return /Sign Out|Settings|Notes|Planet/i.test(body);
+function pageFailure(state) {
+  if (state === "challenge") return "V2EX Cloudflare 安全验证未通过；无法判断 Cookie 是否有效，请检查当前代理出口或在相同出口的浏览器完成人工验证";
+  if (state === "unauthenticated") return "V2EX 登录态无效或 Cookie 不完整，请重新维护 Cookie";
+  return "V2EX 页面未识别到登录状态，无法确认 Cookie 是否有效；请检查页面或网络后重试";
 }
 
 function alreadyRedeemed(body = "") {
@@ -210,7 +213,8 @@ export default class V2EXDriver extends BaseDriver {
   }
 
   async signIn() {
-    if (wantsHttpMode(this.siteConfig)) {
+    const httpAttempted = wantsHttpMode(this.siteConfig);
+    if (httpAttempted) {
       const httpResult = await runSiteHttp(this.siteConfig, this.secrets, "v2ex");
       if (httpResult.success || !allowsHttpFallback(this.siteConfig)) return httpResult;
       logger.warn(`[${this.siteConfig.note || "v2ex"}] HTTP/API-first 失败，回退 Playwright：${httpResult.message}`);
@@ -261,16 +265,27 @@ export default class V2EXDriver extends BaseDriver {
       const daily = await page.goto(dailyUrl, { waitUntil: "domcontentloaded", timeout });
       await page.waitForTimeout(this.siteConfig.playwright_wait_ms || 2500);
 
-      const title = await page.title().catch(() => "");
-      let bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
+      const pageState = await waitForV2EXPage(page, { timeout: Math.min(timeout, 15000) });
+      const title = pageState.title || "";
+      let bodyText = pageState.text || "";
       let preview = bodyText.replace(/\s+/g, " ").slice(0, 220);
       logger.info(`[V2EX] 步骤 4/5：页面状态 ${daily?.status() || "unknown"} | ${title} | ${preview}`);
 
-      if (!includesLogin(bodyText)) {
+      if (pageState.state === "challenge" && !httpAttempted && allowsHttpFallback(this.siteConfig)) {
+        // Only before any browser redemption, and never retry an HTTP-first run.
+        // Reuse the exact config/secrets: no proxy rotation or credential mutation.
+        const result = await runSiteHttp(this.siteConfig, this.secrets, "v2ex");
+        return {
+          ...result,
+          details: { ...result.details, browserPageState: "challenge", fallbackFrom: "browser_challenge" },
+          steps: [{ label: "浏览器安全验证未通过，使用相同代理 HTTP 回退", ok: false, status: daily?.status() || null }, ...(result.steps || [])],
+        };
+      }
+      if (pageState.state !== "authenticated") {
         return {
           success: false,
-          message: "V2EX 登录态无效或 Cookie 不完整，请重新维护 Cookie",
-          details: { signTime, pageTitle: title },
+          message: pageFailure(pageState.state),
+          details: { signTime, pageTitle: title, pageState: pageState.state },
           steps: [
             { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
             { label: "注入 Cookie 并准备浏览器上下文", ok: true },
@@ -322,13 +337,14 @@ export default class V2EXDriver extends BaseDriver {
         await page.waitForTimeout(this.siteConfig.redeem_retry_delay_ms || 4000);
         const retryDaily = await page.goto(dailyUrl, { waitUntil: "domcontentloaded", timeout });
         await page.waitForTimeout(this.siteConfig.playwright_wait_ms || 2500);
-        bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
+        const retryState = await waitForV2EXPage(page, { timeout: Math.min(timeout, 15000) });
+        bodyText = retryState.text || "";
         preview = bodyText.replace(/\s+/g, " ").slice(0, 220);
-        if (!includesLogin(bodyText)) {
+        if (retryState.state !== "authenticated") {
           return {
             success: false,
-            message: "V2EX 登录态无效或 Cookie 不完整，请重新维护 Cookie",
-            details: { signTime, pageTitle: await page.title().catch(() => title) },
+            message: pageFailure(retryState.state),
+            details: { signTime, pageTitle: retryState.title || title, pageState: retryState.state },
             steps: [
               { label: "启动 Playwright/CloakBrowser 浏览器", ok: true },
               { label: "注入 Cookie 并准备浏览器上下文", ok: true },

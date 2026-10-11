@@ -3,15 +3,12 @@
 // ============================================================
 
 import { createHash } from "node:crypto";
-import iconv from "iconv-lite";
 import BaseDriver from "./base.js";
 import { get, postForm } from "../utils/http.js";
 import logger from "../utils/logger.js";
 
-const TBS_URL = "http://tieba.baidu.com/dc/common/tbs";
-const LOGIN_INFO_URL = "https://zhidao.baidu.com/api/loginInfo";
-const MY_LIKE_URL = "https://tieba.baidu.com/f/like/mylike?&pn=";
-const SIGN_URL = "http://c.tieba.baidu.com/c/c/forum/sign";
+const MOBILE_FORUMS_URL = "https://tieba.baidu.com/mo/q/newmoindex";
+const SIGN_URL = "https://c.tieba.baidu.com/c/c/forum/sign";
 
 function normalizeCookieHeader(value = "") {
   return String(value || "")
@@ -41,11 +38,6 @@ function formatTime(date = new Date()) {
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
-async function readText(response) {
-  const buffer = Buffer.from(await response.arrayBuffer());
-  return iconv.decode(buffer, "gbk");
-}
-
 async function readJson(response) {
   const text = await response.text();
   try {
@@ -53,22 +45,6 @@ async function readJson(response) {
   } catch {
     return { raw: text };
   }
-}
-
-function parseLastPage(html = "") {
-  const match = String(html).match(/\/f\/like\/mylike\?&pn=(\d+)[^>]*>尾页/s);
-  const page = Number.parseInt(match?.[1] || "1", 10);
-  return Number.isFinite(page) && page > 0 ? page : 1;
-}
-
-function parseForumNames(html = "") {
-  const names = [];
-  const pattern = /<a[^>]+href="\/f\?kw=[^"]*"[^>]+title="([^"]+)"/g;
-  for (const match of String(html).matchAll(pattern)) {
-    const name = String(match[1] || "").trim();
-    if (name) names.push(name);
-  }
-  return names;
 }
 
 function unique(values = []) {
@@ -124,43 +100,28 @@ export default class TiebaDriver extends BaseDriver {
   }
 
   async validateLogin(cookie) {
-    const response = await this.apiGet(TBS_URL, cookie);
+    const response = await this.apiGet(MOBILE_FORUMS_URL, cookie);
     const data = await readJson(response);
-    if (!response.ok) {
-      return { ok: false, message: `登录验证失败：HTTP ${response.status}`, status: response.status, raw: data };
+    if (!response.ok) return { ok: false, message: `登录验证失败：HTTP ${response.status}`, status: response.status };
+    if (data?.raw !== undefined) return { ok: false, message: "贴吧要求人工确认登录或安全验证，请在相同出口处理", status: response.status };
+    if (![0, "0"].includes(data?.no) || !(Number(data?.data?.uid) > 0) || !data?.data?.tbs) {
+      return { ok: false, message: "登录失败，Cookie 可能已过期", status: response.status };
     }
-    if (Number(data?.is_login || 0) === 0 || !data?.tbs) {
-      return { ok: false, message: "登录失败，Cookie 可能已过期", status: response.status, raw: data };
-    }
-
-    let username = "";
-    try {
-      const userResponse = await this.apiGet(LOGIN_INFO_URL, cookie);
-      const userData = await readJson(userResponse);
-      username = userData?.userName || userData?.username || "";
-    } catch {
-      username = "";
-    }
-
-    return { ok: true, tbs: data.tbs, username, status: response.status, raw: data };
+    return { ok: true, tbs: data.data.tbs, status: response.status };
   }
 
   async getForumList(cookie) {
-    const first = await this.apiGet(`${MY_LIKE_URL}1`, cookie);
-    if (!first.ok) throw new Error(`获取贴吧列表失败：HTTP ${first.status}`);
-    const firstHtml = await readText(first);
-    const lastPage = parseLastPage(firstHtml);
-    const names = parseForumNames(firstHtml);
-
-    for (let page = 2; page <= lastPage; page++) {
-      const response = await this.apiGet(`${MY_LIKE_URL}${page}`, cookie);
-      if (!response.ok) {
-        logger.warn(`[百度贴吧] 获取第 ${page} 页关注贴吧失败：HTTP ${response.status}`);
-        continue;
-      }
-      names.push(...parseForumNames(await readText(response)));
+    // The legacy management page can return an empty shell for valid accounts.
+    // The mobile index exposes the authenticated followed-forum list as JSON.
+    const mobile = await this.apiGet(MOBILE_FORUMS_URL, cookie);
+    if (!mobile.ok) throw new Error(`获取关注贴吧失败：HTTP ${mobile.status}`);
+    const data = await readJson(mobile);
+    if (data.raw !== undefined) throw new Error("贴吧列表接口返回非 JSON 页面，请在相同出口人工确认登录或安全验证");
+    if (![0, "0"].includes(data.no) || !Array.isArray(data.data?.like_forum)) {
+      throw new Error("贴吧关注列表接口异常，请确认登录状态后重试");
     }
-
+    const names = data.data.like_forum.map(f => typeof f?.forum_name === "string" ? f.forum_name.trim() : "");
+    if (names.some(name => !name)) throw new Error("贴吧关注列表字段异常，已停止签到");
     return unique(names);
   }
 

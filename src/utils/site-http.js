@@ -7,7 +7,7 @@
 import logger from "./logger.js";
 import { createHttpSession, getCookieForSite, htmlToText, pageTitleFromHtml, readJson, readText } from "./http-session.js";
 import { normalizeProxyUrl } from "./proxy.js";
-import { collectV2EXDailyRedeemCandidates, findV2EXDailyRedeemHref } from "../drivers/v2ex-utils.js";
+import { alreadyRedeemed, collectV2EXDailyRedeemCandidates, findV2EXDailyRedeemHref, v2exHttpUserAgent } from "../drivers/v2ex-utils.js";
 
 export function wantsHttpMode(siteConfig = {}) {
   const explicit = siteConfig.experimental_signin_mode
@@ -55,7 +55,7 @@ function alternateProxyUrl(siteConfig = {}, currentProxyUrl = "") {
   return candidates.find(v => v && v !== current) || "";
 }
 
-function buildSession(siteConfig = {}, secrets = {}) {
+function buildSession(siteConfig = {}, secrets = {}, sessionOptions = {}) {
   const cookie = getCookieForSite(secrets, siteConfig);
   if (!cookie) return { error: "⚠️ Cookie 未配置，请点击「维护 Cookie」填写" };
   const session = createHttpSession({
@@ -63,6 +63,7 @@ function buildSession(siteConfig = {}, secrets = {}) {
     cookie,
     proxyUrl: siteConfig.proxy_url || "",
     timeout: siteConfig.timeout || 60_000,
+    ...sessionOptions,
   });
   return { session, cookie };
 }
@@ -211,12 +212,13 @@ async function runNodeLoc(siteConfig = {}, secrets = {}) {
   };
 }
 
-function includesV2Login(body = "") {
-  return /Sign Out|Settings|Notes|Planet/i.test(body);
+function includesV2Login(html = "") {
+  const source = html.replace(/<!--[\s\S]*?-->|<script\b[\s\S]*?<\/script>/gi, "");
+  return /<a\b[^>]*\bhref\s*=\s*["']\/(?:settings(?:[?#][^"']*)?|signout(?:[/?#][^"']*)?)["']/i.test(source);
 }
 
 function v2AlreadyRedeemed(body = "") {
-  return /already redeemed|has been redeemed|reward redeemed|已领取|每日登录奖励已领取|每日登录奖励已发放|Daily login reward already redeemed/i.test(body);
+  return alreadyRedeemed(body);
 }
 
 function extractCoinStats(text = "") {
@@ -282,7 +284,10 @@ function parseV2Balance(text = "") {
   const stats = {};
   const today = todayV2EXDate();
   const normalized = compactText(text);
-  const loginRow = normalized.split(/(?=\d{4}-\d{2}-\d{2}|\d{8})/).find(row => row.includes(today) && /每日登录奖励/.test(row)) || "";
+  const loginRow = normalized.split(/(?=\b(?:\d{4}-\d{2}-\d{2}|\d{8})\b)/).find(row => {
+    const date = row.match(/^(\d{4}-\d{2}-\d{2}|\d{8})\b/)?.[1];
+    return date?.replace(/-/g, "") === today && /每日登录奖励/.test(row);
+  }) || "";
   const reward = loginRow.match(/每日登录奖励\s+([0-9]+(?:\.0)?)/)?.[1]
     || loginRow.match(/每日登录奖励\s*(\d+)\s*铜币/)?.[1]
     || loginRow.match(/奖励\s*(\d+)\s*铜币/)?.[1];
@@ -291,27 +296,29 @@ function parseV2Balance(text = "") {
 }
 
 function v2RedeemConfirmed(text = "") {
-  return /already redeemed|has been redeemed|reward redeemed|Daily login reward already redeemed|每日登录奖励已领取|每日登录奖励已发放|已领取|每日登录奖励\s+\d+|获得\s*\d+\s*(?:铜币|bronze)|奖励\s*\d+\s*(?:铜币|bronze)/i.test(String(text || ""));
+  return alreadyRedeemed(text);
 }
 
 async function readV2Balance(session, origin, steps) {
   const page = await getHtml(session, `${origin}/balance`);
-  steps.push({ label: "HTTP 读取 V2EX 余额", ok: page.res.status >= 200 && page.res.status < 400, status: page.res.status, detail: "/balance" });
+  steps.push({ label: "HTTP 读取 V2EX 余额", ok: page.res.status >= 200 && page.res.status < 300, status: page.res.status, detail: "/balance" });
+  if (!(page.res.status >= 200 && page.res.status < 300) || !includesV2Login(page.html) || looksLikeJsChallenge(page.text, page.html)) return {};
   return mergeCoinStats(parseV2Balance(page.text), parseBalanceAreaStats(page.html));
 }
 
 async function runV2EX(siteConfig = {}, secrets = {}) {
   const signTime = formatTime();
   const steps = [];
-  const { session, error } = buildSession(siteConfig, secrets);
+  const { session, error } = buildSession(siteConfig, secrets, { userAgent: v2exHttpUserAgent(siteConfig) });
   if (error) return { success: false, message: error, steps };
   const origin = String(siteConfig.base_url || "https://www.v2ex.com").replace(/\/+$/, "");
   const dailyUrl = `${origin}/mission/daily`;
   logger.info(`[V2EX/API] HTTP 打开每日任务页面 → ${dailyUrl}`);
   let daily = await getHtml(session, dailyUrl);
-  steps.push({ label: "HTTP 打开 V2EX 每日任务页面", ok: daily.res.status >= 200 && daily.res.status < 400, status: daily.res.status, detail: dailyUrl });
+  steps.push({ label: "HTTP 打开 V2EX 每日任务页面", ok: daily.res.status >= 200 && daily.res.status < 300, status: daily.res.status, detail: dailyUrl });
   if (looksLikeJsChallenge(daily.text, daily.html)) return { success: false, message: "V2EX HTTP 遇到 JS/验证页，需要浏览器兜底", details: { signTime, pageTitle: daily.title, checkinAction: "api_challenge" }, steps };
-  if (!includesV2Login(daily.text)) return { success: false, message: "V2EX 登录态无效或 Cookie 不完整，请重新维护 Cookie", details: { signTime, pageTitle: daily.title, checkinAction: "api_login_failed" }, steps };
+  if (!(daily.res.status >= 200 && daily.res.status < 300)) return { success: false, message: `V2EX HTTP ${daily.res.status}，需要浏览器兜底`, details: { signTime, checkinAction: "api_http_error" }, steps };
+  if (!includesV2Login(daily.html)) return { success: false, message: "V2EX 登录态无效或 Cookie 不完整，请重新维护 Cookie", details: { signTime, pageTitle: daily.title, checkinAction: "api_login_failed" }, steps };
   if (v2AlreadyRedeemed(daily.text)) {
     const coinStats = mergeCoinStats(extractCoinStats(daily.text), await readV2Balance(session, origin, steps));
     const extra = coinMessage(coinStats);
@@ -324,9 +331,10 @@ async function runV2EX(siteConfig = {}, secrets = {}) {
     linkRetry = true;
     await new Promise(resolve => setTimeout(resolve, Number(siteConfig.redeem_retry_delay_ms || 4000)));
     const retryDaily = await getHtml(session, dailyUrl);
-    steps.push({ label: "HTTP 刷新 V2EX 每日任务页面", ok: retryDaily.res.status >= 200 && retryDaily.res.status < 400, status: retryDaily.res.status, detail: dailyUrl });
+    steps.push({ label: "HTTP 刷新 V2EX 每日任务页面", ok: retryDaily.res.status >= 200 && retryDaily.res.status < 300, status: retryDaily.res.status, detail: dailyUrl });
     if (looksLikeJsChallenge(retryDaily.text, retryDaily.html)) return { success: false, message: "V2EX HTTP 遇到 JS/验证页，需要浏览器兜底", details: { signTime, pageTitle: retryDaily.title, checkinAction: "api_challenge" }, steps };
-    if (!includesV2Login(retryDaily.text)) return { success: false, message: "V2EX 登录态无效或 Cookie 不完整，请重新维护 Cookie", details: { signTime, pageTitle: retryDaily.title, checkinAction: "api_login_failed" }, steps };
+    if (!(retryDaily.res.status >= 200 && retryDaily.res.status < 300)) return { success: false, message: `V2EX HTTP ${retryDaily.res.status}，需要浏览器兜底`, details: { signTime, checkinAction: "api_http_error" }, steps };
+    if (!includesV2Login(retryDaily.html)) return { success: false, message: "V2EX 登录态无效或 Cookie 不完整，请重新维护 Cookie", details: { signTime, pageTitle: retryDaily.title, checkinAction: "api_login_failed" }, steps };
     daily = retryDaily;
     if (v2AlreadyRedeemed(daily.text)) {
       const coinStats = mergeCoinStats(extractCoinStats(daily.text), await readV2Balance(session, origin, steps));
@@ -345,14 +353,15 @@ async function runV2EX(siteConfig = {}, secrets = {}) {
   }
   const redeemUrl = new URL(href, dailyUrl).toString();
   const redeem = await getHtml(session, redeemUrl);
-  steps.push({ label: "HTTP 访问 V2EX 领取链接", ok: redeem.res.status >= 200 && redeem.res.status < 400, status: redeem.res.status, detail: redeemUrl });
+  steps.push({ label: "HTTP 访问 V2EX 领取链接", ok: redeem.res.status >= 200 && redeem.res.status < 300, status: redeem.res.status, detail: redeemUrl });
   const verify = await getHtml(session, dailyUrl);
-  steps.push({ label: "HTTP 复查 V2EX 每日任务状态", ok: verify.res.status >= 200 && verify.res.status < 400, status: verify.res.status, detail: dailyUrl });
-  const coinStats = mergeCoinStats(extractCoinStats(daily.text), extractCoinStats(redeem.text), extractCoinStats(verify.text), await readV2Balance(session, origin, steps));
+  steps.push({ label: "HTTP 复查 V2EX 每日任务状态", ok: verify.res.status >= 200 && verify.res.status < 300, status: verify.res.status, detail: dailyUrl });
+  const validResponse = page => page.res.status >= 200 && page.res.status < 300 && includesV2Login(page.html) && !looksLikeJsChallenge(page.text, page.html);
+  const coinStats = await readV2Balance(session, origin, steps);
   const extra = coinMessage(coinStats);
   const combined = `${redeem.text} ${verify.text} ${daily.text}`;
   const balanceConfirmed = Number.isFinite(coinStats.rewardCopper);
-  const ok = redeem.res.status >= 200 && redeem.res.status < 400 && (balanceConfirmed || v2RedeemConfirmed(combined));
+  const ok = validResponse(redeem) && validResponse(verify) && (balanceConfirmed || v2RedeemConfirmed(verify.text) || v2RedeemConfirmed(redeem.text));
   return { success: ok, message: ok ? `签到成功${extra ? `；${extra}` : ""}；签到时间：${signTime}` : "签到未确认：领取后未看到 V2EX 已领取状态", details: { signTime, clickedSignIn: true, checkinAction: ok ? "api_signed" : "api_unconfirmed", ...coinStats, pageTitle: verify.title || redeem.title || daily.title }, raw: compactText(combined).slice(0, 220), steps };
 }
 

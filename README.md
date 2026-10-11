@@ -21,7 +21,7 @@ SignMate 仅作为开源的自托管自动化工具，供学习、研究及合�
 ```text
 ghcr.io/hughryu/signmate:latest   # 最新稳定版（随 v* 正式版本标签更新）
 ghcr.io/hughryu/signmate:edge     # main 分支最新构建，包含尚未发版的新功能/修复
-ghcr.io/hughryu/signmate:v0.1.26  # 固定正式版本
+ghcr.io/hughryu/signmate:v0.1.27  # 固定正式版本
 ```
 
 创建目录与配置文件：
@@ -153,6 +153,8 @@ SignMate 内置以下站点 Driver / 站点模板。站点凭据请在 Web 面�
 | 卡饭论坛 | `kafan` | `kafan` | 签到 | API-first（浏览器兜底） |
 | 阡陌居 | `qianmoju` | `qianmoju` | 签到 | API-first（浏览器兜底） |
 | PCBeta | `pcbeta` | `pcbeta` | 签到 | API |
+| LINUX SB | `linux-sb` | `forum-visit` | 保活 | HTTP 登录态验证 |
+| 烧饼论坛 | `sb-sb` | `forum-visit` | 保活 | HTTP 登录态验证 |
 | 百度贴吧 | `baidu-tieba` | `tieba` | 签到 | API |
 
 ### PT / NexusPHP
@@ -243,3 +245,9 @@ docker compose up -d --build
 # 手动执行一次签到（测试配置）
 docker compose exec signmate node src/index.js
 ```
+
+### LINUX SB / 烧饼论坛保活
+
+添加 `linux-sb`、`sb-sb` 后，分别维护对应域名的登录 Cookie，再启用调度。仅访问页面并确认登录态，不执行签到、发帖或回帖。公开页面、登录页、无法确认登录态和安全验证页均不会报告保活成功；安全验证需在相同代理出口人工处理。
+
+若 LINUX SB 或烧饼论坛直连失败，或返回的不是正常论坛首页，请在站点设置中启用可用代理后重试。CookieCloud 同步成功不代表直连网络可用。

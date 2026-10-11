@@ -1,5 +1,10 @@
+// Match the HTTP transport rather than advertising a Chromium fingerprint.
+export function v2exHttpUserAgent(siteConfig = {}) {
+  return siteConfig.http_user_agent || "undici";
+}
+
 export function alreadyRedeemed(body = "") {
-  return /already redeemed|每日登录奖励\s*已领取|Daily login reward already redeemed/i.test(body);
+  return /每日登录奖励\s*(?:已领取|已发放)|Daily login (?:reward|bonus)\s+(?:(?:has been|already)\s+)?redeemed/i.test(body);
 }
 
 function decodeHtmlEntities(value = "") {
@@ -23,6 +28,7 @@ export function isV2EXDailyRedeemHref(href = "", origin = "https://www.v2ex.com"
     const sameV2EXHost = ["www.v2ex.com", "v2ex.com"].includes(url.hostname)
       && ["www.v2ex.com", "v2ex.com"].includes(base.hostname);
     return sameV2EXHost
+      && url.protocol === "https:"
       && url.pathname.replace(/\/+$/, "") === "/mission/daily/redeem"
       && url.searchParams.has("once");
   } catch {
@@ -43,7 +49,7 @@ export function collectV2EXDailyRedeemCandidates(html = "") {
   const values = [];
   for (const match of source.matchAll(/\b(?:href|action|data-href|data-url)\s*=\s*["']([^"']+)["']/gi)) values.push(match[1]);
   for (const match of source.matchAll(/\bonclick\s*=\s*["']([^"']+)["']/gi)) values.push(match[1]);
-  values.push(...(source.match(/\/?mission\/daily\/redeem\?once=[^"' <>)]*/gi) || []));
+  values.push(...(source.match(/(?:https?:\/\/[^"'<>\s)]+)?\/mission\/daily\/redeem\?once=[^"' <>)]*/gi) || []));
   return values;
 }
 

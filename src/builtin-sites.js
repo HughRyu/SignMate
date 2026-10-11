@@ -2,6 +2,20 @@
 // User overrides live in config/sites.yaml and are merged on top.
 
 export const BUILTIN_SITES = {
+  "linux-sb": {
+    "enabled": true, "driver": "forum-visit", "schedule": "auto",
+    "note": "LINUX SB", "base_url": "https://linux.sb/",
+    "kind": "visit", "enforced_kind": "visit", "signin_mode": "api",
+    "category": "forum", "proxy": "auto", "notify": true,
+    "retry": 1, "retry_delay_ms": 10000, "timeout": 30000
+  },
+  "sb-sb": {
+    "enabled": true, "driver": "forum-visit", "schedule": "auto",
+    "note": "烧饼论坛", "base_url": "https://sb.sb/",
+    "kind": "visit", "enforced_kind": "visit", "signin_mode": "api",
+    "category": "forum", "proxy": "auto", "notify": true,
+    "retry": 1, "retry_delay_ms": 10000, "timeout": 30000
+  },
   "feng-com": {
     "enabled": true,
     "driver": "feng",

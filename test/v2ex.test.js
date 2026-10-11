@@ -6,8 +6,20 @@ import {
   confirmedV2EXDailyReward,
   findV2EXDailyRedeemHref,
   hasTodayLoginReward,
+  v2exHttpUserAgent,
   isV2EXDailyRedeemHref,
 } from "../src/drivers/v2ex-utils.js";
+
+test("rejects HTTP downgrade including HTML extraction", () => {
+ const href = "http://www.v2ex.com/mission/daily/redeem?once=test";
+ assert.equal(isV2EXDailyRedeemHref(href), false);
+ assert.equal(findV2EXDailyRedeemHref(collectV2EXDailyRedeemCandidates(`<a href="${href}">领取</a>`)), "");
+});
+
+test("V2EX HTTP uses its real transport UA, with an explicit override", () => {
+  assert.equal(v2exHttpUserAgent({}), "undici");
+  assert.equal(v2exHttpUserAgent({ http_user_agent: "custom" }), "custom");
+});
 
 test("accepts same-site V2EX redeem URLs from links, onclick, and HTML", () => {
   assert.equal(isV2EXDailyRedeemHref("https://www.v2ex.com/mission/daily/redeem?once=abc", "https://www.v2ex.com"), true);
