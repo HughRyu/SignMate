@@ -3879,9 +3879,10 @@ input[type="time"].field-input::-webkit-datetime-edit-fields-wrapper {
 
 /* ---- 2026-05-22 23:05: user feedback pass ---- */
 .site-card {
-  height: 266px !important;
+  /* Login verification and alerts add rows; keep all content inside the card. */
+  height: auto !important;
   min-height: 266px !important;
-  max-height: 266px !important;
+  max-height: none !important;
   overflow: hidden !important;
 }
 .signin-card:not(.pt-card) .site-card-status {
@@ -3983,9 +3984,10 @@ input[type="time"].field-input::-webkit-datetime-edit-fields-wrapper {
 .site-card.visit-card.pt-card,
 .site-card.pt-card,
 #card-pttime-org {
-  height: 266px !important;
+  /* Login verification and alerts add rows; keep all content inside the card. */
+  height: auto !important;
   min-height: 266px !important;
-  max-height: 266px !important;
+  max-height: none !important;
   padding-top: 18px !important;
   padding-bottom: 16px !important;
   box-sizing: border-box !important;
@@ -4848,9 +4850,10 @@ input.is-saved-field:focus {
 #card-pttime-org {
   padding-top: 15px !important;
   padding-bottom: 15px !important;
-  height: 266px !important;
+  /* Login verification and alerts add rows; keep all content inside the card. */
+  height: auto !important;
   min-height: 266px !important;
-  max-height: 266px !important;
+  max-height: none !important;
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
@@ -5843,9 +5846,11 @@ input.is-saved-field:focus {
 #tab-sites .visit-card.pt-card .site-card-schedule,
 #tab-sites .visit-card:not(.pt-card) .site-card-schedule,
 #tab-sites #card-pttime-org .site-card-schedule {
-  height: 26px !important;
+  height: auto !important;
   min-height: 26px !important;
-  max-height: 26px !important;
+  max-height: none !important;
+  flex-shrink: 0;
+  flex-wrap: wrap;
   line-height: 22px !important;
   padding-top: 2px !important;
   padding-bottom: 2px !important;
@@ -10951,4 +10956,11 @@ input.is-saved-field:focus {
   [class*="spin"] {
     animation: none !important;
   }
+}
+
+/* Keep recent activity timestamps readable when a card becomes narrow. */
+#tab-sites .site-card .site-card-schedule > span {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
