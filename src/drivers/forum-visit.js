@@ -71,7 +71,12 @@ export default class ForumVisitDriver extends BaseDriver {
           // Never follow a wallet redirect or reuse a challenge/login page as a balance.
           if (wallet.ok) {
             const walletHtml = await wallet.text();
-            if (classifyForumPage(walletHtml, base.href) === "authenticated") {
+            const walletState = classifyForumPage(walletHtml, base.href);
+            const walletAccount = parseForumAccount(walletHtml, base.href);
+            // Wallet pages omit the homepage filter ID; require the same sidebar account.
+            const sameAccount = account.profileUrl && walletAccount.profileUrl === account.profileUrl
+              && walletAccount.details.username === account.details.username;
+            if (walletState === "authenticated" || (walletState === "unknown" && sameAccount)) {
               const balance = parseLinuxWallet(walletHtml);
               if (balance !== null) details.totalCoins = balance;
             }

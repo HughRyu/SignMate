@@ -17,7 +17,7 @@ test("account extraction excludes community totals and preserves zero balances",
   assert.equal(walletUrl, null);
 });
 test("Linux account identity, entity decoding and wallet path are scoped", () => {
-  assert.deepEqual(parseForumAccount(linux, "https://linux.sb/"), { details: { username: "Demo & User", totalPoints: 1234 }, walletUrl: "https://linux.sb/community_wallet" });
+  assert.deepEqual(parseForumAccount(linux, "https://linux.sb/"), { details: { username: "Demo & User", totalPoints: 1234 }, profileUrl: "https://linux.sb/user/42", walletUrl: "https://linux.sb/community_wallet" });
   for (const html of [linux.replace('/user/42', '/user/43'), linux.replace('/user/42', 'https://evil.invalid/user/42'), `<script>${linux}</script>`]) {
     assert.deepEqual(parseForumAccount(html, "https://linux.sb/").details, {});
   }
@@ -49,5 +49,16 @@ test("authenticated wallet fills balance; session-only verification skips extra 
     const result = await d.signIn();
     assert.equal(result.details.totalCoins, verifyOnly ? undefined : 12.5);
     assert.equal(calls, verifyOnly ? 1 : 2);
+  }
+});
+
+test("wallet without homepage identity requires the same sidebar account", async () => {
+  const wallet = linux.replace(/<div data-home-keyword-filter-user-id="42"><\/div>|<a href="\/logout">退出<\/a>/g, "") + '<div class="community-wallet-balance">可用余额<strong>🧇0</strong></div>';
+  for (const [html, expected] of [[wallet, 0], [wallet.replace('/user/42', '/user/43'), undefined], [wallet + '<a href="/login">登录</a>', undefined], ['<title>Just a moment...</title>' + wallet, undefined]]) {
+    const d = driver(); let calls = 0;
+    d.fetchPage = async () => new Response(++calls === 1 ? linux : html);
+    const result = await d.signIn();
+    assert.equal(result.success, true);
+    assert.equal(result.details.totalCoins, expected);
   }
 });

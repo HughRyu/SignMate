@@ -52,7 +52,7 @@ export function parseForumAccount(html, baseUrl) {
     if (points && number(points) !== null) details.totalPoints = number(points);
   }
   const wallet = [...nodes(card)].find(node => node.tagName === "a" && attr(node, "href") === "/community_wallet");
-  return { details, walletUrl: base.hostname === "linux.sb" && wallet ? new URL("/community_wallet", base).href : null };
+  return { details, profileUrl: profile.href, walletUrl: base.hostname === "linux.sb" && wallet ? new URL("/community_wallet", base).href : null };
 }
 
 export function parseLinuxWallet(html) {
