@@ -1114,7 +1114,10 @@ export async function startServer() {
       configOk = false;
     }
     const batch = getBatchState() || {};
-    const healthy = configOk && batch.active !== true;
+    // A running batch is expected service activity, not a health failure.
+    // Report configuration and process liveness independently so Docker does
+    // not restart the container during a normal scheduled run.
+    const healthy = configOk;
     res.status(healthy ? 200 : 503).json({
       ok: healthy,
       version: APP_VERSION,

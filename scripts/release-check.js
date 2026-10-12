@@ -24,12 +24,17 @@ const checks = [
 
 function run({ name, cmd, args, env = {} }) {
   console.log(`\n==> ${name}: ${cmd} ${args.join(" ")}`);
-  const result = spawnSync(cmd, args, {
+  // npm.cmd is required on Windows; process.execPath + npm-cli is portable
+  // and avoids shell-dependent resolution in CI and local release checks.
+  const npmCli = process.env.npm_execpath;
+  const executable = cmd === "npm" ? (npmCli ? process.execPath : (process.platform === "win32" ? "npm.cmd" : "npm")) : cmd;
+  const executableArgs = cmd === "npm" && npmCli ? [npmCli, ...args] : args;
+  const result = spawnSync(executable, executableArgs, {
     stdio: "inherit",
-    shell: false,
+    shell: cmd === "npm" && !npmCli && process.platform === "win32",
     env: { ...process.env, ...env },
   });
-  if (result.status !== 0) {
+  if (result.error || result.status !== 0) {
     console.error(`\n[release:check] ${name} failed with exit code ${result.status}`);
     process.exit(result.status || 1);
   }

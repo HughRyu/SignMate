@@ -4,7 +4,7 @@
 # ============================================================
 
 FROM mcr.microsoft.com/playwright:v1.57.0-noble
-ARG SIGNMATE_VERSION=0.1.27
+ARG SIGNMATE_VERSION=0.1.29
 ARG SIGNMATE_GIT_COMMIT=unknown
 WORKDIR /app
 
