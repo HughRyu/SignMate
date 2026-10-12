@@ -30,6 +30,8 @@ const DATA_DIR = join(import.meta.dirname, "..", "data");
 const MAINTENANCE_STATE_PATH = join(DATA_DIR, "maintenance-state.json");
 const BRANDING_PATH = join(CONFIG_DIR, "branding.json");
 const DRIVERS_DIR = join(import.meta.dirname, "drivers");
+const STARTED_AT = new Date().toISOString();
+const APP_VERSION = process.env.SIGNMATE_VERSION || "0.1.27";
 const DEFAULT_SITE_CATEGORIES = [
   { key: "forum", label: "论坛", emoji: "💬" },
   { key: "pt", label: "PT站点", emoji: "📀" },
@@ -1085,6 +1087,37 @@ export async function startServer() {
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: false }));
   app.use(requireSameOrigin);
+
+  // Lightweight unauthenticated probe for Docker and external monitoring.
+  // It exposes operational metadata only; credentials and site details stay protected.
+  app.get("/api/health", (_req, res) => {
+    let configOk = true;
+    let proxy = { enabled: false, ok: null, checkedAt: null, usableCount: 0 };
+    try {
+      const { proxy: configuredProxy } = loadConfig();
+      const health = configuredProxy?.health || {};
+      proxy = {
+        enabled: configuredProxy?.enabled === true,
+        ok: typeof health.ok === "boolean" ? health.ok : null,
+        checkedAt: health.checkedAt || null,
+        usableCount: Array.isArray(health.usableUrls) ? health.usableUrls.length : 0,
+      };
+    } catch {
+      configOk = false;
+    }
+    const batch = getBatchState() || {};
+    const healthy = configOk && batch.active !== true;
+    res.status(healthy ? 200 : 503).json({
+      ok: healthy,
+      version: APP_VERSION,
+      commit: process.env.SIGNMATE_GIT_COMMIT || null,
+      startedAt: STARTED_AT,
+      uptimeSeconds: Math.floor(process.uptime()),
+      configOk,
+      batchActive: batch.active === true,
+      proxy,
+    });
+  });
 
   app.get("/login", (req, res) => {
     if (isAuthenticated(req)) return res.redirect(String(req.query.next || "/"));

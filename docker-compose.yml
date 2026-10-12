@@ -11,8 +11,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        SIGNMATE_VERSION: ${SIGNMATE_VERSION:-0.1.27}
+        SIGNMATE_GIT_COMMIT: ${SIGNMATE_GIT_COMMIT:-unknown}
     container_name: signmate
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.WEB_PORT||6668)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
     # config/data/logs 需要可写；容器启动时会自动修正挂载目录权限
     volumes:
       - ./config:/app/config
