@@ -859,7 +859,15 @@ async function syncCookieCloudFromSavedConfig({ source = "auto" } = {}) {
   const { updated, skipped } = filterCookieCloudWrites(matches, secrets);
   const now = new Date().toISOString();
   for (const item of updated) {
-    secrets[item.key] = { ...(secrets[item.key] || {}), cookie: item.cookie, cookiecloud_updated_at: now, cookiecloud_source: source };
+    secrets[item.key] = {
+      ...(secrets[item.key] || {}),
+      cookie: item.cookie,
+      cookiecloud_updated_at: now,
+      cookiecloud_source: source,
+      // Synchronization only proves that CookieCloud returned a cookie.
+      // The next site run must establish whether the session is still valid.
+      cookiecloud_verification: "pending",
+    };
   }
   writeSecrets(secrets);
   for (const item of skipped) logger.warn(`[CookieCloud] ${item.reason}`);

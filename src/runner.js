@@ -519,6 +519,7 @@ function rememberProxyMode(siteConfig, mode, directOk = null) {
  * @returns {Promise<{success: boolean, message: string, site: string}>}
  */
 export async function runSingle(siteConfig, secrets) {
+  const executionStartedAt = Date.now();
   const driverName = siteConfig.driver;
   const DriverClass = DRIVER_REGISTRY[driverName];
 
@@ -538,7 +539,13 @@ export async function runSingle(siteConfig, secrets) {
   let driver = new DriverClass(effectiveSiteConfig, secrets);
   let result = await driver.runWithRetry();
 
-  result.details = { ...(result.details || {}), proxyModeUsed: effectiveSiteConfig.proxy_mode_used, proxyUsed: effectiveSiteConfig.proxy_used, proxyReason: effectiveSiteConfig.proxy_reason };
+  result.details = {
+    ...(result.details || {}),
+    proxyModeUsed: effectiveSiteConfig.proxy_mode_used,
+    proxyUsed: effectiveSiteConfig.proxy_used,
+    proxyReason: effectiveSiteConfig.proxy_reason,
+    durationMs: Date.now() - executionStartedAt,
+  };
   if (result.success) rememberProxyMode(siteConfig, effectiveSiteConfig.proxy_mode_used, effectiveSiteConfig.proxy_mode_used === "direct");
   const logLine = driver.formatResult(result);
   logger.info(logLine);
