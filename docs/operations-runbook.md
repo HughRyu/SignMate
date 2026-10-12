@@ -30,7 +30,7 @@ docker compose -f docker-compose.yml -f docker-compose.host-network.yml -f docke
 bash /path/to/release/scripts/rollback-production.sh ghcr.io/hughryu/signmate@sha256:<旧镜像摘要>
 ```
 
-回滚执行相同的空闲检查、备份、健康核验流程。只接受镜像摘要，不接受浮动标签。回滚不自动覆盖 Cookie 或历史；需要数据恢复时先停容器，再校验 `runtime.sha256` 并将归档恢复到隔离目录检查后替换。不要直接覆盖仍在运行的数据目录。
+回滚执行相同的空闲检查、备份、健康核验流程；目标版本需提供 `/api/health` 和 `scripts/production-manifest.js`（本轮运维改造前的旧镜像须按其原始恢复方式处理）。只接受镜像摘要，不接受浮动标签。回滚不自动覆盖 Cookie 或历史；需要数据恢复时先停容器，再校验 `runtime.sha256` 并将归档恢复到隔离目录检查后替换。不要直接覆盖仍在运行的数据目录。
 
 ## 可观察性
 

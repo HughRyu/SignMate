@@ -197,3 +197,14 @@ export function isProxyCacheFresh(checkedAt, maxAgeMs = 3 * 60 * 60 * 1000) {
   const ts = Date.parse(checkedAt);
   return fresh(checkedAt, Date.now(), maxAgeMs);
 }
+
+// A blocked homepage can coexist with a working authenticated API. Probe
+// results choose a route; only a driver's account evidence establishes login.
+export function chooseProbeRoute(direct, proxied, preferred = "direct") {
+  if (direct?.ok) return "direct";
+  if (proxied?.ok) return "proxy";
+  if (preferred === "proxy" && proxied?.reachable) return "proxy";
+  if (direct?.reachable) return "direct";
+  if (proxied?.reachable) return "proxy";
+  return "offline";
+}

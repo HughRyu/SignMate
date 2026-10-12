@@ -15,10 +15,11 @@ test("unknown drivers, offline exits and successful runs all retain operation me
     for (const site of [
       { key: "unknown", driver: "missing" },
       { key: "offline", driver: "fixture", proxy_mode: "on", proxy_available: false },
+      { key: "denied", driver: "fixture", proxy_mode: "auto", proxy_last_mode: "offline", direct: { ok: false, reachable: true, status: 403 } },
       { key: "success", driver: "fixture", proxy_mode: "off" },
     ]) {
       const result = await runSingle(site, {}, { source: "schedule" });
-      assert.equal(result.success, site.key === "success");
+      assert.equal(result.success, ["success", "denied"].includes(site.key));
       assert.equal(result.details.source, "schedule");
       assert.ok(result.details.runId);
       assert.ok(result.details.endedAt);

@@ -3,7 +3,7 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.30",
+    "version": "0.1.31",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"

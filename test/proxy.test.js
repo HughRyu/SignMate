@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { testDirect } from "../src/utils/proxy.js";
+import { testDirect, chooseProbeRoute } from "../src/utils/proxy.js";
 test("real HTTP probes reject denied/error pages and retry HEAD using GET", async () => {
   const server = createServer((req, res) => {
     if (req.url === "/fallback") res.statusCode = req.method === "HEAD" ? 405 : 200;
@@ -16,4 +16,13 @@ test("real HTTP probes reject denied/error pages and retry HEAD using GET", asyn
     assert.equal((await testDirect(`${base}/500`)).ok, false);
     assert.equal((await testDirect(`${base}/fallback`)).ok, true);
   } finally { await new Promise(resolve => server.close(resolve)); }
+});
+
+test("homepage HTTP denial does not block a working authenticated API route", () => {
+  const denied = { ok: false, reachable: true, status: 403 };
+  assert.equal(chooseProbeRoute(denied, denied), "direct");
+  assert.equal(chooseProbeRoute(denied, denied, "proxy"), "proxy");
+  assert.equal(chooseProbeRoute(denied, { ok: true }), "proxy");
+  assert.equal(chooseProbeRoute({ ok: false }, denied), "proxy");
+  assert.equal(chooseProbeRoute({ ok: false }, { ok: false }), "offline");
 });

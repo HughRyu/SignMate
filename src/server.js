@@ -17,7 +17,7 @@ import logger from "./utils/logger.js";
 import { loadConfig, resolveProxyForSite, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState, dismissCompletedBatchState, BatchAlreadyRunningError } from "./runner.js";
 import { notifier, TelegramChannel, BarkChannel } from "./notify.js";
 import * as store from "./store.js";
-import { applySiteProxyMode, getGlobalProxy, setGlobalProxy, siteProxyMode, testDirect, testProxy, normalizeProxyUrl, testProxyPool, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
+import { chooseProbeRoute, applySiteProxyMode, getGlobalProxy, setGlobalProxy, siteProxyMode, testDirect, testProxy, normalizeProxyUrl, testProxyPool, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
 import { ProxyAgent, fetch as undiciFetch } from "undici";
 import CryptoJS from "crypto-js";
 import { timingSafeEqual, createHmac } from "node:crypto";
@@ -2021,7 +2021,7 @@ export async function startServer() {
       const override = {};
       override.proxy_checked_at = new Date().toISOString();
       override.proxy_direct_ok = direct.ok === true;
-      override.proxy_last_mode = direct.ok ? "direct" : (proxied?.ok ? "proxy" : "offline");
+      override.proxy_last_mode = chooseProbeRoute(direct, proxied, site.proxy_last_mode);
       Object.assign(site, override);
       runtimeState.update("siteProxy", key, { ...override, direct, proxied });
       res.json({ ok: true, data: { site: key, cached: false, testUrl, direct, proxy: proxied, directOk: site.proxy_direct_ok, mode: site.proxy_last_mode, checkedAt: site.proxy_checked_at } });

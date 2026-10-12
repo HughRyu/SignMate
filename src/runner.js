@@ -13,7 +13,7 @@ import { getGlobalProxy, siteProxyMode, selectProxyUrl, hasUsableProxyCandidate 
 import { fileURLToPath } from "node:url";
 import { runtimeState, fresh } from "./utils/runtime-state.js";
 import { operations } from "./utils/operations.js";
-import { testDirect, testProxy } from "./utils/proxy.js";
+import { testDirect, testProxy, chooseProbeRoute } from "./utils/proxy.js";
 import BUILTIN_SITES from "./builtin-sites.js";
 
 // Driver 注册表: name → class
@@ -481,10 +481,13 @@ export async function resolveProxyForSite(siteConfig, forceProxy = false) {
     const direct = await testDirect(siteConfig.base_url, 8000);
     const proxied = !direct.ok && proxyUrl ? await testProxy(proxyUrl, siteConfig.base_url, 10000) : null;
     const observation = { proxy_checked_at: new Date().toISOString(), proxy_direct_ok: direct.ok,
-      proxy_last_mode: direct.ok ? "direct" : proxied?.ok ? "proxy" : "offline",
+      proxy_last_mode: chooseProbeRoute(direct, proxied, siteConfig.proxy_last_mode),
       direct, proxied };
     runtimeState.update("siteProxy", siteConfig.key || siteConfig.driver, observation);
     siteConfig = { ...siteConfig, ...observation };
+  }
+  if (siteConfig.proxy_last_mode === "offline" && (siteConfig.direct?.reachable || siteConfig.proxied?.reachable)) {
+    siteConfig = { ...siteConfig, proxy_last_mode: chooseProbeRoute(siteConfig.direct, siteConfig.proxied) };
   }
   if (siteConfig.proxy_last_mode === "offline") return { ...siteConfig, site_offline: true, proxy_mode_used: "offline", proxy_reason: "probe_failed", offline_reason: "直连和代理探测均失败，请查看代理诊断" };
   if (siteConfig.proxy_direct_ok === true || siteConfig.proxy_last_mode === "direct") {

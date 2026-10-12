@@ -16,6 +16,6 @@
     "tmp/",
     "fingerprints.json"
   ],
-  "targetRelease": "v0.1.30",
+  "targetRelease": "v0.1.31",
   "sourceState": "release working tree"
 }
