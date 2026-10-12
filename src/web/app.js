@@ -633,9 +633,18 @@ async function loadSites(silent = false) {
       }
 
       const card = document.getElementById(`card-${site.key}`);
-      if (card && Array.isArray(site.steps) && site.steps.length) {
+      if (card) {
         card.querySelectorAll(".aggregate-metrics, .site-card-status").forEach(area => {
           area.classList.add("process-click-area");
+          area.setAttribute("role", "button");
+          area.setAttribute("tabindex", "0");
+          area.setAttribute("aria-label", `${displaySiteName(site.name)}：查看执行过程和账户信息`);
+          area.title = "点击查看执行过程和账户信息";
+          area.addEventListener("keydown", event => {
+            if (event.target === area && ["Enter", " "].includes(event.key)) {
+              event.preventDefault(); openProcessModal(site);
+            }
+          });
           area.addEventListener("click", (event) => {
             if (event.target.closest("button, a, input, select, textarea, form")) return;
             event.stopPropagation();
@@ -744,7 +753,7 @@ function detailVisualLineCount(value = "") {
   return Math.max(explicitLines, punctuationLines, estimatedWrapLines);
 }
 
-function formatDetailsPanel(details = {}) {
+function formatDetailsPanel(details = {}, options = []) {
   const entries = Object.entries(details || {}).filter(([key, value]) => !["rawStatsText"].includes(key) && value !== undefined && value !== null && value !== "");
   if (!entries.length) return "";
   const folded = entries.length > 12;
@@ -752,7 +761,7 @@ function formatDetailsPanel(details = {}) {
     const lineCount = detailVisualLineCount(value);
     const isLongText = lineCount > 3 || String(value).length > 420;
     const extraClass = index >= 12 ? "extra-detail-row" : "";
-    return `<div class="process-detail-row ${extraClass} ${isLongText ? "long-text-row" : ""}" data-lines="${lineCount}"><span>${esc(detailLabel(key))}</span><code class="${isLongText ? "collapsible-detail" : ""}" title="${isLongText ? "双击展开/收起全部内容" : ""}">${formatDetailHtml(value)}</code></div>`;
+    return `<div class="process-detail-row ${extraClass} ${isLongText ? "long-text-row" : ""}" data-lines="${lineCount}"><span>${esc(options.find(item => item.key === key)?.label || detailLabel(key))}</span><code class="${isLongText ? "collapsible-detail" : ""}" title="${isLongText ? "双击展开/收起全部内容" : ""}">${formatDetailHtml(value)}</code></div>`;
   }).join("");
   return `<div class="process-details-panel ${folded ? "is-folded" : ""}"><div class="process-details-title-row"><h4>详细信息</h4>${folded ? `<button class="detail-expand-btn" type="button" data-action="toggle-details">展开全部 ${entries.length} 项</button>` : ""}</div><div class="process-detail-grid">${rows}</div></div>`;
 }
@@ -940,175 +949,23 @@ function coinIcon(kind) {
   return "🟤";
 }
 
-function buildAggregateMetrics(details = {}, siteKey = "") {
-  const items = [];
-  if (["linux-sb", "sb-sb"].includes(siteKey)) {
-    if (details.username) items.push(metricItem(`👤${esc(String(details.username))}`, "metric-chip metric-level", "当前登录账户"));
-    if (details.levelTitle) items.push(metricItem(`🏅${esc(String(details.levelTitle))}`, "metric-chip metric-level", "账户等级"));
-    for (const [key, label, icon, style] of [
-      ["totalPoints", "积分", "💎", "points"], ["totalCoins", "烧饼", "🧇", "coin"],
-      ["totalExp", "成长", "⭐", "reward"], ["joinDays", "注册天数", "📅", "days"],
-      ["postCount", "帖子", "📝", "days"], ["bankBalance", "存款", "🏦", "coin"],
-      ["gameCoins", "游戏币", "🎮", "coin"],
-    ]) {
-      const value = finiteNumber(details[key]);
-      if (value !== null) items.push(metricItem(`${icon}${label} ${esc(String(value))}`, `metric-chip metric-${style}`, label));
-    }
-    return items.join("");
-  }
-  const totalChickenLegs = finiteNumber(details.totalChickenLegs);
-  const rewardChickenLegs = finiteNumber(details.rewardChickenLegs);
-  const rewardExp = finiteNumber(details.rewardExp);
-  const rewardPoints = finiteNumber(details.rewardPoints);
-  const rewardCoins = finiteNumber(details.rewardWuAiCoins);
-  const rewardEnergy = finiteNumber(details.rewardEnergy) ?? finiteNumber(details.todayEnergy);
-  const rewardCopper = finiteNumber(details.rewardCopper);
-  const totalCoins = finiteNumber(details.totalWuAiCoins);
-  const totalPoints = finiteNumber(details.totalPoints);
-  const totalPbCoins = finiteNumber(details.totalPbCoins);
-  const rewardPbCoins = finiteNumber(details.rewardPbCoins);
-  const totalEnergy = finiteNumber(details.totalEnergy) ?? (siteKey === "nodeloc" ? totalPoints : null);
-  const explicitPointSites = new Set(["right", "pojie52", "pceva", "pcbeta"]);
-  const totalDays = finiteNumber(details.totalDays);
-  const streakDays = finiteNumber(details.streakDays);
-  const totalGold = finiteNumber(details.totalGold);
-  const totalSilver = finiteNumber(details.totalSilver);
-  const totalCopper = finiteNumber(details.totalCopper);
-  const totalSmzdmGold = siteKey === "smzdm" ? null : finiteNumber(details.totalSmzdmGold);
-  const totalSmzdmSilver = siteKey === "smzdm" ? null : finiteNumber(details.totalSmzdmSilver);
-  const totalExp = finiteNumber(details.totalExp) ?? finiteNumber(details.totalExperience)
-    ?? (siteKey !== "smzdm" && rewardExp !== null && totalDays !== null ? rewardExp * totalDays : null);
-
-  if (details.bonus && siteKey === "audiences-me") items.push(metricItem(`🍿爆米花 ${esc(String(details.bonus))}`, "metric-chip metric-reward", "Audiences 爆米花"));
-  else if (details.bonus && ["pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) items.push(metricItem(`🪄魔力值 ${esc(String(details.bonus))}${esc(signedDelta(ptBonusGain(details)))}`, "metric-chip metric-reward", "PT 魔力值（括号内为本次获得）"));
-  else if (siteKey === "hhanclub-net" && ptBonusGain(details)) items.push(metricItem(`🪄魔力值 ?${esc(signedDelta(ptBonusGain(details)))}`, "metric-chip metric-reward", "HHanClub 憨豆（等同魔力值）"));
-  if (!details.bonus && ptBonusGain(details) && ["hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) {
-    const rewardName = String(details.rewardName || "").replace(/^[,，。；;)）\]】]+|[,，。；;)）\]】]+$/g, "");
-    items.push(metricItem(`🎁签到 +${esc(String(ptBonusGain(details)))}${rewardName && !/^[0]+$/.test(rewardName) ? ` ${esc(rewardName)}` : ""}`, "metric-chip metric-reward", "本次签到获得"));
-  }
-  if (details.seedPoints && siteKey === "audiences-me") items.push(metricItem(`🌱做种积分 ${esc(String(details.seedPoints))}`, "metric-chip metric-points", "Audiences 做种积分"));
-  if (details.ratio && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) items.push(metricItem(`⚖️分享率 ${esc(String(details.ratio))}`, "metric-chip metric-level", "PT 分享率"));
-  if ((details.upload || details.download) && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) {
-    const transfer = [details.upload ? `U: ${esc(String(details.upload))}` : "", details.download ? `D: ${esc(String(details.download))}` : ""].filter(Boolean).join(" / ");
-    items.push(metricItem(`↕️${transfer}`, "metric-chip metric-points metric-transfer", "PT 上传/下载量"));
-  }
-  if ((details.inviteDisplay || details.invite || details.tempInvite) && ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net", "hddolby-com", "mteam"].includes(siteKey)) {
-    const inviteMetric = formatInviteMetric(details, siteKey);
-    if (inviteMetric) items.push(metricItem(`🎟️${esc(inviteMetric.text)}`, "metric-chip metric-level", inviteMetric.title));
-  }
-  if (details.points && siteKey === "chiphell-com") items.push(metricItem(`💎积分 ${esc(String(details.points))}${esc(signedDelta(finiteNumber(details.pointsGain) ?? finiteNumber(details.todayPoints)))}`, "metric-chip metric-points", "Chiphell 积分（括号内为本次增加）"));
-  if (details.userGroup && siteKey === "chiphell-com") items.push(metricItem(`🏷️用户组 ${esc(String(details.userGroup))}`, "metric-chip metric-level", "Chiphell 用户组"));
-  if (siteKey === "kafan") {
-    const totalExperience = finiteNumber(details.experience) ?? finiteNumber(details.totalExp);
-    const signExperience = String(details.rewardUnit || "") === "经验" ? finiteNumber(details.rewardAmount) : finiteNumber(details.rewardExp);
-    const totalSign = finiteNumber(details.addup) ?? finiteNumber(details.totalDays);
-    const continuousSign = finiteNumber(details.cons) ?? finiteNumber(details.streakDays);
-    if (totalExperience !== null || signExperience !== null) items.push(metricItem(`⭐${esc(String(totalExperience ?? "?"))}${esc(signedDelta(signExperience))}`, "metric-chip metric-reward", "卡饭总经验（括号内为本次签到经验）"));
-    if (totalSign !== null) items.push(metricItem(`📅${esc(String(totalSign))}`, "metric-chip metric-days", "卡饭总签到"));
-    if (continuousSign !== null) items.push(metricItem(`🔥${esc(String(continuousSign))}`, "metric-chip metric-streak", "卡饭连续签到"));
-    if (details.userGroup) items.push(metricItem(`🏷️${esc(String(details.userGroup))}`, "metric-chip metric-level", "卡饭用户组"));
-  }
-  if (siteKey === "qianmoju") {
-    const qmCoins = finiteNumber(details.qianmojuPoints) ?? finiteNumber(details.points);
-    const qmReward = finiteNumber(details.qianmojuRewardAmount) ?? finiteNumber(details.qianmojuSignReward) ?? finiteNumber(details.rewardCopper);
-    const legacyRewardCoins = finiteNumber(details.rewardCoins);
-    const qmRewardValue = qmReward ?? (legacyRewardCoins && legacyRewardCoins > 0 ? legacyRewardCoins : null);
-    const qmTotalDays = finiteNumber(details.totalDays);
-    const qmMonthDays = finiteNumber(details.monthDays);
-    const rewardText = qmRewardValue !== null ? `(+${esc(String(qmRewardValue))})` : "";
-    if (qmCoins !== null) items.push(metricItem(`🪙${esc(String(qmCoins))}${rewardText}`, "metric-chip metric-coin", "阡陌居铜币总数（括号内为本次/上次签到铜币）"));
-    if (qmTotalDays !== null && qmTotalDays > 0) items.push(metricItem(`📅${esc(String(qmTotalDays))}`, "metric-chip metric-days", "阡陌居总签到"));
-    if (qmMonthDays !== null && qmMonthDays > 0) items.push(metricItem(`🗓️${esc(String(qmMonthDays))}`, "metric-chip metric-days", "阡陌居月签到"));
-  }
-  if (siteKey === "baidu-tieba") {
-    const totalForums = finiteNumber(details.tiebaTotalForums) ?? finiteNumber(details.totalForums);
-    const successCount = finiteNumber(details.tiebaSuccessCount) ?? finiteNumber(details.successCount);
-    const alreadySignedCount = finiteNumber(details.tiebaAlreadySignedCount) ?? finiteNumber(details.alreadySignedCount);
-    const shieldedCount = finiteNumber(details.tiebaShieldedCount) ?? finiteNumber(details.shieldedCount);
-    const failedCount = finiteNumber(details.tiebaFailedCount) ?? finiteNumber(details.failedCount);
-    if (totalForums !== null) items.push(metricItem(`📌贴吧 ${esc(String(totalForums))}`, "metric-chip metric-days", "关注贴吧总数"));
-    if (successCount !== null || alreadySignedCount !== null) {
-      const parts = [];
-      if (successCount !== null) parts.push(`成功 ${successCount}`);
-      if (alreadySignedCount !== null) parts.push(`已签 ${alreadySignedCount}`);
-      items.push(metricItem(`✅${esc(parts.join(" / "))}`, "metric-chip metric-reward", "百度贴吧签到结果"));
-    }
-    if (shieldedCount !== null && shieldedCount > 0) items.push(metricItem(`🛡️屏蔽 ${esc(String(shieldedCount))}`, "metric-chip metric-level", "被屏蔽贴吧数量"));
-    if (failedCount !== null && failedCount > 0) items.push(metricItem(`⚠️失败 ${esc(String(failedCount))}`, "metric-chip metric-error", "签到失败贴吧数量"));
-    return items.join("");
-  }
-
-  if (siteKey === "pcbeta") {
-    const parts = [];
-    if (totalPoints !== null || rewardPoints !== null) {
-      parts.push(`💎积分 ${esc(String(totalPoints !== null ? totalPoints : "?"))}${esc(signedDelta(rewardPoints))}`);
-    }
-    if (totalPbCoins !== null || rewardPbCoins !== null) {
-      parts.push(`🪙PB币 ${esc(String(totalPbCoins !== null ? totalPbCoins : "?"))}${esc(signedDelta(rewardPbCoins))}`);
-    }
-    if (parts.length) items.push(metricItem(parts.join(" / "), "metric-chip metric-points metric-coin", "PCBeta 积分 / PB币（括号内为本次获得）"));
-    return items.join("");
-  }
-
-  if (siteKey === "feng-com") {
-    const fengCoins = finiteNumber(details.fengCoins) ?? finiteNumber(details.totalCoins) ?? finiteNumber(details.coins);
-    const levelNo = finiteNumber(details.level);
-    const fengLevel = details.fengLevel || (levelNo !== null ? `Lv${levelNo}` : null);
-    const joinDays = finiteNumber(details.joinDays) ?? finiteNumber(details.totalDays);
-    const signInDays = finiteNumber(details.signInDays) ?? finiteNumber(details.streakDays);
-    if (fengCoins !== null) items.push(metricItem(`🪙${esc(String(fengCoins))}`, "metric-chip metric-coin", "威锋威币"));
-    if (fengLevel) items.push(metricItem(`🏅${esc(String(fengLevel))}`, "metric-chip metric-level", "威锋等级"));
-    if (joinDays !== null) items.push(metricItem(`📅${esc(String(joinDays))}`, "metric-chip metric-days", "威锋总天数"));
-    return items.join("");
-  }
-  const nsLevel = finiteNumber(details.nodeSeekLevel);
-  const nsProgress = finiteNumber(details.nodeSeekLevelProgress);
-  const genericLevel = details.pcevaLevel || details.level || null;
-  if (nsLevel !== null) items.push(metricItem(`🏅Lv${esc(String(nsLevel))}${nsProgress !== null ? ` ${esc(String(nsProgress))}%` : ""}`, "metric-chip metric-level", "NodeSeek 等级进度"));
-  else if (genericLevel && (siteKey !== "smzdm" || /^Lv\d+$/i.test(String(genericLevel)))) items.push(metricItem(`🏅${esc(String(genericLevel).replace(/^\[LV\.?([^\]]+)\].*$/i, "Lv$1").replace(/^LV\.?/i, "Lv"))}`, "metric-chip metric-level", "等级"));
-  if (totalChickenLegs !== null || rewardChickenLegs !== null) {
-    const base = totalChickenLegs !== null ? totalChickenLegs : "?";
-    items.push(metricItem(`🍗${esc(String(base))}${esc(signedDelta(rewardChickenLegs))}`, "metric-chip metric-reward", "总鸡腿（括号内为今日获得）"));
-  }
-  if (siteKey !== "smzdm" && siteKey !== "kafan" && (totalExp !== null || rewardExp !== null)) {
-    const base = totalExp !== null ? totalExp : "?";
-    items.push(metricItem(`⭐${esc(String(base))}${esc(signedDelta(rewardExp))}`, "metric-chip metric-reward", "累计经验/积分（括号内为今日获得）"));
-  }
-  if (siteKey === "pojie52") {
-    const poJieCoins = finiteNumber(details.totalCoins);
-    const poJieRewardCoins = finiteNumber(details.rewardCoins);
-    if (poJieCoins !== null || poJieRewardCoins !== null) {
-      const base = poJieCoins !== null ? poJieCoins : "?";
-      items.push(metricItem(`🪙吾爱币 ${esc(String(base))}${esc(signedDelta(poJieRewardCoins))}`, "metric-chip metric-coin", "吾爱币（括号内为今日获得）"));
-    }
-  } else if (totalCoins !== null || rewardCoins !== null) {
-    const base = totalCoins !== null ? totalCoins : "?";
-    items.push(metricItem(`🪙${esc(String(base))}${esc(signedDelta(rewardCoins))}`, "metric-chip metric-coin", "站点货币（括号内为今日获得）"));
-  }
-  if (totalEnergy !== null || rewardEnergy !== null) {
-    const base = totalEnergy !== null ? totalEnergy : "?";
-    items.push(metricItem(`⚡${esc(String(base))}${esc(signedDelta(rewardEnergy))}`, "metric-chip metric-energy", "能量（括号内为今日获得）"));
-  } else if ((totalPoints !== null || rewardPoints !== null) && explicitPointSites.has(siteKey)) {
-    const base = totalPoints !== null ? totalPoints : "?";
-    items.push(metricItem(`💎${esc(String(base))}${esc(signedDelta(rewardPoints))}`, "metric-chip metric-points", "总积分（括号内为今日获得）"));
-  }
-  if (siteKey !== "smzdm") {
-    if (totalSmzdmGold !== null) items.push(metricItem(`🪙${esc(String(totalSmzdmGold))}`, "metric-chip metric-coin", "什么值得买金币"));
-    if (totalSmzdmSilver !== null) items.push(metricItem(`🥈${esc(String(totalSmzdmSilver))}`, "metric-chip metric-coin", "什么值得买碎银子"));
-  }
-  if (totalGold !== null) items.push(metricItem(`${coinIcon("gold")}${esc(String(totalGold))}`, "metric-chip metric-coin", "V2EX 金币总数"));
-  if (totalSilver !== null) items.push(metricItem(`${coinIcon("silver")}${esc(String(totalSilver))}`, "metric-chip metric-coin", "V2EX 银币总数"));
-  if (totalCopper !== null || rewardCopper !== null) {
-    const base = totalCopper !== null ? totalCopper : "?";
-    items.push(metricItem(`${coinIcon("bronze")}${esc(String(base))}${esc(signedDelta(rewardCopper))}`, "metric-chip metric-coin", "V2EX 铜币总数（括号内为今日获得）"));
-  }
-  if (siteKey !== "qianmoju" && siteKey !== "kafan" && totalDays !== null) items.push(metricItem(`📅${esc(String(totalDays))}`, "metric-chip metric-days", "总签到天数"));
-  if (siteKey !== "qianmoju" && siteKey !== "kafan" && streakDays !== null) items.push(metricItem(`🔥${esc(String(streakDays))}`, "metric-chip metric-streak", "连续签到天数"));
-  return items.join("");
+function availableCardMetrics(site, details = site.details || {}) {
+  return (site.cardMetricOptions || []).filter(option => details[option.key] !== undefined && details[option.key] !== null && details[option.key] !== "");
+}
+function cardMetricValue(value) {
+  return typeof value === "boolean" ? (value ? "是" : "否") : String(value);
+}
+function buildAggregateMetrics(details = {}, siteKey = "", site = {}) {
+  return (site.cardMetrics || []).slice(0, 4).map(key => {
+    const option = availableCardMetrics(site, details).find(item => item.key === key);
+    if (!option) return "";
+    const value = cardMetricValue(details[key]);
+    return metricItem(`${option.icon}${esc(option.label)} ${esc(value)}`, `metric-chip metric-${option.style}`, `${option.label}：${value}`);
+  }).join("");
 }
 
 function buildMetricBadges(site, details = {}) {
-  return buildAggregateMetrics(details, site?.key || "");
+  return buildAggregateMetrics(details, site?.key || "", site);
 }
 
 function statusBadgeFor(site, details = {}) {
@@ -1286,6 +1143,16 @@ function hasMissedTodaySignin(site = {}) {
   return localDateKey(site.lastTime) !== localDateKey(new Date());
 }
 
+function privateCardText(text, site) {
+  let safe = String(text || "");
+  for (const option of site.cardMetricOptions || []) {
+    if (!option.personal) continue;
+    const value = String(site.details?.[option.key] ?? "");
+    if (value) safe = safe.split(value).join("[已隐藏]");
+  }
+  return safe;
+}
+
 function buildSiteCard(site) {
   const hasStatus = site.lastSuccess !== null;
   const details = site.details || {};
@@ -1306,9 +1173,9 @@ function buildSiteCard(site) {
   const tagText = site.enabled ? "启用" : "停用";
   const steps = Array.isArray(site.steps) ? site.steps : [];
   const statusBadge = statusBadgeFor(site, details);
-  const aggregateMetrics = buildAggregateMetrics(details, site.key);
-  const cardMessage = formatStatusMessageLines(cleanDailyMessage(site.lastMessage || statusText, site.key));
-  const cardMessageTitle = cleanCardMessage(site.lastMessage || statusText);
+  const aggregateMetrics = buildAggregateMetrics(details, site.key, site);
+  const cardMessage = formatStatusMessageLines(cleanDailyMessage(privateCardText(site.lastMessage || statusText, site), site.key));
+  const cardMessageTitle = cleanCardMessage(privateCardText(site.lastMessage || statusText, site));
   const displayName = displaySiteName(site.name);
   const isPtSite = ["audiences-me", "pt-btschool-club", "carpt-net", "hhanclub-net", "hddolby-com", "pt-0ff-cc", "hdfans-org", "hdhome-org", "hdsky-me", "open-cd", "ourbits-club", "piggo-me", "pttime-org", "pterclub-net"].includes(site.key);
   const categoryKey = site.category || "forum";
@@ -1338,7 +1205,7 @@ function buildSiteCard(site) {
       </div>
 
       <div class="site-card-metrics aggregate-metrics">
-        ${aggregateMetrics || `<span class="metric-empty">暂无累计信息</span>`}
+        ${aggregateMetrics || `<span class="metric-empty">${site.cardMetricOptions?.length ? "未选择展示项目（点击设置）" : "暂无累计信息（点击查看）"}</span>`}
       </div>
 
       ${showStatusBand ? `<div class="site-card-status ${statusClass} ${hasStatus && !site.lastSuccess ? "is-running" : ""}">
@@ -3118,6 +2985,19 @@ function markCookieClear(form, textarea, helpEl, name = "该站点") {
   showToast("已标记清除 Cookie，保存后生效", "info");
 }
 
+function cardMetricPicker(site) {
+  const options = availableCardMetrics(site);
+  if (!options.length) return '<p class="card-metric-empty">暂无可选信息，完成一次执行后可在这里设置卡片展示。</p>';
+  const selected = new Set(site.cardMetrics || []);
+  return `<form id="cardMetricPicker" class="card-metric-picker">
+    <h4>卡片展示项目</h4>
+    <p>最多选择 4 项显示在卡片上，其余信息在下方查看。用户名等个人信息默认不展示。</p>
+    <div class="card-metric-options">${options.map(option => `<label><input type="checkbox" name="metric" value="${escAttr(option.key)}" ${selected.has(option.key) ? "checked" : ""}><span>${esc(option.label)}：${esc(cardMetricValue(site.details[option.key]))}${option.personal ? "（个人信息）" : ""}</span></label>`).join("")}</div>
+    <div class="card-metric-toolbar"><span id="cardMetricCount" aria-live="polite"></span><button type="submit" class="btn btn-primary">保存展示项目</button></div>
+    <p id="cardMetricFeedback" role="status"></p>
+  </form>`;
+}
+
 function openProcessModal(site) {
   const existing = document.getElementById("processModal");
   if (existing) existing.remove();
@@ -3147,18 +3027,52 @@ function openProcessModal(site) {
         ${reward}
         ${rawStats}
       </div>
+      ${cardMetricPicker(site)}
       <div class="process-two-col">
         <section class="process-col process-steps-col">
           <h4>执行过程</h4>
           ${formatStepList(site.steps || [], site.lastSuccess === true)}
         </section>
         <section class="process-col process-details-col">
-          ${formatDetailsPanel(details)}
+          ${formatDetailsPanel(details, site.cardMetricOptions || [])}
         </section>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+  const picker = modal.querySelector("#cardMetricPicker");
+  if (picker) {
+    const inputs = [...picker.querySelectorAll('input[name="metric"]')];
+    const limit = 4;
+    const save = picker.querySelector('button[type="submit"]');
+    let saving = false;
+    const update = () => {
+      const count = inputs.filter(input => input.checked).length;
+      inputs.forEach(input => { input.disabled = saving || (!input.checked && count >= limit); });
+      picker.querySelector("#cardMetricCount").textContent = `已选 ${count} / ${limit} 项`;
+      save.disabled = saving;
+    };
+    picker.addEventListener("change", update);
+    update();
+    picker.addEventListener("submit", async event => {
+      event.preventDefault();
+      const metrics = inputs.filter(input => input.checked).map(input => input.value);
+      if (saving || metrics.length > limit) return;
+      saving = true;
+      update();
+      const feedback = picker.querySelector("#cardMetricFeedback");
+      try {
+        await api(`/api/sites/${encodeURIComponent(site.key)}/card-metrics`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ metrics }),
+        });
+        site.cardMetrics = metrics;
+        await loadSites(true);
+        modal.querySelector(".process-summary").innerHTML = buildMetricBadges(site, details) + rawStats;
+        feedback.textContent = "已保存，卡片展示已更新";
+      } catch (err) { feedback.textContent = `保存失败：${err.message}`; }
+      finally { saving = false; update(); }
+    });
+  }
   document.getElementById("processModalClose")?.addEventListener("click", closeProcessModal);
   modal.addEventListener("click", (event) => {
     if (event.target === modal) closeProcessModal();

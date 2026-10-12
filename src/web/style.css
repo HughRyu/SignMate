@@ -10965,18 +10965,34 @@ input.is-saved-field:focus {
   overflow-wrap: anywhere;
 }
 
-/* Account metrics may have more rows than the historical fixed PT summary. */
-#tab-sites #card-linux-sb .aggregate-metrics,
-#tab-sites #card-sb-sb .aggregate-metrics {
+/* Forum cards use the same four-row summary layout as other keepalive sites. */
+.card-metric-picker { margin: 16px 0; padding: 14px; border: 1px solid var(--border-color, #aaa5); border-radius: 10px; }
+.card-metric-picker p { font-size: 13px; margin: 8px 0; }
+.card-metric-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.card-metric-options label { display: flex; align-items: flex-start; gap: 8px; min-width: 0; cursor: pointer; }
+.card-metric-options input { flex: 0 0 auto; width: auto; margin-top: 3px; }
+.card-metric-options span { overflow-wrap: anywhere; min-width: 0; }
+.card-metric-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+@media (max-width: 520px) { .card-metric-options { grid-template-columns: 1fr; } }
+
+/* A selected summary always has up to four readable rows, for every site kind. */
+#tab-sites .site-card .aggregate-metrics {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: none !important;
+  grid-auto-rows: minmax(20px, auto) !important;
+  gap: 6px !important;
   height: auto !important;
-  min-height: 110px !important;
+  min-height: 116px !important;
   max-height: none !important;
   overflow: visible !important;
-  align-content: flex-start !important;
+  align-content: start !important;
 }
-#tab-sites #card-linux-sb .metric-chip,
-#tab-sites #card-sb-sb .metric-chip {
+#tab-sites .site-card .aggregate-metrics .metric-chip {
+  display: block !important;
   max-width: 100%;
-  white-space: normal;
+  height: auto !important;
+  min-width: 0;
+  white-space: normal !important;
   overflow-wrap: anywhere;
 }

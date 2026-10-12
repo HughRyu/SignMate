@@ -64,6 +64,10 @@ export default class ForumVisitDriver extends BaseDriver {
       if (!response.ok) return { success: false, message: `保活访问失败：HTTP ${response.status}` };
       if (state !== "authenticated") return { success: false, message: state === "logged_out" ? "Cookie 未登录或已失效，请更新 Cookie" : "无法确认登录态，未报告保活成功" };
       const account = parseForumAccount(html, base.href);
+      const steps = [
+        { label: "访问论坛首页", ok: true, status: response.status, detail: "只读访问完成，已确认登录状态" },
+        { label: "读取账户信息", ok: true, detail: Object.keys(account.details).length ? "已读取当前账户侧栏信息" : "页面未提供可识别的账户信息" },
+      ];
       const details = { status: response.status, authenticated: true, ...account.details };
       if (account.walletUrl && this.siteConfig.verify_only !== true) {
         try {
@@ -83,7 +87,11 @@ export default class ForumVisitDriver extends BaseDriver {
           } else await wallet.body?.cancel();
         } catch { /* Optional metrics must not turn a confirmed visit into failure. */ }
       }
-      return { success: true, message: "已登录访问完成，保活成功", details };
+      if (account.walletUrl && this.siteConfig.verify_only !== true) steps.push({
+        label: "读取烧饼余额", ok: details.totalCoins !== undefined,
+        detail: details.totalCoins !== undefined ? "已核对钱包账户并读取余额" : "钱包余额暂不可用，不影响首页保活成功",
+      });
+      return { success: true, message: "已登录访问完成，保活成功", details, steps };
     }
     return { success: false, message: "保活页面重定向次数过多" };
   }

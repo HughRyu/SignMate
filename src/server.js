@@ -1,3 +1,4 @@
+import { cardMetricOptions, defaultCardMetrics, selectedCardMetrics, validCardMetricSelection } from "./utils/card-metrics.js";
 import { operations, healthReport } from "./utils/operations.js";
 import { createVerificationQueue, publicVerification } from "./utils/session-verification.js";
 import { checkBrowserHealth } from "./utils/browser-health.js";
@@ -1259,6 +1260,7 @@ export async function startServer() {
           status.lastMessage.includes("Headers.append")
         );
         const executionMethod = executionMethodOf(site, status);
+        const metricOptions = cardMetricOptions(staleConfigMessage ? {} : status.details, key);
         return {
           key,
           name,
@@ -1275,6 +1277,9 @@ export async function startServer() {
           proxyGlobalEnabled: site.proxy_global_enabled === true,
           proxyModeUsed: status.details?.proxyModeUsed || null,
           proxyUsed: status.details?.proxyUsed ?? null,
+          cardMetricOptions: metricOptions,
+          defaultCardMetrics: defaultCardMetrics(metricOptions, key),
+          cardMetrics: selectedCardMetrics(site.card_metrics, metricOptions, key),
           executionMethod,
           executionMethodLabel: executionMethodLabel(executionMethod),
           category: site.category || "forum",
@@ -1301,6 +1306,24 @@ export async function startServer() {
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
     }
+  });
+
+  app.post("/api/sites/:siteName/card-metrics", async (req, res) => {
+    try {
+      const { sites } = loadConfig();
+      const site = sites.find(item => item.key === req.params.siteName);
+      if (!site) return res.status(404).json({ ok: false, error: "站点不存在" });
+      const statuses = await store.getSitesStatus();
+      const status = statuses.find(item => item.siteKey === site.key) || statuses.find(item => item.site === (site.note || site.key));
+      const selected = req.body?.metrics;
+      if (!validCardMetricSelection(selected, cardMetricOptions(status?.details, site.key))) {
+        return res.status(400).json({ ok: false, error: "最多选择 4 项有效且不重复的信息" });
+      }
+      const sitesRaw = readSitesRaw();
+      siteOverrideFor(site.key, sitesRaw).card_metrics = selected;
+      writeSitesRaw(sitesRaw);
+      res.json({ ok: true, data: { cardMetrics: selected } });
+    } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
   });
 
   app.post("/api/sites/:siteName/enabled", (req, res) => {

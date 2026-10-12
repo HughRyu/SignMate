@@ -3,7 +3,7 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.34",
+    "version": "0.1.35",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
@@ -11,7 +11,7 @@
   "summary": {
     "title": "SignMate 项目知识图",
     "description": "手动更新的中文架构图；包含运行缓存、异步登录验证、健康探测和固定摘要部署。",
-    "totalFiles": 94
+    "totalFiles": 96
   },
   "nodes": [
     {
@@ -784,7 +784,7 @@
       "type": "file",
       "label": "server.js",
       "title": "src/server.js",
-      "description": "项目核心组件",
+      "description": "项目核心组件；全站卡片展示项校验、四项限制及持久化偏好接口。",
       "path": "src/server.js",
       "layer": "core",
       "tags": [
@@ -964,7 +964,7 @@
       "type": "file",
       "label": "app.js",
       "title": "src/web/app.js",
-      "description": "项目管理界面",
+      "description": "项目管理界面；无步骤执行详情入口与全站信息选择与默认个人信息隐藏。",
       "path": "src/web/app.js",
       "layer": "frontend",
       "tags": [
@@ -1192,7 +1192,7 @@
       "type": "file",
       "label": "check-service.js",
       "title": "scripts/check-service.js",
-      "description": "隔离容器中的真实浏览器、健康接口和管理面板集成验收",
+      "description": "隔离容器中的真实浏览器、健康接口和管理面板集成验收；验证卡片四项选择、跨会话持久化、无步骤入口和窄屏弹窗。",
       "path": "scripts/check-service.js",
       "layer": "operations",
       "tags": [
@@ -1223,6 +1223,34 @@
       "tags": [
         "账户信息",
         "保活"
+      ]
+    },
+    {
+      "id": "file:src/utils/card-metrics.js",
+      "type": "file",
+      "label": "card-metrics.js",
+      "title": "src/utils/card-metrics.js",
+      "description": "全站可展示字段策略、个人信息默认隐藏、偏好与四项限制",
+      "path": "src/utils/card-metrics.js",
+      "layer": "utils",
+      "tags": [
+        "卡片展示",
+        "隐私",
+        "偏好"
+      ]
+    },
+    {
+      "id": "file:test/card-metrics.test.js",
+      "type": "file",
+      "label": "card-metrics.test.js",
+      "title": "test/card-metrics.test.js",
+      "description": "全站指标选择、默认隐私、字段校验及缺失值偏好回归",
+      "path": "test/card-metrics.test.js",
+      "layer": "tests",
+      "tags": [
+        "卡片展示",
+        "隐私",
+        "偏好"
       ]
     }
   ],
@@ -2310,6 +2338,18 @@
     {
       "source": "file:test/forum-account.test.js",
       "target": "file:src/utils/forum-account.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/utils/card-metrics.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/card-metrics.test.js",
+      "target": "file:src/utils/card-metrics.js",
       "type": "imports",
       "label": "导入"
     }
