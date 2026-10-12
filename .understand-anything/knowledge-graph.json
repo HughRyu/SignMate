@@ -3,43 +3,15 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.16",
+    "version": "0.1.30",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
   },
   "summary": {
     "title": "SignMate 项目知识图",
-    "description": "面向 OpenClaw / Hermes / agent 协作共享的项目结构知识图。CodeGraph 索引由每台机器本地生成，不提交到仓库。",
-    "readmeHead": "# SignMate （签伴）\n\n基于 Node.js 的 Docker 化多论坛自动签到系统，插件式 Driver 架构，支持不同签到方式的论坛扩展。\n\n## 快速开始\n\n### 方式 A：直接使用 GHCR Docker 镜像（推荐）\n\n镜像地址：\n\n```text\nghcr.io/hughryu/signmate:latest   # 最新稳定版（随 v* 正式版本标签更新）\nghcr.io/hughryu/signmate:edge     # main 分支最新构建，包含尚未发版的新功能/修复\nghcr.io/hughryu/signmate:v0.1.16  # 固定正式版本\n```\n\n创建目录与配置文件：\n\n```bash\nmkdir -p /opt/docker/signmate/{config,data,logs}",
-    "totalFiles": 49,
-    "filteredByIgnore": 2,
-    "languages": {
-      "unknown": 2,
-      "markdown": 4,
-      "example": 1,
-      "yaml": 1,
-      "shell": 1,
-      "dockerfile": 1,
-      "json": 1,
-      "javascript": 36,
-      "html": 1,
-      "css": 1
-    },
-    "categories": {
-      "infra": 3,
-      "code": 38,
-      "docs": 4,
-      "script": 1,
-      "config": 1,
-      "markup": 2
-    },
-    "importEdges": 126,
-    "importMapStats": {
-      "filesScanned": 49,
-      "filesWithImports": 29,
-      "totalEdges": 126
-    }
+    "description": "手动更新的中文架构图；包含运行缓存、异步登录验证、健康探测和固定摘要部署。",
+    "totalFiles": 92
   },
   "nodes": [
     {
@@ -62,7 +34,7 @@
       "type": "layer",
       "label": "前端管理界面",
       "title": "前端管理界面",
-      "description": "src/public 提供站点状态、配置、调度和运行结果的浏览器界面。",
+      "description": "src/web 提供站点状态、配置、调度和运行结果的浏览器界面。",
       "layer": "frontend",
       "tags": [
         "架构层"
@@ -128,1804 +100,2180 @@
       "type": "file",
       "label": ".dockerignore",
       "title": ".dockerignore",
-      "description": "unknown 文件，约 18 行，类别：infra。",
+      "description": "项目核心组件",
       "path": ".dockerignore",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "unknown",
-        "infra"
-      ],
-      "sizeLines": 18
+        "配置与文档"
+      ]
     },
     {
-      "id": "file:.understand-anything/.understandignore",
+      "id": "file:.env.example",
       "type": "file",
-      "label": ".understandignore",
-      "title": ".understand-anything/.understandignore",
-      "description": "unknown 文件，约 18 行，类别：code。",
-      "path": ".understand-anything/.understandignore",
-      "layer": "api",
+      "label": ".env.example",
+      "title": ".env.example",
+      "description": "项目核心组件",
+      "path": ".env.example",
+      "layer": "core",
       "tags": [
-        "unknown",
-        "code"
-      ],
-      "sizeLines": 18
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:.gitattributes",
+      "type": "file",
+      "label": ".gitattributes",
+      "title": ".gitattributes",
+      "description": "项目核心组件",
+      "path": ".gitattributes",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:.github/workflows/docker-image.yml",
+      "type": "file",
+      "label": "docker-image.yml",
+      "title": ".github/workflows/docker-image.yml",
+      "description": "项目运维与发布",
+      "path": ".github/workflows/docker-image.yml",
+      "layer": "operations",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:.github/workflows/quality.yml",
+      "type": "file",
+      "label": "quality.yml",
+      "title": ".github/workflows/quality.yml",
+      "description": "项目运维与发布",
+      "path": ".github/workflows/quality.yml",
+      "layer": "operations",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:.gitignore",
+      "type": "file",
+      "label": ".gitignore",
+      "title": ".gitignore",
+      "description": "项目核心组件",
+      "path": ".gitignore",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:AGENTS.md",
+      "type": "file",
+      "label": "AGENTS.md",
+      "title": "AGENTS.md",
+      "description": "项目核心组件",
+      "path": "AGENTS.md",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
     },
     {
       "id": "file:CHANGELOG.md",
       "type": "file",
       "label": "CHANGELOG.md",
       "title": "CHANGELOG.md",
-      "description": "markdown 文件，约 143 行，类别：docs。",
+      "description": "项目核心组件",
       "path": "CHANGELOG.md",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "markdown",
-        "docs"
-      ],
-      "sizeLines": 143
-    },
-    {
-      "id": "file:config/secrets.yaml.example",
-      "type": "file",
-      "label": "secrets.yaml.example",
-      "title": "config/secrets.yaml.example",
-      "description": "example 文件，约 36 行，类别：code。",
-      "path": "config/secrets.yaml.example",
-      "layer": "config",
-      "tags": [
-        "example",
-        "code"
-      ],
-      "sizeLines": 36
-    },
-    {
-      "id": "file:docker-compose.yml",
-      "type": "file",
-      "label": "docker-compose.yml",
-      "title": "docker-compose.yml",
-      "description": "yaml 文件，约 37 行，类别：infra。",
-      "path": "docker-compose.yml",
-      "layer": "container",
-      "tags": [
-        "yaml",
-        "infra"
-      ],
-      "sizeLines": 37
-    },
-    {
-      "id": "file:docker-entrypoint.sh",
-      "type": "file",
-      "label": "docker-entrypoint.sh",
-      "title": "docker-entrypoint.sh",
-      "description": "shell 文件，约 11 行，类别：script。",
-      "path": "docker-entrypoint.sh",
-      "layer": "container",
-      "tags": [
-        "shell",
-        "script"
-      ],
-      "sizeLines": 11
+        "配置与文档"
+      ]
     },
     {
       "id": "file:Dockerfile",
       "type": "file",
       "label": "Dockerfile",
       "title": "Dockerfile",
-      "description": "dockerfile 文件，约 24 行，类别：infra。",
+      "description": "项目核心组件",
       "path": "Dockerfile",
-      "layer": "container",
+      "layer": "core",
       "tags": [
-        "dockerfile",
-        "infra"
-      ],
-      "sizeLines": 24
+        "配置与文档"
+      ]
     },
     {
-      "id": "file:docs/release-data-policy.md",
+      "id": "file:LICENSE",
       "type": "file",
-      "label": "release-data-policy.md",
-      "title": "docs/release-data-policy.md",
-      "description": "markdown 文件，约 19 行，类别：docs。",
-      "path": "docs/release-data-policy.md",
-      "layer": "api",
+      "label": "LICENSE",
+      "title": "LICENSE",
+      "description": "项目核心组件",
+      "path": "LICENSE",
+      "layer": "core",
       "tags": [
-        "markdown",
-        "docs"
-      ],
-      "sizeLines": 19
-    },
-    {
-      "id": "file:docs/release-process.md",
-      "type": "file",
-      "label": "release-process.md",
-      "title": "docs/release-process.md",
-      "description": "markdown 文件，约 126 行，类别：docs。",
-      "path": "docs/release-process.md",
-      "layer": "api",
-      "tags": [
-        "markdown",
-        "docs"
-      ],
-      "sizeLines": 126
-    },
-    {
-      "id": "file:package.json",
-      "type": "file",
-      "label": "package.json",
-      "title": "package.json",
-      "description": "json 文件，约 33 行，类别：config。",
-      "path": "package.json",
-      "layer": "container",
-      "tags": [
-        "json",
-        "config"
-      ],
-      "sizeLines": 33
+        "配置与文档"
+      ]
     },
     {
       "id": "file:README.md",
       "type": "file",
       "label": "README.md",
       "title": "README.md",
-      "description": "markdown 文件，约 224 行，类别：docs。",
+      "description": "项目核心组件",
       "path": "README.md",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "markdown",
-        "docs"
-      ],
-      "sizeLines": 224
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:config/secrets.yaml.example",
+      "type": "file",
+      "label": "secrets.yaml.example",
+      "title": "config/secrets.yaml.example",
+      "description": "项目核心组件",
+      "path": "config/secrets.yaml.example",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:docker-compose.host-network.yml",
+      "type": "file",
+      "label": "docker-compose.host-network.yml",
+      "title": "docker-compose.host-network.yml",
+      "description": "项目核心组件",
+      "path": "docker-compose.host-network.yml",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:docker-compose.yml",
+      "type": "file",
+      "label": "docker-compose.yml",
+      "title": "docker-compose.yml",
+      "description": "项目核心组件",
+      "path": "docker-compose.yml",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:docker-entrypoint.sh",
+      "type": "file",
+      "label": "docker-entrypoint.sh",
+      "title": "docker-entrypoint.sh",
+      "description": "项目核心组件",
+      "path": "docker-entrypoint.sh",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:docs/operations-runbook.md",
+      "type": "file",
+      "label": "operations-runbook.md",
+      "title": "docs/operations-runbook.md",
+      "description": "项目运维与发布",
+      "path": "docs/operations-runbook.md",
+      "layer": "operations",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:docs/production-version-policy.md",
+      "type": "file",
+      "label": "production-version-policy.md",
+      "title": "docs/production-version-policy.md",
+      "description": "项目运维与发布",
+      "path": "docs/production-version-policy.md",
+      "layer": "operations",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:docs/release-data-policy.md",
+      "type": "file",
+      "label": "release-data-policy.md",
+      "title": "docs/release-data-policy.md",
+      "description": "项目运维与发布",
+      "path": "docs/release-data-policy.md",
+      "layer": "operations",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:docs/release-process.md",
+      "type": "file",
+      "label": "release-process.md",
+      "title": "docs/release-process.md",
+      "description": "项目运维与发布",
+      "path": "docs/release-process.md",
+      "layer": "operations",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:package-lock.json",
+      "type": "file",
+      "label": "package-lock.json",
+      "title": "package-lock.json",
+      "description": "项目核心组件",
+      "path": "package-lock.json",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:package.json",
+      "type": "file",
+      "label": "package.json",
+      "title": "package.json",
+      "description": "项目核心组件",
+      "path": "package.json",
+      "layer": "core",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:scripts/assert-production-idle.js",
+      "type": "file",
+      "label": "assert-production-idle.js",
+      "title": "scripts/assert-production-idle.js",
+      "description": "项目运维与发布",
+      "path": "scripts/assert-production-idle.js",
+      "layer": "operations",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:scripts/check-browser.js",
       "type": "file",
       "label": "check-browser.js",
       "title": "scripts/check-browser.js",
-      "description": "javascript 文件，约 21 行，类别：code。",
+      "description": "项目运维与发布",
       "path": "scripts/check-browser.js",
-      "layer": "container",
+      "layer": "operations",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 21
+        "源码"
+      ]
+    },
+    {
+      "id": "file:scripts/deploy-production.sh",
+      "type": "file",
+      "label": "deploy-production.sh",
+      "title": "scripts/deploy-production.sh",
+      "description": "项目运维与发布",
+      "path": "scripts/deploy-production.sh",
+      "layer": "operations",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:scripts/production-manifest.js",
+      "type": "file",
+      "label": "production-manifest.js",
+      "title": "scripts/production-manifest.js",
+      "description": "项目运维与发布",
+      "path": "scripts/production-manifest.js",
+      "layer": "operations",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:scripts/release-check.js",
       "type": "file",
       "label": "release-check.js",
       "title": "scripts/release-check.js",
-      "description": "javascript 文件，约 79 行，类别：code。",
+      "description": "项目运维与发布",
       "path": "scripts/release-check.js",
-      "layer": "container",
+      "layer": "operations",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 79
+        "源码"
+      ]
+    },
+    {
+      "id": "file:scripts/rollback-production.sh",
+      "type": "file",
+      "label": "rollback-production.sh",
+      "title": "scripts/rollback-production.sh",
+      "description": "项目运维与发布",
+      "path": "scripts/rollback-production.sh",
+      "layer": "operations",
+      "tags": [
+        "配置与文档"
+      ]
     },
     {
       "id": "file:scripts/smoke-sites.js",
       "type": "file",
       "label": "smoke-sites.js",
       "title": "scripts/smoke-sites.js",
-      "description": "javascript 文件，约 173 行，类别：code。",
+      "description": "项目运维与发布",
       "path": "scripts/smoke-sites.js",
-      "layer": "container",
+      "layer": "operations",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 173
+        "源码"
+      ]
+    },
+    {
+      "id": "file:scripts/test-feng-credentials.js",
+      "type": "file",
+      "label": "test-feng-credentials.js",
+      "title": "scripts/test-feng-credentials.js",
+      "description": "项目运维与发布",
+      "path": "scripts/test-feng-credentials.js",
+      "layer": "operations",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:scripts/test-naixi-sign.js",
+      "type": "file",
+      "label": "test-naixi-sign.js",
+      "title": "scripts/test-naixi-sign.js",
+      "description": "项目运维与发布",
+      "path": "scripts/test-naixi-sign.js",
+      "layer": "operations",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:src/builtin-sites.js",
       "type": "file",
       "label": "builtin-sites.js",
       "title": "src/builtin-sites.js",
-      "description": "javascript 文件，约 446 行，类别：code。",
+      "description": "项目核心组件",
       "path": "src/builtin-sites.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 446
+        "源码"
+      ]
     },
     {
       "id": "file:src/captcha-ocr.js",
       "type": "file",
       "label": "captcha-ocr.js",
       "title": "src/captcha-ocr.js",
-      "description": "javascript 文件，约 99 行，类别：code。",
+      "description": "项目核心组件",
       "path": "src/captcha-ocr.js",
-      "layer": "drivers",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 99
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/base.js",
       "type": "file",
       "label": "base.js",
       "title": "src/drivers/base.js",
-      "description": "javascript 文件，约 69 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/base.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 69
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/chiphell.js",
       "type": "file",
       "label": "chiphell.js",
       "title": "src/drivers/chiphell.js",
-      "description": "javascript 文件，约 153 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/chiphell.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 153
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/feng.js",
       "type": "file",
       "label": "feng.js",
       "title": "src/drivers/feng.js",
-      "description": "javascript 文件，约 228 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/feng.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 228
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/drivers/forum-visit.js",
+      "type": "file",
+      "label": "forum-visit.js",
+      "title": "src/drivers/forum-visit.js",
+      "description": "项目站点驱动",
+      "path": "src/drivers/forum-visit.js",
+      "layer": "drivers",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/kafan.js",
       "type": "file",
       "label": "kafan.js",
       "title": "src/drivers/kafan.js",
-      "description": "javascript 文件，约 328 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/kafan.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 328
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/mteam.js",
       "type": "file",
       "label": "mteam.js",
       "title": "src/drivers/mteam.js",
-      "description": "javascript 文件，约 194 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/mteam.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 194
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/naixi.js",
       "type": "file",
       "label": "naixi.js",
       "title": "src/drivers/naixi.js",
-      "description": "javascript 文件，约 248 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/naixi.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 248
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/nexusphp.js",
       "type": "file",
       "label": "nexusphp.js",
       "title": "src/drivers/nexusphp.js",
-      "description": "javascript 文件，约 982 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/nexusphp.js",
       "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 982
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/nodeloc.js",
       "type": "file",
       "label": "nodeloc.js",
       "title": "src/drivers/nodeloc.js",
-      "description": "javascript 文件，约 239 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/nodeloc.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 239
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/nodeseek.js",
       "type": "file",
       "label": "nodeseek.js",
       "title": "src/drivers/nodeseek.js",
-      "description": "javascript 文件，约 356 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/nodeseek.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 356
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/drivers/pcbeta.js",
+      "type": "file",
+      "label": "pcbeta.js",
+      "title": "src/drivers/pcbeta.js",
+      "description": "项目站点驱动",
+      "path": "src/drivers/pcbeta.js",
+      "layer": "drivers",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/pceva.js",
       "type": "file",
       "label": "pceva.js",
       "title": "src/drivers/pceva.js",
-      "description": "javascript 文件，约 239 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/pceva.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 239
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/pojie52.js",
       "type": "file",
       "label": "pojie52.js",
       "title": "src/drivers/pojie52.js",
-      "description": "javascript 文件，约 298 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/pojie52.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 298
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/qianmoju.js",
       "type": "file",
       "label": "qianmoju.js",
       "title": "src/drivers/qianmoju.js",
-      "description": "javascript 文件，约 267 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/qianmoju.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 267
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/right.js",
       "type": "file",
       "label": "right.js",
       "title": "src/drivers/right.js",
-      "description": "javascript 文件，约 274 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/right.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 274
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/template.js",
       "type": "file",
       "label": "template.js",
       "title": "src/drivers/template.js",
-      "description": "javascript 文件，约 87 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/template.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 87
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/tieba.js",
       "type": "file",
       "label": "tieba.js",
       "title": "src/drivers/tieba.js",
-      "description": "javascript 文件，约 294 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/tieba.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 294
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/drivers/v2ex-page.js",
+      "type": "file",
+      "label": "v2ex-page.js",
+      "title": "src/drivers/v2ex-page.js",
+      "description": "项目站点驱动",
+      "path": "src/drivers/v2ex-page.js",
+      "layer": "drivers",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/drivers/v2ex-utils.js",
+      "type": "file",
+      "label": "v2ex-utils.js",
+      "title": "src/drivers/v2ex-utils.js",
+      "description": "项目站点驱动",
+      "path": "src/drivers/v2ex-utils.js",
+      "layer": "drivers",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/v2ex.js",
       "type": "file",
       "label": "v2ex.js",
       "title": "src/drivers/v2ex.js",
-      "description": "javascript 文件，约 367 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/v2ex.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 367
+        "源码"
+      ]
     },
     {
       "id": "file:src/drivers/website.js",
       "type": "file",
       "label": "website.js",
       "title": "src/drivers/website.js",
-      "description": "javascript 文件，约 128 行，类别：code。",
+      "description": "项目站点驱动",
       "path": "src/drivers/website.js",
-      "layer": "api",
+      "layer": "drivers",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 128
+        "源码"
+      ]
     },
     {
       "id": "file:src/index.js",
       "type": "file",
       "label": "index.js",
       "title": "src/index.js",
-      "description": "javascript 文件，约 189 行，类别：code。",
+      "description": "项目核心组件",
       "path": "src/index.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 189
+        "源码"
+      ]
     },
     {
       "id": "file:src/notify.js",
       "type": "file",
       "label": "notify.js",
       "title": "src/notify.js",
-      "description": "javascript 文件，约 220 行，类别：code。",
+      "description": "项目核心组件",
       "path": "src/notify.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 220
+        "源码"
+      ]
     },
     {
       "id": "file:src/runner.js",
       "type": "file",
       "label": "runner.js",
       "title": "src/runner.js",
-      "description": "javascript 文件，约 643 行，类别：code。",
+      "description": "项目核心组件",
       "path": "src/runner.js",
-      "layer": "drivers",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 643
+        "源码"
+      ]
     },
     {
       "id": "file:src/scheduler.js",
       "type": "file",
       "label": "scheduler.js",
       "title": "src/scheduler.js",
-      "description": "javascript 文件，约 385 行，类别：code。",
+      "description": "项目核心组件",
       "path": "src/scheduler.js",
-      "layer": "scheduler",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 385
+        "源码"
+      ]
     },
     {
       "id": "file:src/server.js",
       "type": "file",
       "label": "server.js",
       "title": "src/server.js",
-      "description": "javascript 文件，约 2333 行，类别：code。",
+      "description": "项目核心组件",
       "path": "src/server.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 2333
+        "源码"
+      ]
     },
     {
       "id": "file:src/store.js",
       "type": "file",
       "label": "store.js",
       "title": "src/store.js",
-      "description": "javascript 文件，约 187 行，类别：code。",
+      "description": "项目核心组件",
       "path": "src/store.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 187
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/utils/browser-health.js",
+      "type": "file",
+      "label": "browser-health.js",
+      "title": "src/utils/browser-health.js",
+      "description": "运行状态、探测与验证模块",
+      "path": "src/utils/browser-health.js",
+      "layer": "core",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:src/utils/browser.js",
       "type": "file",
       "label": "browser.js",
       "title": "src/utils/browser.js",
-      "description": "javascript 文件，约 81 行，类别：code。",
+      "description": "运行状态、探测与验证模块",
       "path": "src/utils/browser.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 81
+        "源码"
+      ]
     },
     {
       "id": "file:src/utils/discuz-http.js",
       "type": "file",
       "label": "discuz-http.js",
       "title": "src/utils/discuz-http.js",
-      "description": "javascript 文件，约 442 行，类别：code。",
+      "description": "运行状态、探测与验证模块",
       "path": "src/utils/discuz-http.js",
-      "layer": "drivers",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 442
+        "源码"
+      ]
     },
     {
       "id": "file:src/utils/http-session.js",
       "type": "file",
       "label": "http-session.js",
       "title": "src/utils/http-session.js",
-      "description": "javascript 文件，约 127 行，类别：code。",
+      "description": "运行状态、探测与验证模块",
       "path": "src/utils/http-session.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 127
+        "源码"
+      ]
     },
     {
       "id": "file:src/utils/http.js",
       "type": "file",
       "label": "http.js",
       "title": "src/utils/http.js",
-      "description": "javascript 文件，约 173 行，类别：code。",
+      "description": "运行状态、探测与验证模块",
       "path": "src/utils/http.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 173
+        "源码"
+      ]
     },
     {
       "id": "file:src/utils/logger.js",
       "type": "file",
       "label": "logger.js",
       "title": "src/utils/logger.js",
-      "description": "javascript 文件，约 86 行，类别：code。",
+      "description": "运行状态、探测与验证模块",
       "path": "src/utils/logger.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 86
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/utils/naixi-page.js",
+      "type": "file",
+      "label": "naixi-page.js",
+      "title": "src/utils/naixi-page.js",
+      "description": "运行状态、探测与验证模块",
+      "path": "src/utils/naixi-page.js",
+      "layer": "core",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/utils/naixi-sign.js",
+      "type": "file",
+      "label": "naixi-sign.js",
+      "title": "src/utils/naixi-sign.js",
+      "description": "运行状态、探测与验证模块",
+      "path": "src/utils/naixi-sign.js",
+      "layer": "core",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/utils/operations.js",
+      "type": "file",
+      "label": "operations.js",
+      "title": "src/utils/operations.js",
+      "description": "运行状态、探测与验证模块",
+      "path": "src/utils/operations.js",
+      "layer": "core",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:src/utils/proxy.js",
       "type": "file",
       "label": "proxy.js",
       "title": "src/utils/proxy.js",
-      "description": "javascript 文件，约 167 行，类别：code。",
+      "description": "运行状态、探测与验证模块",
       "path": "src/utils/proxy.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 167
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/utils/runtime-state.js",
+      "type": "file",
+      "label": "runtime-state.js",
+      "title": "src/utils/runtime-state.js",
+      "description": "运行状态、探测与验证模块",
+      "path": "src/utils/runtime-state.js",
+      "layer": "core",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/utils/session-verification.js",
+      "type": "file",
+      "label": "session-verification.js",
+      "title": "src/utils/session-verification.js",
+      "description": "运行状态、探测与验证模块",
+      "path": "src/utils/session-verification.js",
+      "layer": "core",
+      "tags": [
+        "源码"
+      ]
     },
     {
       "id": "file:src/utils/site-http.js",
       "type": "file",
       "label": "site-http.js",
       "title": "src/utils/site-http.js",
-      "description": "javascript 文件，约 358 行，类别：code。",
+      "description": "运行状态、探测与验证模块",
       "path": "src/utils/site-http.js",
-      "layer": "api",
+      "layer": "core",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 358
+        "源码"
+      ]
     },
     {
       "id": "file:src/web/app.js",
       "type": "file",
       "label": "app.js",
       "title": "src/web/app.js",
-      "description": "javascript 文件，约 3875 行，类别：code。",
+      "description": "项目管理界面",
       "path": "src/web/app.js",
-      "layer": "api",
+      "layer": "frontend",
       "tags": [
-        "javascript",
-        "code"
-      ],
-      "sizeLines": 3875
+        "源码"
+      ]
     },
     {
       "id": "file:src/web/index.html",
       "type": "file",
       "label": "index.html",
       "title": "src/web/index.html",
-      "description": "html 文件，约 246 行，类别：markup。",
+      "description": "项目管理界面",
       "path": "src/web/index.html",
-      "layer": "api",
+      "layer": "frontend",
       "tags": [
-        "html",
-        "markup"
-      ],
-      "sizeLines": 246
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:src/web/logo.jpg",
+      "type": "file",
+      "label": "logo.jpg",
+      "title": "src/web/logo.jpg",
+      "description": "项目管理界面",
+      "path": "src/web/logo.jpg",
+      "layer": "frontend",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:src/web/logo.png",
+      "type": "file",
+      "label": "logo.png",
+      "title": "src/web/logo.png",
+      "description": "项目管理界面",
+      "path": "src/web/logo.png",
+      "layer": "frontend",
+      "tags": [
+        "配置与文档"
+      ]
     },
     {
       "id": "file:src/web/style.css",
       "type": "file",
       "label": "style.css",
       "title": "src/web/style.css",
-      "description": "css 文件，约 10900 行，类别：markup。",
+      "description": "项目管理界面",
       "path": "src/web/style.css",
-      "layer": "api",
+      "layer": "frontend",
       "tags": [
-        "css",
-        "markup"
-      ],
-      "sizeLines": 10900
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:test/deployment.test.sh",
+      "type": "file",
+      "label": "deployment.test.sh",
+      "title": "test/deployment.test.sh",
+      "description": "项目回归测试",
+      "path": "test/deployment.test.sh",
+      "layer": "tests",
+      "tags": [
+        "配置与文档"
+      ]
+    },
+    {
+      "id": "file:test/forum-visit.test.js",
+      "type": "file",
+      "label": "forum-visit.test.js",
+      "title": "test/forum-visit.test.js",
+      "description": "项目回归测试",
+      "path": "test/forum-visit.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/health.test.js",
+      "type": "file",
+      "label": "health.test.js",
+      "title": "test/health.test.js",
+      "description": "项目回归测试",
+      "path": "test/health.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/naixi-page.test.js",
+      "type": "file",
+      "label": "naixi-page.test.js",
+      "title": "test/naixi-page.test.js",
+      "description": "项目回归测试",
+      "path": "test/naixi-page.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/observability.test.js",
+      "type": "file",
+      "label": "observability.test.js",
+      "title": "test/observability.test.js",
+      "description": "项目回归测试",
+      "path": "test/observability.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/pcbeta.test.js",
+      "type": "file",
+      "label": "pcbeta.test.js",
+      "title": "test/pcbeta.test.js",
+      "description": "项目回归测试",
+      "path": "test/pcbeta.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/proxy.test.js",
+      "type": "file",
+      "label": "proxy.test.js",
+      "title": "test/proxy.test.js",
+      "description": "项目回归测试",
+      "path": "test/proxy.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/runner-operations.test.js",
+      "type": "file",
+      "label": "runner-operations.test.js",
+      "title": "test/runner-operations.test.js",
+      "description": "项目回归测试",
+      "path": "test/runner-operations.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/session-verification.test.js",
+      "type": "file",
+      "label": "session-verification.test.js",
+      "title": "test/session-verification.test.js",
+      "description": "项目回归测试",
+      "path": "test/session-verification.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/tieba.test.js",
+      "type": "file",
+      "label": "tieba.test.js",
+      "title": "test/tieba.test.js",
+      "description": "项目回归测试",
+      "path": "test/tieba.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/v2ex-driver.test.js",
+      "type": "file",
+      "label": "v2ex-driver.test.js",
+      "title": "test/v2ex-driver.test.js",
+      "description": "项目回归测试",
+      "path": "test/v2ex-driver.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/v2ex-http.test.js",
+      "type": "file",
+      "label": "v2ex-http.test.js",
+      "title": "test/v2ex-http.test.js",
+      "description": "项目回归测试",
+      "path": "test/v2ex-http.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/v2ex-page.test.js",
+      "type": "file",
+      "label": "v2ex-page.test.js",
+      "title": "test/v2ex-page.test.js",
+      "description": "项目回归测试",
+      "path": "test/v2ex-page.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/v2ex.test.js",
+      "type": "file",
+      "label": "v2ex.test.js",
+      "title": "test/v2ex.test.js",
+      "description": "项目回归测试",
+      "path": "test/v2ex.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:scripts/check-service.js",
+      "type": "file",
+      "label": "check-service.js",
+      "title": "scripts/check-service.js",
+      "description": "隔离容器中的真实浏览器、健康接口和管理面板集成验收",
+      "path": "scripts/check-service.js",
+      "layer": "operations",
+      "tags": [
+        "离线验收"
+      ]
     }
   ],
   "edges": [
     {
-      "source": "project:signmate",
-      "target": "layer:frontend",
-      "type": "contains",
-      "label": "包含"
-    },
-    {
-      "source": "project:signmate",
-      "target": "layer:api",
-      "type": "contains",
-      "label": "包含"
-    },
-    {
-      "source": "project:signmate",
-      "target": "layer:drivers",
-      "type": "contains",
-      "label": "包含"
-    },
-    {
-      "source": "project:signmate",
-      "target": "layer:scheduler",
-      "type": "contains",
-      "label": "包含"
-    },
-    {
-      "source": "project:signmate",
-      "target": "layer:config",
-      "type": "contains",
-      "label": "包含"
-    },
-    {
-      "source": "project:signmate",
-      "target": "layer:container",
-      "type": "contains",
-      "label": "包含"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:.dockerignore",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:.understand-anything/.understandignore",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:CHANGELOG.md",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:config",
-      "target": "file:config/secrets.yaml.example",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:container",
-      "target": "file:docker-compose.yml",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:container",
-      "target": "file:docker-entrypoint.sh",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:container",
-      "target": "file:Dockerfile",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:docs/release-data-policy.md",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:docs/release-process.md",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:container",
-      "target": "file:package.json",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:README.md",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:container",
-      "target": "file:scripts/check-browser.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:container",
-      "target": "file:scripts/release-check.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:container",
-      "target": "file:scripts/smoke-sites.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/builtin-sites.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:drivers",
-      "target": "file:src/captcha-ocr.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/base.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/chiphell.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/feng.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/kafan.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/mteam.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/naixi.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:drivers",
-      "target": "file:src/drivers/nexusphp.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/nodeloc.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/nodeseek.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/pceva.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/pojie52.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/qianmoju.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/right.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/template.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/tieba.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/v2ex.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/drivers/website.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/index.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/notify.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:drivers",
-      "target": "file:src/runner.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:scheduler",
-      "target": "file:src/scheduler.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/server.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/store.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/utils/browser.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:drivers",
-      "target": "file:src/utils/discuz-http.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/utils/http-session.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/utils/http.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/utils/logger.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/utils/proxy.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/utils/site-http.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/web/app.js",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/web/index.html",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
-      "source": "layer:api",
-      "target": "file:src/web/style.css",
-      "type": "contains",
-      "label": "包含文件"
-    },
-    {
       "source": "file:scripts/check-browser.js",
       "target": "file:src/utils/browser.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/chiphell.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/feng.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/kafan.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/naixi.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/nexusphp.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/nodeloc.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/nodeseek.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/pceva.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/pojie52.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/qianmoju.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/right.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/template.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/tieba.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/v2ex.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:scripts/smoke-sites.js",
-      "target": "file:src/drivers/website.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:scripts/smoke-sites.js",
       "target": "file:src/runner.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/nodeseek.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/template.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/v2ex.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/naixi.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/right.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/website.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/forum-visit.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/pojie52.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/nodeloc.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/pceva.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/chiphell.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/nexusphp.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/qianmoju.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/kafan.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/feng.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/tieba.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/smoke-sites.js",
+      "target": "file:src/drivers/pcbeta.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/test-feng-credentials.js",
+      "target": "file:src/drivers/feng.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/test-naixi-sign.js",
+      "target": "file:src/utils/naixi-sign.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/base.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/base.js",
       "target": "file:src/utils/http.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/base.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/chiphell.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/chiphell.js",
-      "target": "file:src/utils/browser.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/chiphell.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/chiphell.js",
+      "target": "file:src/utils/browser.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/chiphell.js",
       "target": "file:src/utils/site-http.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/feng.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/feng.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/feng.js",
       "target": "file:src/utils/http.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
-      "source": "file:src/drivers/feng.js",
-      "target": "file:src/utils/logger.js",
+      "source": "file:src/drivers/forum-visit.js",
+      "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/forum-visit.js",
+      "target": "file:src/utils/http.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/kafan.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/kafan.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/kafan.js",
       "target": "file:src/utils/browser.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/kafan.js",
       "target": "file:src/utils/discuz-http.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/kafan.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/mteam.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/mteam.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/mteam.js",
       "target": "file:src/utils/proxy.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/naixi.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/naixi.js",
-      "target": "file:src/utils/browser.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/naixi.js",
-      "target": "file:src/utils/discuz-http.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/naixi.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/naixi.js",
+      "target": "file:src/utils/browser.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/naixi.js",
+      "target": "file:src/utils/discuz-http.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/naixi.js",
+      "target": "file:src/utils/naixi-sign.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/naixi.js",
+      "target": "file:src/utils/naixi-page.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/nexusphp.js",
+      "target": "file:src/drivers/website.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/nexusphp.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nexusphp.js",
       "target": "file:src/captcha-ocr.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/nexusphp.js",
-      "target": "file:src/drivers/website.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/nexusphp.js",
-      "target": "file:src/utils/browser.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nexusphp.js",
       "target": "file:src/utils/http-session.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nexusphp.js",
-      "target": "file:src/utils/logger.js",
+      "target": "file:src/utils/browser.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nodeloc.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/nodeloc.js",
-      "target": "file:src/utils/browser.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nodeloc.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/nodeloc.js",
+      "target": "file:src/utils/browser.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nodeloc.js",
       "target": "file:src/utils/site-http.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nodeseek.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/nodeseek.js",
-      "target": "file:src/utils/browser.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nodeseek.js",
       "target": "file:src/utils/http.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/nodeseek.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/nodeseek.js",
+      "target": "file:src/utils/browser.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/pcbeta.js",
+      "target": "file:src/drivers/base.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/pcbeta.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/pcbeta.js",
+      "target": "file:src/utils/http-session.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/pceva.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/pceva.js",
-      "target": "file:src/utils/browser.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/pceva.js",
-      "target": "file:src/utils/discuz-http.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/pceva.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/pceva.js",
+      "target": "file:src/utils/browser.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/pceva.js",
+      "target": "file:src/utils/discuz-http.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/pojie52.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/pojie52.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/pojie52.js",
       "target": "file:src/utils/browser.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/pojie52.js",
       "target": "file:src/utils/discuz-http.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/pojie52.js",
       "target": "file:src/utils/http-session.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/pojie52.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/qianmoju.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/qianmoju.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/qianmoju.js",
       "target": "file:src/utils/browser.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/qianmoju.js",
       "target": "file:src/utils/discuz-http.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/qianmoju.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/right.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/right.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/right.js",
       "target": "file:src/utils/browser.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/right.js",
       "target": "file:src/utils/discuz-http.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/right.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/template.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/template.js",
       "target": "file:src/utils/http.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/template.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/tieba.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/tieba.js",
       "target": "file:src/utils/http.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/tieba.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/v2ex.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/v2ex.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/v2ex.js",
       "target": "file:src/utils/browser.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/v2ex.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/v2ex.js",
       "target": "file:src/utils/site-http.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/v2ex.js",
+      "target": "file:src/drivers/v2ex-utils.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/v2ex.js",
+      "target": "file:src/drivers/v2ex-page.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/website.js",
       "target": "file:src/drivers/base.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/drivers/website.js",
-      "target": "file:src/utils/browser.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/drivers/website.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/website.js",
+      "target": "file:src/utils/browser.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/index.js",
-      "target": "file:src/drivers/chiphell.js",
+      "target": "file:src/utils/runtime-state.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/index.js",
-      "target": "file:src/drivers/feng.js",
+      "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/kafan.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/mteam.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/naixi.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/nexusphp.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/nodeloc.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/nodeseek.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/pceva.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/pojie52.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/qianmoju.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/right.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/template.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/tieba.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/v2ex.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/drivers/website.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/notify.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/index.js",
       "target": "file:src/runner.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/index.js",
       "target": "file:src/scheduler.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/notify.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/index.js",
       "target": "file:src/server.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/store.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/index.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/index.js",
       "target": "file:src/utils/proxy.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/store.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/nodeseek.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/template.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/v2ex.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/naixi.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/right.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/website.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/forum-visit.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/pojie52.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/nodeloc.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/pceva.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/chiphell.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/nexusphp.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/qianmoju.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/kafan.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/feng.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/tieba.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/mteam.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/pcbeta.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/notify.js",
+      "target": "file:src/utils/runtime-state.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/notify.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/runner.js",
-      "target": "file:src/builtin-sites.js",
+      "target": "file:src/utils/session-verification.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/runner.js",
-      "target": "file:src/notify.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/runner.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/runner.js",
+      "target": "file:src/notify.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/runner.js",
+      "target": "file:src/store.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/runner.js",
       "target": "file:src/utils/proxy.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
-      "source": "file:src/scheduler.js",
-      "target": "file:src/notify.js",
+      "source": "file:src/runner.js",
+      "target": "file:src/utils/runtime-state.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
-      "source": "file:src/scheduler.js",
-      "target": "file:src/store.js",
+      "source": "file:src/runner.js",
+      "target": "file:src/utils/operations.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/runner.js",
+      "target": "file:src/utils/proxy.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/runner.js",
+      "target": "file:src/builtin-sites.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/scheduler.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
-      "source": "file:src/server.js",
-      "target": "file:src/builtin-sites.js",
-      "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/server.js",
+      "source": "file:src/scheduler.js",
       "target": "file:src/notify.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/scheduler.js",
+      "target": "file:src/store.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/scheduler.js",
+      "target": "file:src/runner.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/scheduler.js",
+      "target": "file:src/runner.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/scheduler.js",
+      "target": "file:src/runner.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/utils/operations.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/utils/session-verification.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/utils/browser-health.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/utils/runtime-state.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/server.js",
       "target": "file:src/runner.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/notify.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/server.js",
       "target": "file:src/store.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/server.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/server.js",
       "target": "file:src/utils/proxy.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/builtin-sites.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/store.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
-      "source": "file:src/utils/discuz-http.js",
-      "target": "file:src/utils/http-session.js",
+      "source": "file:src/utils/browser-health.js",
+      "target": "file:src/utils/browser.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/utils/discuz-http.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/discuz-http.js",
+      "target": "file:src/utils/http-session.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/discuz-http.js",
+      "target": "file:src/utils/naixi-sign.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/utils/http-session.js",
       "target": "file:src/utils/proxy.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/utils/http.js",
       "target": "file:src/utils/logger.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/utils/http.js",
       "target": "file:src/utils/proxy.js",
       "type": "imports",
-      "label": "依赖"
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/operations.js",
+      "target": "file:src/utils/runtime-state.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/proxy.js",
+      "target": "file:src/utils/runtime-state.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/session-verification.js",
+      "target": "file:src/utils/runtime-state.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/session-verification.js",
+      "target": "file:src/drivers/forum-visit.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/session-verification.js",
+      "target": "file:src/drivers/tieba.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/site-http.js",
+      "target": "file:src/utils/logger.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
       "source": "file:src/utils/site-http.js",
       "target": "file:src/utils/http-session.js",
       "type": "imports",
-      "label": "依赖"
-    },
-    {
-      "source": "file:src/utils/site-http.js",
-      "target": "file:src/utils/logger.js",
-      "type": "imports",
-      "label": "依赖"
+      "label": "导入"
     },
     {
       "source": "file:src/utils/site-http.js",
       "target": "file:src/utils/proxy.js",
       "type": "imports",
-      "label": "依赖"
-    }
-  ],
-  "tour": [
-    {
-      "title": "从 README 开始",
-      "description": "先阅读 README.md 理解部署、配置和 release 约定。",
-      "nodeId": "file:README.md"
+      "label": "导入"
     },
     {
-      "title": "理解服务入口",
-      "description": "查看 src/server.js 的 API、静态资源和运行控制。",
-      "nodeId": "file:src/server.js"
+      "source": "file:src/utils/site-http.js",
+      "target": "file:src/drivers/v2ex-utils.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
-      "title": "理解站点能力",
-      "description": "重点看 src/sites 和 runner 相关文件，区分签到与保活能力。",
-      "nodeId": "layer:drivers"
+      "source": "file:test/forum-visit.test.js",
+      "target": "file:src/drivers/forum-visit.js",
+      "type": "imports",
+      "label": "导入"
     },
     {
-      "title": "理解调度与通知",
-      "description": "查看 scheduler、notifier、backup 相关模块。",
-      "nodeId": "layer:scheduler"
+      "source": "file:test/forum-visit.test.js",
+      "target": "file:src/builtin-sites.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/health.test.js",
+      "target": "file:src/utils/operations.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/health.test.js",
+      "target": "file:src/utils/browser-health.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/naixi-page.test.js",
+      "target": "file:src/utils/naixi-page.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/observability.test.js",
+      "target": "file:src/utils/runtime-state.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/observability.test.js",
+      "target": "file:src/utils/operations.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/observability.test.js",
+      "target": "file:src/drivers/base.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/pcbeta.test.js",
+      "target": "file:src/drivers/pcbeta.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/proxy.test.js",
+      "target": "file:src/utils/proxy.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/runner-operations.test.js",
+      "target": "file:src/runner.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/session-verification.test.js",
+      "target": "file:src/utils/session-verification.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/tieba.test.js",
+      "target": "file:src/drivers/tieba.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/v2ex-http.test.js",
+      "target": "file:src/utils/site-http.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/v2ex-page.test.js",
+      "target": "file:src/drivers/v2ex-page.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/v2ex.test.js",
+      "target": "file:src/drivers/v2ex-utils.js",
+      "type": "imports",
+      "label": "导入"
     }
-  ],
-  "generatedAt": "2026-06-08T03:49:04.037Z",
-  "generator": {
-    "name": "Understand-Anything audited local scripts + OpenClaw synthesis",
-    "options": {
-      "language": "zh",
-      "autoUpdate": false
-    }
-  }
+  ]
 }

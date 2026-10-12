@@ -1,3 +1,4 @@
+import { runtimeState } from "./utils/runtime-state.js";
 // ============================================================
 // notify — 签到结果通知
 //
@@ -43,6 +44,10 @@ export class Notifier {
         logger.error(`[通知] ${channel.name} 发送失败: ${err.message}`);
       }
     }
+    try {
+      runtimeState.update("notifications", "latest", { checkedAt: new Date().toISOString(), attempted,
+        externalAttempted, failureCount: failures.length, ok: failures.length === 0 });
+    } catch { logger.warn("[通知] 无法保存通知状态"); }
     const externalFailures = failures.filter(item => !item.startsWith("Console:"));
     if (externalAttempted > 0 && externalFailures.length === externalAttempted) {
       throw new Error(externalFailures.join("; "));

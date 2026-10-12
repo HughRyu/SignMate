@@ -1,3 +1,4 @@
+import { credentialGeneration } from "./utils/session-verification.js";
 // ============================================================
 // runner — Driver 加载与签到执行引擎
 // ============================================================
@@ -9,6 +10,10 @@ import logger from "./utils/logger.js";
 import notifier from "./notify.js";
 import * as store from "./store.js";
 import { getGlobalProxy, siteProxyMode, selectProxyUrl, hasUsableProxyCandidate } from "./utils/proxy.js";
+import { fileURLToPath } from "node:url";
+import { runtimeState, fresh } from "./utils/runtime-state.js";
+import { operations } from "./utils/operations.js";
+import { testDirect, testProxy } from "./utils/proxy.js";
 import BUILTIN_SITES from "./builtin-sites.js";
 
 // Driver 注册表: name → class
@@ -25,7 +30,7 @@ function normalizeCategoryKey(value = "") {
 
 function loadCategoryMetaSafe() {
   try {
-    const path = new URL("../config/sites.yaml", import.meta.url).pathname;
+    const path = fileURLToPath(new URL("../config/sites.yaml", import.meta.url));
     const raw = existsSync(path) ? (parse(readFileSync(path, "utf-8")) || {}) : {};
     const source = Array.isArray(raw.categories) && raw.categories.length ? raw.categories : DEFAULT_SITE_CATEGORIES;
     const out = new Map();
@@ -216,7 +221,7 @@ function buildCategorizedNotifyMessages(results = []) {
 
 function loadNotifyConfigSafe() {
   try {
-    const path = new URL("../config/notify.yaml", import.meta.url).pathname;
+    const path = fileURLToPath(new URL("../config/notify.yaml", import.meta.url));
     if (!existsSync(path)) return {};
     return parse(readFileSync(path, "utf-8")) || {};
   } catch {
@@ -225,7 +230,7 @@ function loadNotifyConfigSafe() {
 }
 
 
-const BATCH_STATE_PATH = new URL("../data/batch-state.json", import.meta.url).pathname;
+const BATCH_STATE_PATH = fileURLToPath(new URL("../data/batch-state.json", import.meta.url));
 let activeBatchRun = null;
 let batchInterruptedNotified = false;
 
@@ -404,7 +409,7 @@ export function registerDriver(name, driverClass) {
 export function loadConfig() {
   // 加载 sites.yaml（可选）。全新部署没有 sites.yaml 时应能启动，
   // 但站点列表保持为空；内置站点只作为后续“添加站点/模板”和已有配置 merge 的来源。
-  const sitesPath = new URL("../config/sites.yaml", import.meta.url).pathname;
+  const sitesPath = fileURLToPath(new URL("../config/sites.yaml", import.meta.url));
   const hasSitesConfig = existsSync(sitesPath);
   let sitesRaw = {};
   if (hasSitesConfig) {
@@ -431,20 +436,21 @@ export function loadConfig() {
     return {
       key,
       ...site,
+      ...(runtimeState.read().siteProxy?.[key] || {}),
       // 站点代理模式必须按站点配置/自动判断执行，不能因全局代理开关关闭而静默改成 off。
       // 全局开关只影响“未明确配置代理策略”的默认状态；proxy:on 和 proxy:auto 的已保存判断都应生效。
       proxy_mode: rawProxyMode,
       proxy_url: proxyUrl,
       proxy_global_enabled: proxy.enabled,
       proxy_available: (rawProxyMode === "on" || rawProxyMode === "auto") ? hasUsableProxy : false,
-      proxy_checked_at: site.proxy_checked_at || site.proxyCheckedAt || null,
-      proxy_direct_ok: site.proxy_direct_ok ?? site.proxyDirectOk ?? null,
+      proxy_checked_at: runtimeState.read().siteProxy?.[key]?.proxy_checked_at || site.proxy_checked_at || site.proxyCheckedAt || null,
+      proxy_direct_ok: runtimeState.read().siteProxy?.[key]?.proxy_direct_ok ?? site.proxy_direct_ok ?? site.proxyDirectOk ?? null,
     };
   });
 
   // 加载 secrets.yaml（可选）
   let secrets = {};
-  const secretsPath = new URL("../config/secrets.yaml", import.meta.url).pathname;
+  const secretsPath = fileURLToPath(new URL("../config/secrets.yaml", import.meta.url));
   if (existsSync(secretsPath)) {
     secrets = parse(readFileSync(secretsPath, "utf-8"));
   }
@@ -453,7 +459,7 @@ export function loadConfig() {
 }
 
 
-async function resolveProxyForSite(siteConfig, forceProxy = false) {
+export async function resolveProxyForSite(siteConfig, forceProxy = false) {
   const proxyMode = siteConfig.proxy_mode || siteProxyMode(siteConfig);
   const proxyUrl = siteConfig.proxy_url || process.env.SIGNMATE_PROXY_URL || "";
 
@@ -469,8 +475,18 @@ async function resolveProxyForSite(siteConfig, forceProxy = false) {
     return { ...siteConfig, proxy_url: proxyUrl, proxy_used: true, proxy_reason: forceProxy ? "forced_manual" : "forced", proxy_mode_used: "proxy" };
   }
 
-  // 自动模式只使用“保存代理策略时”写入的判断结果，签到/保活运行时不再重新探测直连。
-  // 避免运行时网络抖动把自动模式临时改判成离线，也符合“保存时判定”的产品语义。
+  // Expired route observations must be rechecked; HTTP connectivity never
+  // establishes authentication, which remains the driver's responsibility.
+  if (!fresh(siteConfig.proxy_checked_at) && siteConfig.base_url) {
+    const direct = await testDirect(siteConfig.base_url, 8000);
+    const proxied = !direct.ok && proxyUrl ? await testProxy(proxyUrl, siteConfig.base_url, 10000) : null;
+    const observation = { proxy_checked_at: new Date().toISOString(), proxy_direct_ok: direct.ok,
+      proxy_last_mode: direct.ok ? "direct" : proxied?.ok ? "proxy" : "offline",
+      direct, proxied };
+    runtimeState.update("siteProxy", siteConfig.key || siteConfig.driver, observation);
+    siteConfig = { ...siteConfig, ...observation };
+  }
+  if (siteConfig.proxy_last_mode === "offline") return { ...siteConfig, site_offline: true, proxy_mode_used: "offline", proxy_reason: "probe_failed", offline_reason: "直连和代理探测均失败，请查看代理诊断" };
   if (siteConfig.proxy_direct_ok === true || siteConfig.proxy_last_mode === "direct") {
     logger.info(`[代理] ${siteConfig.note || siteConfig.driver} → 自动模式使用已保存判断：直连`);
     return { ...siteConfig, proxy_url: "", proxy_used: false, proxy_reason: "saved_direct", proxy_mode_used: "direct" };
@@ -492,23 +508,10 @@ async function resolveProxyForSite(siteConfig, forceProxy = false) {
 
 function rememberProxyMode(siteConfig, mode, directOk = null) {
   if (!mode || mode === "offline") return;
-  try {
-    const sitesPath = new URL("../config/sites.yaml", import.meta.url).pathname;
-    const raw = parse(readFileSync(sitesPath, "utf-8")) || {};
-    const entries = Object.entries(raw.sites || {});
-    const targetKey = siteConfig.key || "";
-    const matched = entries.find(([key]) => targetKey && key === targetKey)
-      || entries.find(([, site]) => !targetKey && site.note === siteConfig.note)
-      || entries.find(([, site]) => !targetKey && site.driver === siteConfig.driver && site.note === siteConfig.note);
-    if (!matched) return;
-    const [, site] = matched;
-    site.proxy_last_mode = mode;
-    site.proxy_checked_at = new Date().toISOString();
-    site.proxy_direct_ok = directOk ?? (mode === "direct");
-    writeFileSync(sitesPath, stringify(raw), "utf-8");
-  } catch (err) {
-    logger.warn(`[代理] 记录上次代理模式失败: ${err.message}`);
-  }
+  runtimeState.update("siteProxy", siteConfig.key || siteConfig.driver, {
+    proxy_last_mode: mode, proxy_checked_at: new Date().toISOString(),
+    proxy_direct_ok: directOk ?? mode === "direct",
+  });
 }
 
 /**
@@ -518,7 +521,24 @@ function rememberProxyMode(siteConfig, mode, directOk = null) {
  * @param {object} secrets     全局凭据
  * @returns {Promise<{success: boolean, message: string, site: string}>}
  */
-export async function runSingle(siteConfig, secrets) {
+export async function runSingle(siteConfig, secrets, options = {}) {
+  const run = operations.begin(siteConfig, options.source || "manual");
+  try {
+    const result = await executeSingle(siteConfig, secrets);
+    const key = siteConfig.key || siteConfig.driver;
+    const current = runtimeState.read().verification?.[key];
+    if (current?.generation === credentialGeneration(secrets[key]) && ["unsupported", "unconfirmed", "unverified"].includes(current.status)) {
+      runtimeState.update("verification", key, { ...current, status: result.success ? "execution_succeeded" : "unconfirmed", checkedAt: new Date().toISOString() });
+    }
+    return operations.finish(run, result);
+  } catch (error) {
+    return operations.finish(run, { success: false, site: siteConfig.note || siteConfig.driver,
+      siteKey: siteConfig.key || siteConfig.driver, kind: siteConfig.kind || "signin",
+      message: error?.message || "执行异常" });
+  }
+}
+
+async function executeSingle(siteConfig, secrets) {
   const executionStartedAt = Date.now();
   const driverName = siteConfig.driver;
   const DriverClass = DRIVER_REGISTRY[driverName];
@@ -643,7 +663,7 @@ export async function runAll(options = {}) {
       batchState.currentKey = site.key || site.driver || "";
       writeBatchStateSafe(batchState);
       try {
-        const result = await runSingle(site, secrets);
+        const result = await runSingle(site, secrets, { source: options.autoOnly ? "schedule" : "manual-batch" });
         const runScheduleMode = options.scheduleMode || options.manualScheduleMode || null;
         if (runScheduleMode) {
           result.details = { ...(result.details || {}), scheduleMode: runScheduleMode };

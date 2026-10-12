@@ -1,3 +1,4 @@
+import { runtimeState } from "./utils/runtime-state.js";
 // ============================================================
 // signmate — 签伴 SignMate
 // 入口文件
@@ -169,11 +170,8 @@ async function main() {
       const proxy = getGlobalProxy(sitesRaw);
       if (!proxy.enabled || !proxy.urls.length) return;
       const health = await testProxyPool(proxy.urls, proxy.testUrls, 10000);
-      const before = sitesRaw.proxy?.health;
-      sitesRaw.proxy = { ...(sitesRaw.proxy || {}), health };
-      const { writeFileSync } = await import("node:fs");
-      const { stringify } = await import("yaml");
-      writeFileSync(sitesPath, stringify(sitesRaw), "utf-8");
+      const before = getGlobalProxy(sitesRaw).health;
+      runtimeState.update("proxy", "pool", { urls: proxy.urls, health });
       if (before?.ok !== false && health.ok === false) await notifier.send("SignMate 代理失效", health.proxies.map(p => `${p.url}: ${p.tests.map(t => t.error || t.status || "失败").join("；")}`), "proxy");
     } catch (err) { logger.warn(`[代理健康检查] ${err.message}`); }
   }, 3 * 60 * 60 * 1000);

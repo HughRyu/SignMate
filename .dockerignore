@@ -16,3 +16,8 @@ src/backup-*/
 **/backup-*/
 probe_*.mjs
 tmp/
+
+config/*
+!config/*.example
+.codegraph/
+.understand-anything/

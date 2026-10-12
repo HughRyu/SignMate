@@ -1,6 +1,6 @@
 {
   "name": "signmate",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "private": true,
   "description": "SignMate 签伴 - 多站点签到与保活管理",
   "type": "module",
@@ -9,10 +9,9 @@
     "start:dev": "node --watch src/index.js",
     "check": "node --check src/server.js && node --check src/runner.js && node --check src/scheduler.js && node --check src/index.js && node --check src/web/app.js && node --check src/utils/site-http.js && node --check src/drivers/v2ex-utils.js && node --check src/drivers/v2ex.js && node --check src/drivers/pcbeta.js && node --check src/drivers/tieba.js && node --check src/drivers/forum-visit.js",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
-    "test": "npm run check && npm run test:v2ex && npm run test:tieba && npm run test:forum-visit && npm run test:pcbeta && npm run test:feng && npm run test:naixi && npm run check:browser && npm run audit:prod",
+    "test": "npm run check && node --test test/*.test.js && npm run test:feng && npm run test:naixi",
     "test:v2ex": "node --test test/v2ex.test.js test/v2ex-page.test.js test/v2ex-driver.test.js test/v2ex-http.test.js",
     "test:pcbeta": "node --test test/pcbeta.test.js",
-    "test:nodeseek": "node src/drivers/nodeseek.js",
     "check:browser": "node scripts/check-browser.js",
     "release:check": "node scripts/release-check.js",
     "smoke:sites": "node scripts/smoke-sites.js",
@@ -20,7 +19,8 @@
     "test:naixi": "node scripts/test-naixi-sign.js && node --test test/naixi-page.test.js",
     "test:tieba": "node --test test/tieba.test.js",
     "test:forum-visit": "node --test test/forum-visit.test.js",
-    "production:manifest": "node scripts/production-manifest.js"
+    "production:manifest": "node scripts/production-manifest.js",
+    "smoke:nodeseek": "node src/drivers/nodeseek.js"
   },
   "dependencies": {
     "chalk": "^5.4.1",

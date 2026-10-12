@@ -41,7 +41,7 @@ export default class BaseDriver {
           logger.info(`[${this.name}] 第 ${attempt + 1}/${retry + 1} 次尝试...`);
         }
         const result = await this.signIn();
-        return result;
+        return { ...result, details: { ...result.details, retries: attempt, attempts: attempt + 1 } };
       } catch (err) {
         lastError = err;
         logger.warn(`[${this.name}] 签到失败 (attempt ${attempt + 1}/${retry + 1}): ${err.message}`);
@@ -52,7 +52,7 @@ export default class BaseDriver {
       }
     }
 
-    return { success: false, message: lastError?.message || "未知错误" };
+    return { success: false, message: lastError?.message || "未知错误", details: { retries: retry, attempts: retry + 1 } };
   }
 
   /**

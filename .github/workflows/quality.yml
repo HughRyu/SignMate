@@ -1,5 +1,6 @@
 name: Quality Gate
 on:
+  workflow_call:
   pull_request:
   push:
     branches: [main]
@@ -17,3 +18,4 @@ jobs:
       - run: npm ci
       - run: npm run release:check
       - run: npm test
+      - run: bash test/deployment.test.sh

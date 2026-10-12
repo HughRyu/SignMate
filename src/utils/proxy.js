@@ -2,6 +2,7 @@
 // proxy — 代理配置读取、规范化与连通性检测
 // ============================================================
 
+import { runtimeState, fresh } from "./runtime-state.js";
 import { request as undiciRequest, ProxyAgent } from "undici";
 
 export const DEFAULT_CONNECTIVITY_URLS = [
@@ -40,7 +41,7 @@ export function getGlobalProxy(sitesRaw = {}) {
     autoFallback: proxy.auto_fallback !== false,
     testUrl: testUrls[0] || DEFAULT_CONNECTIVITY_URL,
     testUrls: testUrls.length ? testUrls : [DEFAULT_CONNECTIVITY_URL],
-    health: proxy.health || null,
+    health: (() => { const cached = runtimeState.read().proxy?.pool; return cached?.urls?.join() === urls.join() && fresh(cached.health?.checkedAt) ? cached.health : (fresh(proxy.health?.checkedAt) ? proxy.health : null); })(),
   };
 }
 
@@ -136,7 +137,9 @@ export async function testDirect(url = DEFAULT_CONNECTIVITY_URL, timeoutMs = 800
 export async function testProxy(proxyUrl, url = DEFAULT_CONNECTIVITY_URL, timeoutMs = 10000) {
   const normalized = normalizeProxyUrl(proxyUrl);
   if (!normalized) throw new Error("代理地址为空");
-  return timedRequest(url, { timeoutMs, dispatcher: new ProxyAgent(normalized) });
+  const dispatcher = new ProxyAgent(normalized);
+  try { return await timedRequest(url, { timeoutMs, dispatcher }); }
+  finally { await dispatcher.close(); }
 }
 
 async function timedRequest(url, { timeoutMs, dispatcher } = {}) {
@@ -155,7 +158,9 @@ async function timedRequest(url, { timeoutMs, dispatcher } = {}) {
     // 有些站点/CDN 禁 HEAD，但浏览器 GET 首页是正常的。用 GET 兜底更符合“能正常打开主页”。
     if ([403, 405, 501].includes(status)) status = await once("GET");
     return {
-      ok: status >= 200 && status < 500,
+      ok: status >= 200 && status < 400,
+      reachable: true,
+      diagnosis: status < 400 ? "http_reachable_auth_unverified" : `http_${status}`,
       status,
       ms: Date.now() - started,
     };
@@ -163,6 +168,7 @@ async function timedRequest(url, { timeoutMs, dispatcher } = {}) {
     return {
       ok: false,
       error: formatProxyError(err),
+      diagnosis: /ENOTFOUND|EAI_AGAIN/.test(formatProxyError(err)) ? "dns" : /ETIMEDOUT|timeout|abort/i.test(formatProxyError(err)) ? "timeout" : "network",
       ms: Date.now() - started,
     };
   } finally {
@@ -189,5 +195,5 @@ export function formatProxyError(err) {
 export function isProxyCacheFresh(checkedAt, maxAgeMs = 3 * 60 * 60 * 1000) {
   if (!checkedAt) return false;
   const ts = Date.parse(checkedAt);
-  return Number.isFinite(ts) && Date.now() - ts < maxAgeMs;
+  return fresh(checkedAt, Date.now(), maxAgeMs);
 }

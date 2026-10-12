@@ -1,13 +1,5 @@
-# Production version policy
+# 生产版本基线
 
-生产容器必须从 GitHub/Gitea 已发布的版本标签构建，并把版本号和提交写入镜像环境变量：
+生产使用 GHCR 固定 digest；镜像由已通过质量门禁的 main 提交构建。版本读取镜像内 package.json，完整提交 SHA 同时记录在镜像 OCI label 与运行环境中；部署脚本核对 Docker 镜像 ID 和 `/api/health` 来源。
 
-```bash
-export SIGNMATE_VERSION=0.1.27
-export SIGNMATE_GIT_COMMIT=$(git rev-parse HEAD)
-docker compose build --build-arg SIGNMATE_VERSION --build-arg SIGNMATE_GIT_COMMIT signmate
-docker compose up -d signmate
-curl http://127.0.0.1:9999/api/health
-```
-
-发布后通过 `/api/health` 核对 `version`、`commit`、`batchActive` 和代理摘要。生产源码目录出现未提交修改时，停止发布并先保存差异；禁止使用 `git reset --hard` 覆盖运行配置。
+旧生产源码目录可以作为归档保留，但不能再用于未经验证的现场构建。部署不覆盖用户配置，不重置现场改动。使用 `docker-compose.release.yml` 固定镜像；具体步骤及备份、回滚见 [运维手册](operations-runbook.md)。

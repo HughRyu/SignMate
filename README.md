@@ -21,7 +21,7 @@ SignMate 仅作为开源的自托管自动化工具，供学习、研究及合�
 ```text
 ghcr.io/hughryu/signmate:latest   # 最新稳定版（随 v* 正式版本标签更新）
 ghcr.io/hughryu/signmate:edge     # main 分支最新构建，包含尚未发版的新功能/修复
-ghcr.io/hughryu/signmate:v0.1.28  # 固定正式版本
+ghcr.io/hughryu/signmate:v0.1.30  # 固定正式版本
 ```
 
 创建目录与配置文件：
@@ -251,3 +251,7 @@ docker compose exec signmate node src/index.js
 添加 `linux-sb`、`sb-sb` 后，分别维护对应域名的登录 Cookie，再启用调度。仅访问页面并确认登录态，不执行签到、发帖或回帖。公开页面、登录页、无法确认登录态和安全验证页均不会报告保活成功；安全验证需在相同代理出口人工处理。
 
 若 LINUX SB 或烧饼论坛直连失败，或返回的不是正常论坛首页，请在站点设置中启用可用代理后重试。CookieCloud 同步成功不代表直连网络可用。
+
+## 生产运维
+
+生产建议固定镜像 digest，使用带自动备份和失败恢复的部署脚本。参见 [运维手册](docs/operations-runbook.md)。`npm test` 为离线测试，真实站点冒烟需要显式执行。

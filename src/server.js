@@ -1,3 +1,8 @@
+import { operations, healthReport } from "./utils/operations.js";
+import { createVerificationQueue, publicVerification } from "./utils/session-verification.js";
+import { checkBrowserHealth } from "./utils/browser-health.js";
+import { statfsSync, accessSync, constants as fsConstants } from "node:fs";
+import { runtimeState } from "./utils/runtime-state.js";
 // ============================================================
 // server — Express 管理面板服务器
 // 端口: 9999
@@ -9,7 +14,7 @@ import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, unlink
 import { join, basename } from "node:path";
 import { parse, stringify } from "yaml";
 import logger from "./utils/logger.js";
-import { loadConfig, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState, dismissCompletedBatchState, BatchAlreadyRunningError } from "./runner.js";
+import { loadConfig, resolveProxyForSite, runSingle, runAll, getBatchState, requestBatchCancel, resumeInterruptedBatchState, dismissCompletedBatchState, BatchAlreadyRunningError } from "./runner.js";
 import { notifier, TelegramChannel, BarkChannel } from "./notify.js";
 import * as store from "./store.js";
 import { applySiteProxyMode, getGlobalProxy, setGlobalProxy, siteProxyMode, testDirect, testProxy, normalizeProxyUrl, testProxyPool, selectProxyUrl, isProxyCacheFresh } from "./utils/proxy.js";
@@ -31,7 +36,15 @@ const MAINTENANCE_STATE_PATH = join(DATA_DIR, "maintenance-state.json");
 const BRANDING_PATH = join(CONFIG_DIR, "branding.json");
 const DRIVERS_DIR = join(import.meta.dirname, "drivers");
 const STARTED_AT = new Date().toISOString();
-const APP_VERSION = process.env.SIGNMATE_VERSION || "0.1.27";
+const APP_VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+const verificationQueue = createVerificationQueue({ resolveSite: resolveProxyForSite });
+function verifySynced(items, secrets) {
+  const { sites } = loadConfig();
+  for (const item of items) {
+    const site = sites.find(site => site.key === item.key);
+    if (site) verificationQueue.enqueue(site, secrets).catch(() => logger.warn("[CookieCloud] 登录检查状态保存失败"));
+  }
+}
 const DEFAULT_SITE_CATEGORIES = [
   { key: "forum", label: "论坛", emoji: "💬" },
   { key: "pt", label: "PT站点", emoji: "📀" },
@@ -580,9 +593,8 @@ async function runProxyHealthCheck({ notify = false } = {}) {
   const sitesRaw = readSitesRaw();
   const proxy = getGlobalProxy(sitesRaw);
   const health = proxy.enabled ? await testProxyPool(proxy.urls, proxy.testUrls, 10000) : { checkedAt: new Date().toISOString(), ok: false, proxies: [], usableUrls: [] };
-  const before = sitesRaw.proxy?.health;
-  sitesRaw.proxy = { ...(sitesRaw.proxy || {}), health };
-  writeSitesRaw(sitesRaw);
+  const before = getGlobalProxy(sitesRaw).health;
+  runtimeState.update("proxy", "pool", { urls: proxy.urls, health });
   if (notify && proxy.enabled && before?.ok !== false && health.ok === false && health.proxies.length) {
     const failed = health.proxies.map(p => `${p.url}: ${p.tests.map(t => `${t.testUrl} ${t.status || t.error || "失败"}`).join("；")}`);
     await notifier.send("SignMate 代理失效", failed, "proxy");
@@ -864,12 +876,11 @@ async function syncCookieCloudFromSavedConfig({ source = "auto" } = {}) {
       cookie: item.cookie,
       cookiecloud_updated_at: now,
       cookiecloud_source: source,
-      // Synchronization only proves that CookieCloud returned a cookie.
-      // The next site run must establish whether the session is still valid.
-      cookiecloud_verification: "pending",
+
     };
   }
   writeSecrets(secrets);
+  verifySynced(updated, secrets);
   for (const item of skipped) logger.warn(`[CookieCloud] ${item.reason}`);
   return { updated, skipped, matches };
 }
@@ -1088,6 +1099,8 @@ function installLogCapture() {
 // ---- 创建 App ----
 export async function startServer() {
   installLogCapture();
+  const pendingVerification = runtimeState.read().verification || {};
+  verifySynced(Object.entries(pendingVerification).filter(([, value]) => value.status === "pending").map(([key]) => ({ key })), readSecrets());
 
   const app = express();
 
@@ -1098,36 +1111,20 @@ export async function startServer() {
 
   // Lightweight unauthenticated probe for Docker and external monitoring.
   // It exposes operational metadata only; credentials and site details stay protected.
-  app.get("/api/health", (_req, res) => {
-    let configOk = true;
-    let proxy = { enabled: false, ok: null, checkedAt: null, usableCount: 0 };
+  app.get("/api/health", async (_req, res) => {
+    let configOk = false, diskOk = false, browserOk = false;
+    try { loadConfig(); configOk = true; } catch { /* Only safe booleans are public. */ }
     try {
-      const { proxy: configuredProxy } = loadConfig();
-      const health = configuredProxy?.health || {};
-      proxy = {
-        enabled: configuredProxy?.enabled === true,
-        ok: typeof health.ok === "boolean" ? health.ok : null,
-        checkedAt: health.checkedAt || null,
-        usableCount: Array.isArray(health.usableUrls) ? health.usableUrls.length : 0,
-      };
-    } catch {
-      configOk = false;
-    }
-    const batch = getBatchState() || {};
-    // A running batch is expected service activity, not a health failure.
-    // Report configuration and process liveness independently so Docker does
-    // not restart the container during a normal scheduled run.
-    const healthy = configOk;
-    res.status(healthy ? 200 : 503).json({
-      ok: healthy,
-      version: APP_VERSION,
-      commit: process.env.SIGNMATE_GIT_COMMIT || null,
-      startedAt: STARTED_AT,
-      uptimeSeconds: Math.floor(process.uptime()),
-      configOk,
-      batchActive: batch.active === true,
-      proxy,
-    });
+      mkdirSync(DATA_DIR, { recursive: true });
+      accessSync(DATA_DIR, fsConstants.W_OK);
+      accessSync(CONFIG_DIR, fsConstants.R_OK | fsConstants.W_OK);
+      const disk = statfsSync(DATA_DIR);
+      diskOk = disk.bavail * disk.bsize > 50 * 1024 * 1024;
+    } catch { /* readiness fails */ }
+    try { browserOk = await checkBrowserHealth(); } catch { /* readiness fails */ }
+    const health = healthReport({ configOk, diskOk, browserOk, batch: getBatchState(), active: operations.active(),
+      version: APP_VERSION, commit: process.env.SIGNMATE_GIT_COMMIT || null, startedAt: STARTED_AT });
+    res.status(health.ok ? 200 : 503).json(health);
   });
 
   app.get("/login", (req, res) => {
@@ -1287,6 +1284,9 @@ export async function startServer() {
           verificationAuto: site.verification_auto === true,
           signinBlockedByVerification: site.signin_blocked_by_verification === true,
           hasCookie,
+          verification: publicVerification(runtimeState.read().verification?.[key], siteSecrets),
+          operational: runtimeState.read().runs?.[key] || null,
+          activeRuns: operations.active().filter(run => run.siteKey === key),
           hasTotpSecret,
           totpSecretMasked: maskSecret(totpSecret),
           lastSuccess: hasCookie && staleConfigMessage ? null : (hasCookie ? (status.lastSuccess ?? null) : false),
@@ -1297,7 +1297,7 @@ export async function startServer() {
         };
       });
 
-      res.json({ ok: true, data: result });
+      res.json({ ok: true, data: result, notificationHealth: runtimeState.read().notifications?.latest || null });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
     }
@@ -1616,6 +1616,7 @@ export async function startServer() {
         secrets[item.key] = { ...(secrets[item.key] || {}), cookie: item.cookie, cookiecloud_updated_at: now, cookiecloud_source: "manual" };
       }
       writeSecrets(secrets);
+      verifySynced(toWrite, secrets);
       updateMaintenanceState("cookiecloud", { lastAttemptAt: now, lastSuccessAt: now, lastUpdatedCount: toWrite.length, lastSkippedCount: skippedWrites.length, lastSkippedItems: skippedWrites, lastSource: "manual", lastError: "" });
       if (body.saveConfig === true) {
         upsertEnvValues({ COOKIECLOUD_ENABLED: body.enabled === false ? "false" : "true", COOKIECLOUD_HOST: normalizeCookieCloudHost(host), COOKIECLOUD_UUID: String(uuid || "").trim(), ...(body.password ? { COOKIECLOUD_PASSWORD: String(body.password).trim() } : {}), COOKIECLOUD_AUTO_SYNC: body.autoSync === true ? "true" : "false", COOKIECLOUD_INCLUDE_DISABLED: body.includeDisabled === true ? "true" : "false", COOKIECLOUD_AUTO_INTERVAL_MINUTES: String(Math.max(15, Number(body.autoIntervalMinutes || 180) || 180)) });
@@ -1946,10 +1947,11 @@ export async function startServer() {
         name: site.note || site.driver || key,
         proxyMode: siteProxyMode(site),
         baseUrl: site.base_url || "",
-        proxyLastMode: site.proxy_last_mode || null,
-        proxyCheckedAt: site.proxy_checked_at || null,
-        proxyDirectOk: site.proxy_direct_ok ?? null,
-        proxyCacheFresh: isProxyCacheFresh(site.proxy_checked_at),
+        proxyLastMode: runtimeState.read().siteProxy?.[key]?.proxy_last_mode || site.proxy_last_mode || null,
+        proxyCheckedAt: runtimeState.read().siteProxy?.[key]?.proxy_checked_at || site.proxy_checked_at || null,
+        proxyDirectOk: runtimeState.read().siteProxy?.[key]?.proxy_direct_ok ?? site.proxy_direct_ok ?? null,
+        proxyCacheFresh: isProxyCacheFresh(runtimeState.read().siteProxy?.[key]?.proxy_checked_at || site.proxy_checked_at),
+        diagnosis: runtimeState.read().siteProxy?.[key]?.direct?.diagnosis || null,
       }));
       const notifyConfig = readNotifyConfig();
       res.json({ ok: true, data: { ...proxy, telegramNotifyProxy: notifyConfig.telegram?.proxy !== false, sites } });
@@ -2016,12 +2018,12 @@ export async function startServer() {
       const direct = await testDirect(testUrl, timeoutMs);
       const proxyUrl = selectProxyUrl(proxy, site.proxy_url || "");
       const proxied = direct.ok || !proxyUrl ? null : await testProxy(proxyUrl, testUrl, Math.max(timeoutMs, 10000));
-      const override = siteOverrideFor(key, sitesRaw);
+      const override = {};
       override.proxy_checked_at = new Date().toISOString();
       override.proxy_direct_ok = direct.ok === true;
       override.proxy_last_mode = direct.ok ? "direct" : (proxied?.ok ? "proxy" : "offline");
       Object.assign(site, override);
-      writeSitesRaw(sitesRaw);
+      runtimeState.update("siteProxy", key, { ...override, direct, proxied });
       res.json({ ok: true, data: { site: key, cached: false, testUrl, direct, proxy: proxied, directOk: site.proxy_direct_ok, mode: site.proxy_last_mode, checkedAt: site.proxy_checked_at } });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });

@@ -4,8 +4,10 @@
 # ============================================================
 
 FROM mcr.microsoft.com/playwright:v1.57.0-noble
-ARG SIGNMATE_VERSION=0.1.29
+ARG SIGNMATE_VERSION=0.1.30
 ARG SIGNMATE_GIT_COMMIT=unknown
+LABEL org.opencontainers.image.version=${SIGNMATE_VERSION} \
+      org.opencontainers.image.revision=${SIGNMATE_GIT_COMMIT}
 WORKDIR /app
 
 ENV TZ=Asia/Shanghai \

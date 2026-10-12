@@ -63,12 +63,17 @@ const forbiddenPaths = [
   "config/notify.yaml",
   "config/branding.json",
 ];
-const tracked = spawnSync("git", ["ls-files", ...forbiddenPaths], { encoding: "utf8" });
+const tracked = spawnSync("git", ["ls-files"], { encoding: "utf8" });
 if (tracked.status !== 0) {
   process.stderr.write(tracked.stderr || "");
   process.exit(tracked.status || 1);
 }
-const trackedForbidden = tracked.stdout.split(/\r?\n/).filter(Boolean);
+const trackedForbidden = tracked.stdout.split(/\r?\n/).filter(Boolean).filter(file =>
+  /^(?:data|logs|backups|\.codegraph)\//.test(file)
+  || /(?:^|\/)\.env(?:$|\.)/.test(file) && !file.endsWith(".example")
+  || /^config\//.test(file) && !file.endsWith(".example")
+  || /(?:^|\/)(?:id_rsa|id_ed25519)$|\.(?:pem|key|p12)$/.test(file)
+  || /^\.understand-anything\/(?:intermediate|tmp|fingerprints)/.test(file));
 if (trackedForbidden.length) {
   console.error("\n[release:check] Forbidden runtime/sensitive files are tracked:");
   for (const file of trackedForbidden) console.error(`- ${file}`);

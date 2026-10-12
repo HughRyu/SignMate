@@ -525,7 +525,7 @@ async function loadSites(silent = false) {
   const btnAll = document.getElementById("btnRunAll");
 
   try {
-    const { data } = await api("/api/sites");
+    const { data, notificationHealth } = await api("/api/sites");
     const allSites = data || [];
     latestAllSites = allSites;
     renderBatchProgress(allSites);
@@ -595,7 +595,7 @@ async function loadSites(silent = false) {
       navVisitFilter.classList.toggle("active", activeSiteKind === "visit");
       navVisitFilter.disabled = false;
     }
-    if (summary) summary.textContent = "";
+    if (summary) summary.textContent = notificationHealth?.ok === false ? "⚠ 最近一次通知发送失败，请检查通知设置" : "";
 
     const sortByName = (a, b) => displaySiteName(a.name).localeCompare(displaySiteName(b.name), "zh-Hans-CN", { sensitivity: "base" });
     const sortedSites = [...allSites].sort(sortByName);
@@ -1334,6 +1334,9 @@ function buildSiteCard(site) {
         </div>
       </div>` : ""}
 
+      ${site.verification ? `<div class="site-card-schedule"><span>登录态</span><span>${esc(({execution_succeeded:"最近任务成功（非独立登录验证）",unverified:"尚未验证",pending:"同步完成，检查中",verified:"已验证",invalid:"已失效，请更新",challenge:"需人工验证",unconfirmed:"网络或页面异常，未确认",unsupported:"等待站点执行确认（无只读检查）",disabled:"站点停用，未检查"})[site.verification.status] || "尚未验证")}</span></div>` : ""}
+      ${site.operational?.consecutiveFailures >= 3 ? `<div class="site-card-status">⚠ 连续失败 ${Number(site.operational.consecutiveFailures)} 次</div>` : ""}
+      ${site.activeRuns?.some(run => run.stuck) ? '<div class="site-card-status">⚠ 任务超过 30 分钟，请检查日志</div>' : ""}
       <div class="site-card-actions">
         <button class="btn btn-secondary" id="credential-${escAttr(site.key)}" title="${credentialPrimaryLabel(site)}：${site.hasCookie ? "已维护" : "未维护"}">
           ${site.hasCookie ? "🔑" : "🔒"} ${credentialPrimaryLabel(site)}
