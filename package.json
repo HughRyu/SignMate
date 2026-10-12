@@ -1,6 +1,6 @@
 {
   "name": "signmate",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "private": true,
   "description": "SignMate 签伴 - 多站点签到与保活管理",
   "type": "module",
@@ -19,7 +19,8 @@
     "test:feng": "node scripts/test-feng-credentials.js",
     "test:naixi": "node scripts/test-naixi-sign.js && node --test test/naixi-page.test.js",
     "test:tieba": "node --test test/tieba.test.js",
-    "test:forum-visit": "node --test test/forum-visit.test.js"
+    "test:forum-visit": "node --test test/forum-visit.test.js",
+    "production:manifest": "node scripts/production-manifest.js"
   },
   "dependencies": {
     "chalk": "^5.4.1",
