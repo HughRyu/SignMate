@@ -10964,3 +10964,19 @@ input.is-saved-field:focus {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Account metrics may have more rows than the historical fixed PT summary. */
+#tab-sites #card-linux-sb .aggregate-metrics,
+#tab-sites #card-sb-sb .aggregate-metrics {
+  height: auto !important;
+  min-height: 110px !important;
+  max-height: none !important;
+  overflow: visible !important;
+  align-content: flex-start !important;
+}
+#tab-sites #card-linux-sb .metric-chip,
+#tab-sites #card-sb-sb .metric-chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

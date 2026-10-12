@@ -726,7 +726,7 @@ function detailLabel(key = "") {
     streakDays: "连续签到", totalDays: "累计签到/访问", totalPoints: "总积分", totalPbCoins: "PB币", dailyTask: "每日打卡", replyTask: "回帖打卡", rewardCopper: "奖励铜币",
     totalGold: "金币", totalSilver: "银币", totalCopper: "铜币", rewardChickenLegs: "奖励鸡腿", totalChickenLegs: "总鸡腿",
     nodeSeekLevel: "NodeSeek 等级", nodeSeekLevelProgress: "等级进度", attendanceRank: "签到排名", attendanceTotalParticipants: "参与人数",
-    username: "用户名", totalEnergy: "总能量", rewardEnergy: "今日能量", postCount: "帖子", likesReceived: "获赞", trustLevel: "信任等级",
+    bankBalance: "存款", gameCoins: "游戏币", featuredCount: "精华", followingCount: "关注", followersCount: "粉丝", joinDays: "注册天数", levelTitle: "等级名称", username: "用户名", totalEnergy: "总能量", rewardEnergy: "今日能量", postCount: "帖子", likesReceived: "获赞", trustLevel: "信任等级",
     proxyModeUsed: "代理模式", proxyUsed: "是否使用代理", proxyReason: "代理原因", verificationBlocked: "需要验证",
     totalForums: "贴吧总数", tiebaTotalForums: "贴吧总数", successCount: "贴吧签到成功", tiebaSuccessCount: "贴吧签到成功", alreadySignedCount: "贴吧已签到", tiebaAlreadySignedCount: "贴吧已签到", shieldedCount: "贴吧屏蔽", tiebaShieldedCount: "贴吧屏蔽", failedCount: "贴吧失败", tiebaFailedCount: "贴吧失败",
     bonus: "魔力值", bonusGain: "签到获得", ratio: "分享率", upload: "上传", download: "下载", invite: "邀请", rewardName: "奖励名称",
@@ -942,6 +942,20 @@ function coinIcon(kind) {
 
 function buildAggregateMetrics(details = {}, siteKey = "") {
   const items = [];
+  if (["linux-sb", "sb-sb"].includes(siteKey)) {
+    if (details.username) items.push(metricItem(`👤${esc(String(details.username))}`, "metric-chip metric-level", "当前登录账户"));
+    if (details.levelTitle) items.push(metricItem(`🏅${esc(String(details.levelTitle))}`, "metric-chip metric-level", "账户等级"));
+    for (const [key, label, icon, style] of [
+      ["totalPoints", "积分", "💎", "points"], ["totalCoins", "烧饼", "🧇", "coin"],
+      ["totalExp", "成长", "⭐", "reward"], ["joinDays", "注册天数", "📅", "days"],
+      ["postCount", "帖子", "📝", "days"], ["bankBalance", "存款", "🏦", "coin"],
+      ["gameCoins", "游戏币", "🎮", "coin"],
+    ]) {
+      const value = finiteNumber(details[key]);
+      if (value !== null) items.push(metricItem(`${icon}${label} ${esc(String(value))}`, `metric-chip metric-${style}`, label));
+    }
+    return items.join("");
+  }
   const totalChickenLegs = finiteNumber(details.totalChickenLegs);
   const rewardChickenLegs = finiteNumber(details.rewardChickenLegs);
   const rewardExp = finiteNumber(details.rewardExp);

@@ -1,5 +1,6 @@
 import BaseDriver from "./base.js";
 import { request } from "../utils/http.js";
+import { parseForumAccount, parseLinuxWallet } from "../utils/forum-account.js";
 
 // Require positive account evidence: a public HTTP 200 page is not keepalive.
 export function classifyForumPage(html, baseUrl) {
@@ -62,7 +63,22 @@ export default class ForumVisitDriver extends BaseDriver {
       if (state === "challenge") return { success: false, message: "站点要求安全验证，请在相同代理出口人工完成验证后重试" };
       if (!response.ok) return { success: false, message: `保活访问失败：HTTP ${response.status}` };
       if (state !== "authenticated") return { success: false, message: state === "logged_out" ? "Cookie 未登录或已失效，请更新 Cookie" : "无法确认登录态，未报告保活成功" };
-      return { success: true, message: "已登录访问完成，保活成功", details: { status: response.status, authenticated: true } };
+      const account = parseForumAccount(html, base.href);
+      const details = { status: response.status, authenticated: true, ...account.details };
+      if (account.walletUrl && this.siteConfig.verify_only !== true) {
+        try {
+          const wallet = await this.fetchPage(account.walletUrl, cookie);
+          // Never follow a wallet redirect or reuse a challenge/login page as a balance.
+          if (wallet.ok) {
+            const walletHtml = await wallet.text();
+            if (classifyForumPage(walletHtml, base.href) === "authenticated") {
+              const balance = parseLinuxWallet(walletHtml);
+              if (balance !== null) details.totalCoins = balance;
+            }
+          } else await wallet.body?.cancel();
+        } catch { /* Optional metrics must not turn a confirmed visit into failure. */ }
+      }
+      return { success: true, message: "已登录访问完成，保活成功", details };
     }
     return { success: false, message: "保活页面重定向次数过多" };
   }

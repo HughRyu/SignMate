@@ -3,7 +3,7 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.32",
+    "version": "0.1.33",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
@@ -11,7 +11,7 @@
   "summary": {
     "title": "SignMate 项目知识图",
     "description": "手动更新的中文架构图；包含运行缓存、异步登录验证、健康探测和固定摘要部署。",
-    "totalFiles": 92
+    "totalFiles": 94
   },
   "nodes": [
     {
@@ -1198,6 +1198,32 @@
       "tags": [
         "离线验收"
       ]
+    },
+    {
+      "id": "file:src/utils/forum-account.js",
+      "type": "file",
+      "label": "forum-account.js",
+      "title": "src/utils/forum-account.js",
+      "description": "已登录论坛账户侧栏及 Linux SB 只读钱包信息解析",
+      "path": "src/utils/forum-account.js",
+      "layer": "utils",
+      "tags": [
+        "账户信息",
+        "保活"
+      ]
+    },
+    {
+      "id": "file:test/forum-account.test.js",
+      "type": "file",
+      "label": "forum-account.test.js",
+      "title": "test/forum-account.test.js",
+      "description": "账户隔离、零值、未知值及可选钱包故障回归",
+      "path": "test/forum-account.test.js",
+      "layer": "tests",
+      "tags": [
+        "账户信息",
+        "保活"
+      ]
     }
   ],
   "edges": [
@@ -2272,6 +2298,18 @@
     {
       "source": "file:test/v2ex.test.js",
       "target": "file:src/drivers/v2ex-utils.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/forum-visit.js",
+      "target": "file:src/utils/forum-account.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/forum-account.test.js",
+      "target": "file:src/utils/forum-account.js",
       "type": "imports",
       "label": "导入"
     }

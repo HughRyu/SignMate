@@ -46,7 +46,7 @@ async function safeProbe(site, secrets) {
   if (site.site_offline) return "unconfirmed";
   if (site.driver === "forum-visit") {
     // This driver performs only GET requests, never签到/回帖/领奖.
-    return classifySessionResult(await new ForumVisitDriver({ ...site, timeout: 10000 }, secrets).signIn());
+    return classifySessionResult(await new ForumVisitDriver({ ...site, timeout: 10000, verify_only: true }, secrets).signIn());
   }
   if (site.driver === "tieba") {
     const driver = new TiebaDriver({ ...site, timeout: 10000 }, secrets);
