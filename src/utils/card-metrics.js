@@ -25,6 +25,7 @@ const INTERNAL = /^(?:proxy|verification|tcaptcha|captcha|dryRun|checkinAction|c
 const SECRET = /cookie|token|secret|password|passwd|authorization|credential|session|api.?key|passkey|csrf|raw|html|header|debug|stack|url/i;
 const PRIORITY = ["levelTitle", "nodeSeekLevel", "fengLevel", "pcevaLevel", "level", "bonus", "totalChickenLegs", "totalEnergy", "fengCoins", "qianmojuPoints", "totalCoins", "totalWuAiCoins", "totalPoints", "points", "totalPbCoins", "totalExp", "totalExperience", "experience", "totalGold", "totalSilver", "totalCopper", "ratio", "upload", "download", "totalDays", "joinDays", "streakDays", "userGroup"];
 const SITE_PRIORITY = {
+  "naixi": ["userGroup", "totalPoints", "totalDays", "streakDays"],
   "sb-sb": ["totalCoins", "levelTitle", "totalExp", "joinDays"],
   "linux-sb": ["totalPoints", "totalCoins"],
   "baidu-tieba": ["tiebaTotalForums", "tiebaSuccessCount", "tiebaAlreadySignedCount", "tiebaFailedCount", "totalForums", "successCount", "alreadySignedCount", "failedCount"],

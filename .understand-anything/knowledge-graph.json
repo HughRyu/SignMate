@@ -3,7 +3,7 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.35",
+    "version": "0.1.36",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
@@ -11,7 +11,7 @@
   "summary": {
     "title": "SignMate 项目知识图",
     "description": "手动更新的中文架构图；包含运行缓存、异步登录验证、健康探测和固定摘要部署。",
-    "totalFiles": 96
+    "totalFiles": 100
   },
   "nodes": [
     {
@@ -1252,6 +1252,58 @@
         "隐私",
         "偏好"
       ]
+    },
+    {
+      "id": "file:src/utils/naixi-account.js",
+      "type": "file",
+      "label": "naixi-account.js",
+      "title": "src/utils/naixi-account.js",
+      "description": "奶昔同源已登录账户菜单的会员等级、积分解析和可选读取",
+      "path": "src/utils/naixi-account.js",
+      "layer": "utils",
+      "tags": [
+        "奶昔",
+        "账户信息"
+      ]
+    },
+    {
+      "id": "file:test/naixi-account.test.js",
+      "type": "file",
+      "label": "naixi-account.test.js",
+      "title": "test/naixi-account.test.js",
+      "description": "奶昔账户范围及 HTTP 签到后刷新回归",
+      "path": "test/naixi-account.test.js",
+      "layer": "tests",
+      "tags": [
+        "奶昔",
+        "账户信息"
+      ]
+    },
+    {
+      "id": "file:test/naixi-account-fixtures.js",
+      "type": "file",
+      "label": "naixi-account-fixtures.js",
+      "title": "test/naixi-account-fixtures.js",
+      "description": "不含真实凭据的奶昔账户与签到页面样本",
+      "path": "test/naixi-account-fixtures.js",
+      "layer": "tests",
+      "tags": [
+        "奶昔",
+        "账户信息"
+      ]
+    },
+    {
+      "id": "file:scripts/check-naixi-account.js",
+      "type": "file",
+      "label": "check-naixi-account.js",
+      "title": "scripts/check-naixi-account.js",
+      "description": "离线浏览器验证已签到、新签到后刷新和可选失败",
+      "path": "scripts/check-naixi-account.js",
+      "layer": "operations",
+      "tags": [
+        "奶昔",
+        "账户信息"
+      ]
     }
   ],
   "edges": [
@@ -2350,6 +2402,24 @@
     {
       "source": "file:test/card-metrics.test.js",
       "target": "file:src/utils/card-metrics.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/naixi.js",
+      "target": "file:src/utils/naixi-account.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/discuz-http.js",
+      "target": "file:src/utils/naixi-account.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/naixi-account.test.js",
+      "target": "file:src/utils/naixi-account.js",
       "type": "imports",
       "label": "导入"
     }

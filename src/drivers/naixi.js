@@ -1,3 +1,4 @@
+import { readNaixiAccount, naixiAccountStep } from "../utils/naixi-account.js";
 // ============================================================
 // naixi — 奶昔论坛 Daily Sign Driver
 //
@@ -173,15 +174,17 @@ export default class NaixiDriver extends BaseDriver {
 
       if (isNaixiAlreadySigned(bodyText)) {
         const stats = await readSignStats(page);
+        const account = await readNaixiAccount(() => page.content(), origin);
         const reward = buildReward(stats, bodyText);
         return {
           success: true,
           message: `今天已完成签到${reward ? `，奖励 ${reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}`,
-          details: { signTime, alreadySigned: true, reward, rewardExp: stats.rewardExp, streakDays: stats.streakDays, totalDays: stats.totalDays, pageTitle: title },
+          details: { signTime, alreadySigned: true, ...account, reward, rewardExp: stats.rewardExp, streakDays: stats.streakDays, totalDays: stats.totalDays, pageTitle: title },
           steps: [
             { label: "启动 Playwright 浏览器", ok: true },
             { label: "注入 Cookie 并准备浏览器上下文", ok: true },
             { label: "打开奶昔签到页面", ok: true, status: signPage?.status() || null },
+            naixiAccountStep(account),
             { label: "读取签到状态", ok: true, detail: `页面显示今天已签到${reward ? `，奖励 ${reward}` : ""}${Number.isFinite(stats.streakDays) ? `，连续 ${stats.streakDays} 天` : ""}` },
           ],
         };
@@ -214,21 +217,31 @@ export default class NaixiDriver extends BaseDriver {
       bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
       const finalPreview = bodyText.replace(/\s+/g, " ").slice(0, 300);
       const successText = /签到成功|恭喜|获得奖励|已签到|今日已签|今天已签|您今天已经签到/.test(finalPreview);
-      const stats = await readSignStats(page);
-      const reward = /签到成功|恭喜|获得奖励|奖励|已签到|今日已签|今天已签/.test(finalPreview) ? buildReward(stats, bodyText) : "";
+      let stats = await readSignStats(page);
       const ok = Boolean(signed?.status() && signed.status() < 400 && successText) && !/失败|错误|请先登录|登录/.test(finalPreview);
+      const account = ok ? await readNaixiAccount(async () => {
+        // The qiandao response may be XML; revisit the read-only sign page for fresh totals.
+        const refreshed = await page.goto(signPageUrl, { waitUntil: "domcontentloaded", timeout });
+        if (!refreshed?.ok()) throw new Error("Account page unavailable");
+        const html = await page.content();
+        const latestStats = await readSignStats(page);
+        stats = { ...stats, ...Object.fromEntries(Object.entries(latestStats).filter(([, value]) => value !== null)) };
+        return html;
+      }, origin) : {};
+      const reward = /签到成功|恭喜|获得奖励|奖励|已签到|今日已签|今天已签/.test(finalPreview) ? buildReward(stats, bodyText) : "";
 
       return {
         success: ok,
         message: ok ? `${isNaixiAlreadySigned(finalPreview) ? "今天已完成签到" : "签到成功"}${reward ? `，奖励 ${reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}` : `签到失败：${finalPreview || `HTTP ${signed?.status() || "unknown"}`}`,
         raw: finalPreview,
-        details: { signTime, reward, rewardExp: stats.rewardExp, streakDays: stats.streakDays, totalDays: stats.totalDays, pageTitle: await page.title().catch(() => title) },
+        details: { signTime, ...account, reward, rewardExp: stats.rewardExp, streakDays: stats.streakDays, totalDays: stats.totalDays, pageTitle: await page.title().catch(() => title) },
         steps: [
           { label: "启动 Playwright 浏览器", ok: true },
           { label: "注入 Cookie 并准备浏览器上下文", ok: true },
           { label: "打开奶昔签到页面", ok: true, status: signPage?.status() || null, detail: isNaixiNotSigned(preview) ? "页面显示今天还没有签到" : preview },
           { label: "找到签到链接", ok: true, detail: signHref },
           { label: "访问签到链接", ok, status: signed?.status() || null, detail: ok ? `${finalPreview}${reward ? `；奖励 ${reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续 ${stats.streakDays} 天` : ""}` : finalPreview },
+          ...(ok ? [naixiAccountStep(account)] : []),
         ],
       };
     } finally {

@@ -1,3 +1,4 @@
+import { parseNaixiAccount, readNaixiAccount, naixiAccountStep } from "./naixi-account.js";
 // ============================================================
 // discuz-http — HTTP/API-first helpers for Discuz plugin-style
 // daily sign-in drivers. Playwright remains the fallback when a
@@ -287,16 +288,27 @@ async function runNaixi(siteConfig, secrets) {
   const page = await openText(session, `${origin}/k_misign-sign.html`, steps, "HTTP 打开奶昔签到页面");
   if (!loggedIn(page.text, page.title)) return { success: false, message: "奶昔论坛登录态无效或 Cookie 不完整，请重新维护 Cookie", details: { signTime, pageTitle: page.title }, steps };
   let stats = parseNaixiStats(page.text, page.html);
+  let account = parseNaixiAccount(page.html, origin);
   if (isNaixiAlreadySigned(page.text)) {
+    steps.push(naixiAccountStep(account));
     steps.push({ label: "HTTP 读取签到状态", ok: true, detail: "页面显示今天已签到" });
-    return { success: true, message: `今天已完成签到${stats.reward ? `，奖励 ${stats.reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}`, details: { signTime, alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed", ...stats, pageTitle: page.title }, steps };
+    return { success: true, message: `今天已完成签到${stats.reward ? `，奖励 ${stats.reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}`, details: { signTime, alreadySigned: true, clickedSignIn: false, checkinAction: "api_already_signed", ...stats, ...account, pageTitle: page.title }, steps };
   }
   const href = decodeHtml(page.html.match(/href=["']([^"']*operation=qiandao[^"']*)/i)?.[1] || "");
   if (!href) return { success: false, message: "HTTP 未找到奶昔论坛签到链接", details: { signTime, pageTitle: page.title }, steps };
   const signed = await openText(session, absUrl(`${origin}/k_misign-sign.html`, href), steps, "HTTP 提交奶昔签到");
   stats = parseNaixiStats(`${signed.text} ${page.text}`, signed.html || page.html);
   const ok = signed.res.status < 400 && /签到成功|恭喜|获得奖励|已签到|今日已签|今天已签|您今天已经签到/.test(signed.text);
-  return { success: ok, message: ok ? `签到成功${stats.reward ? `，奖励 ${stats.reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}` : `签到失败：${compactText(signed.text).slice(0, 160)}`, details: { signTime, clickedSignIn: true, checkinAction: ok ? "api_signed" : "api_failed", ...stats, pageTitle: signed.title || page.title }, steps };
+  account = ok ? await readNaixiAccount(async () => {
+    const refreshed = await session.get(`${origin}/k_misign-sign.html`);
+    if (!refreshed.ok) throw new Error("Account page unavailable");
+    const html = await readText(refreshed);
+    const latestStats = parseNaixiStats(htmlToText(html), html);
+    stats = { ...stats, ...Object.fromEntries(Object.entries(latestStats).filter(([, value]) => value !== null && value !== "")) };
+    return html;
+  }, origin) : {};
+  if (ok) steps.push(naixiAccountStep(account));
+  return { success: ok, message: ok ? `签到成功${stats.reward ? `，奖励 ${stats.reward}` : ""}${Number.isFinite(stats.streakDays) ? `；连续签到 ${stats.streakDays} 天` : ""}；签到时间：${signTime}` : `签到失败：${compactText(signed.text).slice(0, 160)}`, details: { signTime, clickedSignIn: true, checkinAction: ok ? "api_signed" : "api_failed", ...stats, ...account, pageTitle: signed.title || page.title }, steps };
 }
 
 async function runDsu(siteConfig, secrets, flavor) {
