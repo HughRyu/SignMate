@@ -11009,6 +11009,8 @@ input.is-saved-field:focus {
   min-height: 34px !important;
   max-height: 34px !important;
   padding: 6px 9px !important;
+  align-items: center !important;
+  justify-items: stretch !important;
 }
 #tab-sites .site-card .aggregate-metrics .metric-chip {
   display: block !important;
@@ -11023,6 +11025,41 @@ input.is-saved-field:focus {
   text-overflow: ellipsis !important;
 }
 #tab-sites .site-card .aggregate-metrics .metric-empty { grid-column: 1 / -1; min-width: 0; }
+/* Short signin summaries show the value in full, centered in each equal slot. */
+#tab-sites .signin-card .aggregate-metrics .metric-chip {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 0 2px !important;
+  width: 100% !important;
+  font-size: 12px !important;
+  line-height: 14px !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+}
+#tab-sites .signin-card .metric-chip:only-child { grid-column: 1 / -1; }
+#tab-sites .signin-card .metric-symbol { flex: 0 0 auto; opacity: 1; }
+#tab-sites .signin-card .metric-value { min-width: 0; font-variant-numeric: tabular-nums; opacity: 1; }
+/* Two text lines fit the usual band. Exceptional long custom values may grow
+   instead of silently clipping information or overlapping the signin status. */
+#tab-sites .signin-card .site-card-overview {
+  height: auto;
+  grid-template-rows: minmax(34px, max-content) 72px;
+}
+#tab-sites .signin-card .aggregate-metrics {
+  grid-template-rows: minmax(28px, max-content) !important;
+  height: auto !important;
+  max-height: none !important;
+  padding: 2px 7px !important;
+  overflow: visible !important;
+}
+#tab-sites .signin-card .aggregate-metrics .metric-chip {
+  height: auto !important;
+  min-height: 28px !important;
+}
 #tab-sites .signin-card .site-card-overview > .site-card-status {
   display: grid !important;
   height: 72px !important;

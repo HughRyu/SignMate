@@ -19,7 +19,7 @@ const store = await import("../src/store.js");
 for (const [key, details] of [
   ["linux-sb", { username: "LinuxFixture", totalPoints: 900, totalCoins: 0 }],
   ["sb-sb", { username: "ForumFixture", levelTitle: "Lv.1 初来乍到", totalCoins: 1056, totalExp: 28, joinDays: 52, postCount: 0, bankBalance: 0, gameCoins: 0, featuredCount: 0, followingCount: 0, followersCount: 0 }],
-  ["fixture", { username: "PrivateFixture", email: "private@example.invalid", totalPoints: 100, totalDays: 7, totalExp: 55, userGroup: "会员", customMetric: 99 }],
+  ["fixture", { username: "PrivateFixture", email: "private@example.invalid", totalPoints: 100, totalDays: 7, totalExp: 1234567, level: 7, userGroup: "中级会员", totalWuAiCoins: 571, bonus: "1234567.89", customMetric: 99 }],
   ["audiences-me", { username: "PrivatePT", bonus: "1234.5", ratio: "2.5", upload: "1 TB", download: "400 GB", invite: 3 }],
 ]) await store.addEntry(key, { siteKey: key, kind: "visit", success: true, message: key === "fixture" ? "PrivateFixture private@example.invalid 保活成功" : "保活成功", details });
 const server = await startServer();
@@ -116,11 +116,36 @@ try {
   }
   await page.reload();
   await page.locator("#card-fixture").waitFor();
-  assert.match(await page.locator("#card-fixture .aggregate-metrics").innerText(), /customMetric 99/);
+  assert.match(await page.locator("#card-fixture .aggregate-metrics").innerText(), /99/);
   assert.match(await page.locator("#card-audiences-me .aggregate-metrics").innerText(), /邀请 3/);
   assert.equal(await page.locator("#card-linux-sb .metric-chip").count(), 0);
   await page.locator("#card-linux-sb .aggregate-metrics").click();
   await page.locator("#cardMetricPicker").waitFor();
+  await page.locator("#processModalClose").click();
+  // Compact signin values stay centered, legible and fully visible at every width.
+  for (const [selected, expected] of [
+    [["level", "totalExp"], ["Lv 7", "⭐1234567"]],
+    [["userGroup", "totalWuAiCoins"], ["中级会员", "🪙571"]],
+    [["bonus", "totalPoints"], ["✨1234567.89", "💎100"]],
+    [["userGroup"], ["中级会员"]],
+  ]) {
+    const response = await fetch(`${base}/api/sites/fixture/card-metrics`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ metrics: selected }) });
+    assert.equal(response.status, 200);
+    await page.reload(); await page.locator("#card-fixture").waitFor();
+    for (const width of [1366, 1024, 768, 390, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const chips = page.locator("#card-fixture .metric-chip");
+      assert.deepEqual(await chips.allTextContents(), expected);
+      const geometry = await chips.evaluateAll(items => items.map(el => {
+        const range = document.createRange(); range.selectNodeContents(el);
+        const text = range.getBoundingClientRect(), box = el.getBoundingClientRect();
+        return { centered: Math.abs((text.left + text.right) - (box.left + box.right)) < 3,
+          visible: text.left >= box.left - 1 && text.right <= box.right + 1 && text.top >= box.top - 1 && text.bottom <= box.bottom + 1,
+          font: Number.parseFloat(getComputedStyle(el).fontSize), label: !!el.getAttribute("aria-label") };
+      }));
+      assert.ok(geometry.every(g => g.centered && g.visible && g.font >= 12 && g.label), `${width}: ${JSON.stringify(geometry)}`);
+    }
+  }
   assert.deepEqual(errors, []);
   console.log("[check:service] health, API and browser UI passed");
 } finally {

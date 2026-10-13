@@ -955,12 +955,25 @@ function availableCardMetrics(site, details = site.details || {}) {
 function cardMetricValue(value) {
   return typeof value === "boolean" ? (value ? "是" : "否") : String(value);
 }
+function compactCardMetric(option, value) {
+  // Names are already meaningful; repeating “用户组/等级” wastes the short band.
+  if (option.key === "userGroup" || option.key === "qianmojuLevel") return esc(value);
+  if (/^(levelTitle|level|trustLevel|fengLevel|pcevaLevel|nodeSeekLevel)$/.test(option.key)) {
+    const level = value.trim().match(/^(?:Lv\.?\s*|等级\s*)?(\d+)(?:\b|级)/i);
+    return esc(level ? `Lv ${level[1]}` : value);
+  }
+  return `<span class="metric-symbol" aria-hidden="true">${esc(option.icon)}</span><span class="metric-value">${esc(value)}</span>`;
+}
 function buildAggregateMetrics(details = {}, siteKey = "", site = {}) {
   return (site.cardMetrics || []).slice(0, site.cardMetricLimit || 2).map(key => {
     const option = availableCardMetrics(site, details).find(item => item.key === key);
     if (!option) return "";
     const value = cardMetricValue(details[key]);
-    return metricItem(`${option.icon}${esc(option.label)} ${esc(value)}`, `metric-chip metric-${option.style}`, `${option.label}：${value}`);
+    const title = `${option.label}：${value}`;
+    if (siteKindOf(site) !== "visit") {
+      return `<span class="metric-chip metric-${option.style}" title="${escAttr(title)}" aria-label="${escAttr(title)}">${compactCardMetric(option, value)}</span>`;
+    }
+    return metricItem(`${option.icon}${esc(option.label)} ${esc(value)}`, `metric-chip metric-${option.style}`, title);
   }).join("");
 }
 

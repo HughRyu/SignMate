@@ -49,7 +49,13 @@ export function cardMetricOptions(details = {}, siteKey = "") {
     const personal = PRIVATE.test(key);
     const defaultEligible = Object.hasOwn(LABELS, key) && !personal && !["status", "authenticated", "alreadySigned", "signTime", "visitTime", "pointsGain"].includes(key);
     const style = /level|group/i.test(key) ? "level" : /days|count/i.test(key) ? "days" : /coin|gold|silver|copper|bonus|balance/i.test(key) ? "coin" : "points";
-    return { key, label: label(key, siteKey), icon: personal ? "👤" : style === "level" ? "🏅" : style === "days" ? "📅" : style === "coin" ? "🪙" : "💎", style, personal, defaultEligible };
+    const icon = personal ? "👤" : /^(totalExp|experience|totalExperience|rewardExp)$/.test(key) ? "⭐"
+      : /^bonus/.test(key) ? (siteKey === "audiences-me" ? "🍿" : "✨")
+      : /energy|vitality/i.test(key) ? "⚡" : /chickenLeg/i.test(key) ? "🍗"
+      : /streak|^cons$/.test(key) ? "🔥" : key === "upload" ? "↑" : key === "download" ? "↓"
+      : /invite/i.test(key) ? "✉" : key === "ratio" ? "⇄"
+      : style === "level" ? "🏅" : style === "days" ? "📅" : style === "coin" ? "🪙" : "💎";
+    return { key, label: label(key, siteKey), icon, style, personal, defaultEligible };
   });
 }
 export const cardMetricLimit = site => site?.kind === "visit" ? 4 : 2;
