@@ -3,7 +3,7 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.36",
+    "version": "0.1.37",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
@@ -964,7 +964,7 @@
       "type": "file",
       "label": "app.js",
       "title": "src/web/app.js",
-      "description": "项目管理界面；无步骤执行详情入口与全站信息选择与默认个人信息隐藏。",
+      "description": "项目管理界面；无步骤执行详情入口与全站信息选择与默认个人信息隐藏。；签到两项与保活四项选择，摘要容器使签到栏与保活信息区同高。",
       "path": "src/web/app.js",
       "layer": "frontend",
       "tags": [
@@ -1230,7 +1230,7 @@
       "type": "file",
       "label": "card-metrics.js",
       "title": "src/utils/card-metrics.js",
-      "description": "全站可展示字段策略、个人信息默认隐藏、偏好与四项限制",
+      "description": "全站可展示字段策略、个人信息默认隐藏、按站点能力限制签到两项及保活四项。",
       "path": "src/utils/card-metrics.js",
       "layer": "utils",
       "tags": [

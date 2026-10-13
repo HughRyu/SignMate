@@ -1,7 +1,7 @@
 {
   "projectName": "SignMate",
-  "gitCommitHash": "6da8fc7dad83ed540f0490c9a259a0bc4c4ac949",
-  "generatedAt": "2026-10-12T07:08:47.081090+00:00",
+  "gitCommitHash": "2c6a7bbbd1890b064d1d9bcc6eefbaea68f71f5c",
+  "generatedAt": "2026-10-12T07:35:56.067173+00:00",
   "language": "zh",
   "autoUpdate": false,
   "sharedArtifacts": [
@@ -16,6 +16,6 @@
     "tmp/",
     "fingerprints.json"
   ],
-  "targetRelease": "v0.1.36",
+  "targetRelease": "v0.1.37",
   "sourceState": "release working tree"
 }

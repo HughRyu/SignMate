@@ -1,4 +1,4 @@
-import { cardMetricOptions, defaultCardMetrics, selectedCardMetrics, validCardMetricSelection } from "./utils/card-metrics.js";
+import { cardMetricLimit, cardMetricOptions, defaultCardMetrics, selectedCardMetrics, validCardMetricSelection } from "./utils/card-metrics.js";
 import { operations, healthReport } from "./utils/operations.js";
 import { createVerificationQueue, publicVerification } from "./utils/session-verification.js";
 import { checkBrowserHealth } from "./utils/browser-health.js";
@@ -1277,9 +1277,10 @@ export async function startServer() {
           proxyGlobalEnabled: site.proxy_global_enabled === true,
           proxyModeUsed: status.details?.proxyModeUsed || null,
           proxyUsed: status.details?.proxyUsed ?? null,
+          cardMetricLimit: cardMetricLimit(site),
           cardMetricOptions: metricOptions,
-          defaultCardMetrics: defaultCardMetrics(metricOptions, key),
-          cardMetrics: selectedCardMetrics(site.card_metrics, metricOptions, key),
+          defaultCardMetrics: defaultCardMetrics(metricOptions, key, cardMetricLimit(site)),
+          cardMetrics: selectedCardMetrics(site.card_metrics, metricOptions, key, cardMetricLimit(site)),
           executionMethod,
           executionMethodLabel: executionMethodLabel(executionMethod),
           category: site.category || "forum",
@@ -1316,8 +1317,8 @@ export async function startServer() {
       const statuses = await store.getSitesStatus();
       const status = statuses.find(item => item.siteKey === site.key) || statuses.find(item => item.site === (site.note || site.key));
       const selected = req.body?.metrics;
-      if (!validCardMetricSelection(selected, cardMetricOptions(status?.details, site.key))) {
-        return res.status(400).json({ ok: false, error: "最多选择 4 项有效且不重复的信息" });
+      if (!validCardMetricSelection(selected, cardMetricOptions(status?.details, site.key), cardMetricLimit(site))) {
+        return res.status(400).json({ ok: false, error: `最多选择 ${cardMetricLimit(site)} 项有效且不重复的信息` });
       }
       const sitesRaw = readSitesRaw();
       siteOverrideFor(site.key, sitesRaw).card_metrics = selected;

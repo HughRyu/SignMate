@@ -956,7 +956,7 @@ function cardMetricValue(value) {
   return typeof value === "boolean" ? (value ? "是" : "否") : String(value);
 }
 function buildAggregateMetrics(details = {}, siteKey = "", site = {}) {
-  return (site.cardMetrics || []).slice(0, 4).map(key => {
+  return (site.cardMetrics || []).slice(0, site.cardMetricLimit || 2).map(key => {
     const option = availableCardMetrics(site, details).find(item => item.key === key);
     if (!option) return "";
     const value = cardMetricValue(details[key]);
@@ -1190,20 +1190,21 @@ function buildSiteCard(site) {
   const executionMethod = executionMethodShort(site);
   const scheduleTitle = missedTodaySignin ? `已过今日设定签到时间，尚未完成今日签到；${lastRunScheduleTitle(site, recentLabel)}` : lastRunScheduleTitle(site, recentLabel);
 
-  const showStatusBand = (!isVisit || isRunning) && (!isPtSite || verificationBlocked);
+  const showStatusBand = !isVisit || isRunning;
   const ptStatusClass = isPtSite && showStatusBand ? "has-pt-status" : "";
 
   return `
     <div class="card site-card ${isVisit ? "visit-card" : "signin-card"} ${isPtSite ? "pt-card" : ""} ${ptStatusClass} ${hasStatus && !site.lastSuccess ? "is-running" : ""}" id="card-${escAttr(site.key)}" data-category="${escAttr(site.category || 'forum')}">
       <span class="site-category-corner cat-${escAttr(categoryKey)}" title="分类：${escAttr(categoryLabel(categoryKey))}">${esc(categoryAbbr(categoryKey))}</span>
       <div class="site-card-header">
-        <span class="site-card-name proxy-name-${escAttr(details.proxyModeUsed || (site.proxyMode === "on" ? "proxy" : site.proxyMode === "off" ? "direct" : "auto"))}" data-site-url="${escAttr(site.baseUrl || site.base_url || "")}" title="双击打开签到站点" tabindex="-1">${esc(displayName)}<span class="site-exec-badge" title="${escAttr(executionMethodTitle(site))}">${esc(executionMethod)}</span></span>
+        <span class="site-card-name proxy-name-${escAttr(details.proxyModeUsed || (site.proxyMode === "on" ? "proxy" : site.proxyMode === "off" ? "direct" : "auto"))}" data-site-url="${escAttr(site.baseUrl || site.base_url || "")}" title="${escAttr(displayName)}（双击打开站点）" tabindex="-1">${esc(displayName)}<span class="site-exec-badge" title="${escAttr(executionMethodTitle(site))}">${esc(executionMethod)}</span></span>
         <div class="site-card-header-right">
           ${verificationLock}${statusBadge}
           <button class="site-card-tag ${tagClass} tag-button" id="toggle-${escAttr(site.key)}" title="点击切换启用/禁用；禁用后刷新页面才会从当前列表隐藏">${tagText}</button>
         </div>
       </div>
 
+      <div class="site-card-overview">
       <div class="site-card-metrics aggregate-metrics">
         ${aggregateMetrics || `<span class="metric-empty">${site.cardMetricOptions?.length ? "未选择展示项目（点击设置）" : "暂无累计信息（点击查看）"}</span>`}
       </div>
@@ -1215,6 +1216,7 @@ function buildSiteCard(site) {
         </div>
       </div>` : ""}
 
+      </div>
       ${site.verification ? `<div class="site-card-schedule"><span>登录态</span><span>${esc(({execution_succeeded:"最近任务成功（非独立登录验证）",unverified:"尚未验证",pending:"同步完成，检查中",verified:"已验证",invalid:"已失效，请更新",challenge:"需人工验证",unconfirmed:"网络或页面异常，未确认",unsupported:"等待站点执行确认（无只读检查）",disabled:"站点停用，未检查"})[site.verification.status] || "尚未验证")}</span></div>` : ""}
       ${site.operational?.consecutiveFailures >= 3 ? `<div class="site-card-status">⚠ 连续失败 ${Number(site.operational.consecutiveFailures)} 次</div>` : ""}
       ${site.activeRuns?.some(run => run.stuck) ? '<div class="site-card-status">⚠ 任务超过 30 分钟，请检查日志</div>' : ""}
@@ -2991,7 +2993,7 @@ function cardMetricPicker(site) {
   const selected = new Set(site.cardMetrics || []);
   return `<form id="cardMetricPicker" class="card-metric-picker">
     <h4>卡片展示项目</h4>
-    <p>最多选择 4 项显示在卡片上，其余信息在下方查看。用户名等个人信息默认不展示。</p>
+    <p>最多选择 ${site.cardMetricLimit || 2} 项显示在卡片上，其余信息在下方查看。用户名等个人信息默认不展示。</p>
     <div class="card-metric-options">${options.map(option => `<label><input type="checkbox" name="metric" value="${escAttr(option.key)}" ${selected.has(option.key) ? "checked" : ""}><span>${esc(option.label)}：${esc(cardMetricValue(site.details[option.key]))}${option.personal ? "（个人信息）" : ""}</span></label>`).join("")}</div>
     <div class="card-metric-toolbar"><span id="cardMetricCount" aria-live="polite"></span><button type="submit" class="btn btn-primary">保存展示项目</button></div>
     <p id="cardMetricFeedback" role="status"></p>
@@ -3043,7 +3045,7 @@ function openProcessModal(site) {
   const picker = modal.querySelector("#cardMetricPicker");
   if (picker) {
     const inputs = [...picker.querySelectorAll('input[name="metric"]')];
-    const limit = 4;
+    const limit = site.cardMetricLimit || 2;
     const save = picker.querySelector('button[type="submit"]');
     let saving = false;
     const update = () => {

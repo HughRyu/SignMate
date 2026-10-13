@@ -44,6 +44,8 @@ try {
   assert.match(card, /已验证/);
   assert.match(card, /连续失败 3 次/);
   assert.match(await page.locator("#sitesSummary").innerText(), /通知发送失败/);
+  runtimeState.update("runs", "fixture", { consecutiveFailures: 0 });
+  await page.reload(); await page.locator("#card-fixture").waitFor();
   for (const width of [1366, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     for (const key of ["linux-sb", "sb-sb", "fixture", "audiences-me"]) {
@@ -52,10 +54,10 @@ try {
       assert.doesNotMatch(await card.innerHTML(), /LinuxFixture|ForumFixture|PrivateFixture|PrivatePT|private@example/);
       if (key === "linux-sb") assert.match(metrics, /烧饼 0/);
       if (key === "sb-sb") assert.match(metrics, /注册天数 52/);
-      assert.equal(await card.locator(".metric-chip").count(), key === "linux-sb" ? 2 : 4);
+      assert.equal(await card.locator(".metric-chip").count(), Math.min(key === "linux-sb" ? 2 : 4, sites.data.find(site => site.key === key).cardMetricLimit));
       await card.locator(".aggregate-metrics").click();
       await page.locator("#cardMetricPicker").waitFor();
-      assert.equal(await page.locator('#cardMetricPicker input:checked').count(), key === "linux-sb" ? 2 : 4);
+      assert.equal(await page.locator('#cardMetricPicker input:checked').count(), Math.min(key === "linux-sb" ? 2 : 4, sites.data.find(site => site.key === key).cardMetricLimit));
       assert.match(await page.locator("#processModal .process-details-panel").innerText(), new RegExp(({ "linux-sb": "LinuxFixture", "sb-sb": "ForumFixture", fixture: "PrivateFixture", "audiences-me": "PrivatePT" })[key]));
       assert.equal(await page.locator("#processModal .modal-card").evaluate(el => el.scrollWidth > el.clientWidth + 1), false);
       await page.locator("#processModalClose").click();
@@ -63,10 +65,13 @@ try {
         const box = el.getBoundingClientRect();
         return [...el.querySelectorAll(".aggregate-metrics,.metric-chip,.site-card-schedule,.site-card-actions")].some(item => {
           const r = item.getBoundingClientRect();
-          return r.bottom > box.bottom || r.right > box.right || r.left < box.left || item.scrollWidth > item.clientWidth + 1;
+          return r.bottom > box.bottom || r.right > box.right || r.left < box.left || (!item.classList.contains("metric-chip") && item.scrollWidth > item.clientWidth + 1);
         });
       }), false, `${key} overflow at ${width}`);
     }
+    const heights = await page.locator("#card-fixture,#card-sb-sb,#card-linux-sb,#card-audiences-me").evaluateAll(cards => cards.map(card => ({ id: card.id, height: card.getBoundingClientRect().height, overview: card.querySelector(".site-card-overview").getBoundingClientRect().height })));
+    assert.ok(heights.every(item => item.overview === 116), JSON.stringify(heights));
+    assert.ok(Math.max(...heights.map(item=>item.height))-Math.min(...heights.map(item=>item.height)) <= 1, `${width}: ${JSON.stringify(heights)}`);
   }
   // Old records have no steps, yet both pointer and keyboard must open the dialog.
   await page.locator("#card-sb-sb .aggregate-metrics").focus();
@@ -98,6 +103,8 @@ try {
     const response = await fetch(`${base}/api/sites/sb-sb/card-metrics`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ metrics }) });
     assert.equal(response.status, 400);
   }
+  const tooMany = await fetch(`${base}/api/sites/fixture/card-metrics`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ metrics: ["totalPoints", "totalDays", "totalExp"] }) });
+  assert.equal(tooMany.status, 400);
   assert.equal(readFileSync("config/sites.yaml", "utf8"), before);
   await page.locator("#processModalClose").click();
   // A custom signin site and a PT site use the same persistent selection API.

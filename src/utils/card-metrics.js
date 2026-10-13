@@ -52,7 +52,9 @@ export function cardMetricOptions(details = {}, siteKey = "") {
     return { key, label: label(key, siteKey), icon: personal ? "👤" : style === "level" ? "🏅" : style === "days" ? "📅" : style === "coin" ? "🪙" : "💎", style, personal, defaultEligible };
   });
 }
-export function defaultCardMetrics(options, siteKey = "") {
+export const cardMetricLimit = site => site?.kind === "visit" ? 4 : 2;
+
+export function defaultCardMetrics(options, siteKey = "", limit = 4) {
   const priority = [...(SITE_PRIORITY[siteKey] || []), ...PRIORITY];
   const aliases = { totalExperience: "experience", totalExp: "experience", points: "totalPoints", addup: "totalDays", cons: "streakDays", fengLevel: "level", pcevaLevel: "level", levelTitle: "level", nodeSeekLevel: "level", totalForums: "tiebaTotalForums", successCount: "tiebaSuccessCount", alreadySignedCount: "tiebaAlreadySignedCount", failedCount: "tiebaFailedCount", shieldedCount: "tiebaShieldedCount" };
   const used = new Set();
@@ -63,14 +65,14 @@ export function defaultCardMetrics(options, siteKey = "") {
     const group = aliases[option.key] || option.key;
     if (used.has(group)) return false;
     used.add(group); return true;
-  }).slice(0, 4).map(option => option.key);
+  }).slice(0, limit).map(option => option.key);
 }
-export function selectedCardMetrics(saved, options, siteKey = "") {
+export function selectedCardMetrics(saved, options, siteKey = "", limit = 4) {
   // Retain valid saved slots even if a later run temporarily omits a value.
-  return Array.isArray(saved) ? [...new Set(saved)].filter(key => typeof key === "string" && /^[a-zA-Z][\w-]{0,63}$/.test(key) && !SECRET.test(key)).slice(0, 4)
-    : defaultCardMetrics(options, siteKey);
+  return Array.isArray(saved) ? [...new Set(saved)].filter(key => typeof key === "string" && /^[a-zA-Z][\w-]{0,63}$/.test(key) && !SECRET.test(key)).slice(0, limit)
+    : defaultCardMetrics(options, siteKey, limit);
 }
-export function validCardMetricSelection(selected, options) {
-  return Array.isArray(selected) && selected.length <= 4 && new Set(selected).size === selected.length
+export function validCardMetricSelection(selected, options, limit = 4) {
+  return Array.isArray(selected) && selected.length <= limit && new Set(selected).size === selected.length
     && selected.every(key => options.some(option => option.key === key));
 }

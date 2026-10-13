@@ -10975,24 +10975,66 @@ input.is-saved-field:focus {
 .card-metric-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
 @media (max-width: 520px) { .card-metric-options { grid-template-columns: 1fr; } }
 
-/* A selected summary always has up to four readable rows, for every site kind. */
+/* Both card kinds reserve the same summary band: 34 + 10 + 72 = 116px. */
+#tab-sites .site-card .site-card-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: 116px;
+  min-height: 116px;
+  gap: 0;
+}
+#tab-sites .signin-card .site-card-overview {
+  grid-template-rows: 34px 72px;
+  row-gap: 10px;
+}
 #tab-sites .site-card .aggregate-metrics {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) !important;
-  grid-template-rows: none !important;
-  grid-auto-rows: minmax(20px, auto) !important;
+  grid-template-rows: repeat(4, 20px) !important;
+  grid-auto-rows: 20px !important;
   gap: 6px !important;
-  height: auto !important;
+  height: 116px !important;
   min-height: 116px !important;
-  max-height: none !important;
-  overflow: visible !important;
+  max-height: 116px !important;
+  padding: 10px 9px !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+  overflow: hidden !important;
   align-content: start !important;
+}
+#tab-sites .signin-card .aggregate-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: 20px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 6px 9px !important;
 }
 #tab-sites .site-card .aggregate-metrics .metric-chip {
   display: block !important;
+  box-sizing: border-box;
   max-width: 100%;
-  height: auto !important;
   min-width: 0;
-  white-space: normal !important;
-  overflow-wrap: anywhere;
+  height: 20px !important;
+  min-height: 20px !important;
+  line-height: 18px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
+#tab-sites .site-card .aggregate-metrics .metric-empty { grid-column: 1 / -1; min-width: 0; }
+#tab-sites .signin-card .site-card-overview > .site-card-status {
+  display: grid !important;
+  height: 72px !important;
+  min-height: 72px !important;
+  max-height: 72px !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+/* Running keepalive status temporarily replaces the summary, within the same band. */
+#tab-sites .visit-card .site-card-overview:has(> .site-card-status) .aggregate-metrics { display: none !important; }
+#tab-sites .visit-card .site-card-overview > .site-card-status { height: 116px !important; min-height: 116px !important; max-height: 116px !important; margin: 0 !important; box-sizing: border-box; }
+
+#tab-sites .site-card .site-card-header { height: 28px !important; min-height: 28px !important; max-height: 28px !important; flex-shrink: 0; }
+#tab-sites .site-card .site-card-name { min-width: 0; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+#tab-sites .site-card .site-card-actions { margin-bottom: 0 !important; }

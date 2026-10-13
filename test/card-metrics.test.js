@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cardMetricOptions, defaultCardMetrics, selectedCardMetrics, validCardMetricSelection } from "../src/utils/card-metrics.js";
+import { cardMetricLimit, cardMetricOptions, defaultCardMetrics, selectedCardMetrics, validCardMetricSelection } from "../src/utils/card-metrics.js";
 
 test("all site kinds get selectable metrics; personal and unknown fields stay off by default", () => {
   for (const key of ["linux-sb", "sb-sb", "v2ex", "audiences-me", "custom-site"]) {
@@ -25,4 +25,14 @@ test("preferences permit four unique available fields, zero fields and omitted v
   assert.deepEqual(selectedCardMetrics(["username", "totalCoins"], [], "sb-sb"), ["username", "totalCoins"]);
   assert.deepEqual(selectedCardMetrics(["cookie", "username"], options), ["username"]);
   assert.deepEqual(defaultCardMetrics(cardMetricOptions({ username: "private", totalPoints: 900, totalCoins: 0 }, "linux-sb"), "linux-sb"), ["totalPoints", "totalCoins"]);
+});
+
+test("signin limits defaults, legacy selections and writes to two; keepalive retains four", () => {
+  const options = cardMetricOptions({ totalPoints: 580, userGroup: "中级会员", totalDays: 8, streakDays: 2 }, "naixi");
+  assert.equal(cardMetricLimit({ kind: "signin", category: "pt" }), 2);
+  assert.equal(cardMetricLimit({ kind: "visit" }), 4);
+  assert.deepEqual(defaultCardMetrics(options, "naixi", 2), ["userGroup", "totalPoints"]);
+  assert.deepEqual(selectedCardMetrics(["userGroup", "totalPoints", "totalDays", "streakDays"], options, "naixi", 2), ["userGroup", "totalPoints"]);
+  assert.equal(validCardMetricSelection(["userGroup", "totalPoints", "totalDays"], options, 2), false);
+  assert.equal(validCardMetricSelection(options.map(item => item.key), options, 4), true);
 });
