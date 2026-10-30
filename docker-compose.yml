@@ -12,7 +12,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        SIGNMATE_VERSION: ${SIGNMATE_VERSION:-0.1.38}
+        SIGNMATE_VERSION: ${SIGNMATE_VERSION:-0.1.39}
         SIGNMATE_GIT_COMMIT: ${SIGNMATE_GIT_COMMIT:-unknown}
     container_name: signmate
     restart: unless-stopped

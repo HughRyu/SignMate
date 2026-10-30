@@ -434,6 +434,7 @@ export function startScheduler(enabledSites, secrets) {
       const { runSingle, compactResultForNotify } = await import("./runner.js");
       logger.info(`[定时触发] ${site.note || site.driver}`);
       const result = await runSingle(site, secrets, { source: "schedule" });
+      if (result.skipped) return;
       await store.addEntry(result.site || site.note || site.driver, result);
       const notifyConfig = loadNotifyConfigSafe();
       const onlyFailures = notifyConfig.signin?.only_failures === true;

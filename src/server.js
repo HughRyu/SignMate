@@ -1,4 +1,5 @@
 import { cardMetricLimit, cardMetricOptions, defaultCardMetrics, selectedCardMetrics, validCardMetricSelection } from "./utils/card-metrics.js";
+import { failurePolicy } from "./utils/failure-policy.js";
 import { operations, healthReport } from "./utils/operations.js";
 import { createVerificationQueue, publicVerification } from "./utils/session-verification.js";
 import { checkBrowserHealth } from "./utils/browser-health.js";
@@ -1292,6 +1293,7 @@ export async function startServer() {
           hasCookie,
           verification: publicVerification(runtimeState.read().verification?.[key], siteSecrets),
           operational: runtimeState.read().runs?.[key] || null,
+          failurePolicy: failurePolicy.status(key, siteSecrets),
           activeRuns: operations.active().filter(run => run.siteKey === key),
           hasTotpSecret,
           totpSecretMasked: maskSecret(totpSecret),
@@ -1341,6 +1343,7 @@ export async function startServer() {
 
       siteOverrideFor(key, sitesRaw).enabled = enabled;
       writeSitesRaw(sitesRaw);
+      if (enabled) failurePolicy.enable(key);
       res.json({ ok: true, data: { site: key, enabled } });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
@@ -1435,6 +1438,7 @@ export async function startServer() {
       sitesRaw.sites = sitesRaw.sites || {};
       sitesRaw.sites[key] = { ...(sitesRaw.sites[key] || {}), ...site };
       writeSitesRaw(sitesRaw);
+      if (body.enabled === true) failurePolicy.enable(key);
       res.json({ ok: true, data: { site: key, config: { ...BUILTIN_SITES[key], ...sitesRaw.sites[key] } } });
     } catch (err) {
       res.status(500).json({ ok: false, error: err.message });
@@ -2369,9 +2373,9 @@ export async function startServer() {
               : (enableSliderSolver ? { ...site, ...explicitFlags, captcha_slider_solver_enabled: true, captcha_ai_save_samples: saveSamples, tcaptcha_stealth_diagnostic: !!req.body?.stealthDiagnostic, captcha_block_geetest_autoclick: req.body?.blockGeetestAutoclick !== false } : { ...site, ...explicitFlags })));
         const actionLabel = dryRun ? "AI干跑" : (site.kind === "visit" ? "保活" : "签到");
         logger.info(`[手动] 开始${actionLabel}: ${site.note || siteName}`);
-        const result = await runSingle(runSite, secrets);
+        const result = await runSingle(runSite, secrets, { diagnostic: dryRun || sliderDiagnostic || sliderFullDiagnostic });
         const diagnosticOnlyResult = sliderDiagnostic || sliderFullDiagnostic || result.details?.checkinAction === "tcaptcha_partial_diagnostic" || result.details?.checkinAction === "tcaptcha_full_diagnostic_failed" || result.details?.checkinAction === "tcaptcha_full_diagnostic_solved" || result.details?.tcaptchaDragResult?.diagnosticOnly === true;
-        if (!dryRun && !diagnosticOnlyResult && result.details?.dryRun !== true) await store.addEntry(site.note || siteName, result);
+        if (!result.skipped && !dryRun && !diagnosticOnlyResult && result.details?.dryRun !== true) await store.addEntry(site.note || siteName, result);
         res.json({ ok: true, data: { site: site.note || siteName, dryRun: dryRun || sliderDiagnostic || sliderFullDiagnostic, diagnostic: sliderDiagnostic || sliderFullDiagnostic, ...result } });
       } else {
         // 触发全部：包含签到站点和保活站点，保活站点只访问确认登录态，不点击签到入口。

@@ -6,6 +6,8 @@ import TiebaDriver from "../drivers/tieba.js";
 export const credentialGeneration = credential => createHash("sha256").update(JSON.stringify(credential || {})).digest("hex");
 export function classifySessionResult(result) {
   if (result.success === true || result.ok === true) return "verified";
+  const type = result.failureType || result.details?.failureType;
+  if (type) return type === "auth_expired" ? "invalid" : type === "challenge" ? "challenge" : "unconfirmed";
   const message = result.message || "";
   if (/安全验证|人工|验证码|challenge/i.test(message)) return "challenge";
   if (/未登录|已失效|过期|重新登录|未配置/.test(message)) return "invalid";

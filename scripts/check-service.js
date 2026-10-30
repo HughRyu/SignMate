@@ -42,9 +42,9 @@ try {
   await page.locator("#card-fixture").waitFor();
   const card = await page.locator("#card-fixture").innerText();
   assert.match(card, /已验证/);
-  assert.match(card, /连续失败 3 次/);
+  assert.match(card, /连败 3/);
   assert.match(await page.locator("#sitesSummary").innerText(), /通知发送失败/);
-  runtimeState.update("runs", "fixture", { consecutiveFailures: 0 });
+  // Keep the alert present: failure/login/stuck states must not change card height.
   await page.reload(); await page.locator("#card-fixture").waitFor();
   for (const width of [1366, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -146,6 +146,31 @@ try {
       assert.ok(geometry.every(g => g.centered && g.visible && g.font >= 12 && g.label), `${width}: ${JSON.stringify(geometry)}`);
     }
   }
+  const { registerDriver, runSingle, runAll, loadConfig } = await import("../src/runner.js");
+  const { failurePolicy } = await import("../src/utils/failure-policy.js");
+  let calls = 0;
+  registerDriver("fixture", class {
+    async runWithRetry() { calls++; return { success: false, message: "fixture expired", details: { failureType: "auth_expired" } }; }
+    formatResult() { return "fixture expired"; }
+  });
+  for (let i = 0; i < 3; i++) assert.equal((await runAll({ autoOnly: true, onlyKeys: ["fixture"] })).length, 1);
+  assert.deepEqual(await runAll({ autoOnly: true, onlyKeys: ["fixture"] }), []);
+  let config = loadConfig();
+  const fixtureSite = config.sites.find(s => s.key === "fixture");
+  assert.equal((await runSingle(fixtureSite, config.secrets, { source: "schedule" })).skipped, true);
+  assert.equal(calls, 3);
+  // Cookie replacement resumes even a scheduler callback holding old credentials.
+  writeFileSync("config/secrets.yaml", "fixture:\n  cookie: fixture=new\n");
+  assert.equal((await runSingle(fixtureSite, config.secrets, { source: "schedule" })).skipped, undefined);
+  assert.equal(calls, 4);
+  const currentPolicy = runtimeState.read().failurePolicy.fixture;
+  runtimeState.update("failurePolicy", "fixture", { ...currentPolicy, offline: { streak: 3, disabledAt: new Date().toISOString() } });
+  assert.equal(loadConfig().sites.find(s => s.key === "fixture").enabled, false);
+  assert.equal((await runSingle(fixtureSite, config.secrets, { source: "schedule" })).skipped, true);
+  const enabledResponse = await fetch(`${base}/api/sites/fixture/enabled`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: true }) });
+  assert.equal(enabledResponse.status, 200);
+  assert.equal(failurePolicy.status("fixture", { cookie: "fixture=new" }).autoDisabled, false);
+  assert.equal(loadConfig().sites.find(s => s.key === "fixture").enabled, true);
   assert.deepEqual(errors, []);
   console.log("[check:service] health, API and browser UI passed");
 } finally {

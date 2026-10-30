@@ -1166,7 +1166,17 @@ function privateCardText(text, site) {
   return safe;
 }
 
+function siteHealthSummary(site) {
+  const labels = { execution_succeeded: "任务成功", unverified: "待验证", pending: "检查中", verified: "已验证", invalid: "已失效", challenge: "需验证", unconfirmed: "未确认", unsupported: "待执行确认", disabled: "已停用" };
+  const login = labels[site.verification?.status] || "待验证";
+  const policy = site.failurePolicy || {};
+  const failures = Number(site.operational?.consecutiveFailures || 0);
+  const alert = policy.autoDisabled ? "离线停用" : policy.authPaused ? "等待新 Cookie" : site.activeRuns?.some(run => run.stuck) ? "任务超时" : policy.dailyRuns >= 3 ? "今日达上限" : failures >= 3 ? `连败 ${failures}` : "";
+  const detail = `登录态：${login}。${policy.authPaused ? "同一凭据连续三次确认登录失效，暂停自动执行；更新 Cookie 后恢复。" : ""}${policy.autoDisabled ? "连续三个自然日，每天三轮直连及健康代理探测均不可达，已自动禁用；可在站点管理中手动启用。" : ""}连续失败 ${failures} 次（跨天累计任务数，非单次重试次数）。今日自动执行 ${policy.dailyRuns || 0}/3 次。离线判定进度 ${policy.offlineDays || 0}/3 天。${site.activeRuns?.some(run => run.stuck) ? "任务超过 30 分钟，请检查日志。" : ""}`;
+  return { login, alert, detail };
+}
 function buildSiteCard(site) {
+  const health = siteHealthSummary(site);
   const hasStatus = site.lastSuccess !== null;
   const details = site.details || {};
   const verificationBlocked = !!(details?.verificationBlocked && site.hasCookie);
@@ -1230,9 +1240,7 @@ function buildSiteCard(site) {
       </div>` : ""}
 
       </div>
-      ${site.verification ? `<div class="site-card-schedule"><span>登录态</span><span>${esc(({execution_succeeded:"最近任务成功（非独立登录验证）",unverified:"尚未验证",pending:"同步完成，检查中",verified:"已验证",invalid:"已失效，请更新",challenge:"需人工验证",unconfirmed:"网络或页面异常，未确认",unsupported:"等待站点执行确认（无只读检查）",disabled:"站点停用，未检查"})[site.verification.status] || "尚未验证")}</span></div>` : ""}
-      ${site.operational?.consecutiveFailures >= 3 ? `<div class="site-card-status">⚠ 连续失败 ${Number(site.operational.consecutiveFailures)} 次</div>` : ""}
-      ${site.activeRuns?.some(run => run.stuck) ? '<div class="site-card-status">⚠ 任务超过 30 分钟，请检查日志</div>' : ""}
+      <div class="site-health-summary" title="${escAttr(health.detail)}" aria-label="${escAttr(health.detail)}"><span>登录态 · ${esc(health.login)}</span><span class="site-health-alert">${esc(health.alert)}</span></div>
       <div class="site-card-actions">
         <button class="btn btn-secondary" id="credential-${escAttr(site.key)}" title="${credentialPrimaryLabel(site)}：${site.hasCookie ? "已维护" : "未维护"}">
           ${site.hasCookie ? "🔑" : "🔒"} ${credentialPrimaryLabel(site)}
@@ -3043,6 +3051,7 @@ function openProcessModal(site) {
         ${rawStats}
       </div>
       ${cardMetricPicker(site)}
+      <p class="process-health-summary">${esc(siteHealthSummary(site).detail)}</p>
       <div class="process-two-col">
         <section class="process-col process-steps-col">
           <h4>执行过程</h4>

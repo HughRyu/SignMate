@@ -57,6 +57,12 @@ function isLoggedIn(text = "", html = "") {
   return /退出|设置|消息|提醒|积分[:：]|活力[:：]|个人空间/.test(source) && !/立即登录|用户登录|登录\s*注册/.test(source.slice(0, 1000));
 }
 
+export function classifyKafanLoginFailure(status, title = "", text = "", html = "") {
+  if (/验证码|安全验证|just a moment|checking your browser/i.test(`${title} ${text}`) || /cf-chl-/i.test(html)) return "challenge";
+  if (status === 200 && /立即登录|用户登录|请先登录|登录\s*注册|<form[^>]+id=["'](?:lsform|loginform)/i.test(`${text} ${html}`)) return "auth_expired";
+  return "unconfirmed";
+}
+
 function numberFrom(text = "", regex) {
   const hit = compactText(text).match(regex);
   const num = hit ? Number.parseInt(hit[1], 10) : NaN;
@@ -223,10 +229,12 @@ export default class KafanDriver extends BaseDriver {
       logger.info(`[卡饭] 步骤 4/5：页面状态 ${response?.status() || "unknown"} | ${title} | ${compactText(bodyText).slice(0, 260)}`);
 
       if (!isLoggedIn(bodyText, html)) {
+        const failureType = classifyKafanLoginFailure(response?.status(), title, bodyText, html);
+        const challenge = failureType === "challenge", loggedOut = failureType === "auth_expired";
         return {
           success: false,
-          message: "卡饭登录态无效或 Cookie 不完整，请重新维护 Cookie",
-          details: { signTime, pageTitle: title },
+          message: loggedOut ? "卡饭登录态已失效，请更新 Cookie" : challenge ? "卡饭需要人工安全验证" : "卡饭页面异常，暂未确认登录状态",
+          details: { signTime, pageTitle: title, failureType },
           steps: [
             { label: "启动 Playwright 浏览器", ok: true },
             { label: "注入 Cookie 并准备浏览器上下文", ok: true },

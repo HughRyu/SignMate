@@ -103,9 +103,10 @@ export default class TiebaDriver extends BaseDriver {
     const response = await this.apiGet(MOBILE_FORUMS_URL, cookie);
     const data = await readJson(response);
     if (!response.ok) return { ok: false, message: `登录验证失败：HTTP ${response.status}`, status: response.status };
-    if (data?.raw !== undefined) return { ok: false, message: "贴吧要求人工确认登录或安全验证，请在相同出口处理", status: response.status };
+    if (data?.raw !== undefined) return { ok: false, failureType: "challenge", message: "贴吧要求人工确认登录或安全验证，请在相同出口处理", status: response.status };
     if (![0, "0"].includes(data?.no) || !(Number(data?.data?.uid) > 0) || !data?.data?.tbs) {
-      return { ok: false, message: "登录失败，Cookie 可能已过期", status: response.status };
+      const loggedOut = [false, 0, "0"].includes(data?.data?.is_login) || ([0, "0"].includes(data?.no) && [0, "0"].includes(data?.data?.uid));
+      return { ok: false, failureType: loggedOut ? "auth_expired" : "unconfirmed", message: loggedOut ? "贴吧登录态已失效，请更新 Cookie" : "贴吧登录接口异常，暂未确认 Cookie 是否失效", status: response.status };
     }
     return { ok: true, tbs: data.data.tbs, status: response.status };
   }
@@ -171,7 +172,7 @@ export default class TiebaDriver extends BaseDriver {
       return {
         success: false,
         message: login.message,
-        details: { signTime, status: login.status },
+        details: { signTime, status: login.status, failureType: login.failureType || "unconfirmed" },
         steps: [{ label: "验证登录态", ok: false, status: login.status, detail: login.message }],
       };
     }

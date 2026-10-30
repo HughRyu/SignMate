@@ -3,15 +3,15 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.38",
+    "version": "0.1.39",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
   },
   "summary": {
     "title": "SignMate 项目知识图",
-    "description": "手动更新的中文架构图；包含运行缓存、异步登录验证、健康探测和固定摘要部署。",
-    "totalFiles": 100
+    "description": "中文架构图；包含持久化故障保护、凭据暂停、三日离线禁用、统一卡片状态及部署回滚。",
+    "totalFiles": 103
   },
   "nodes": [
     {
@@ -1304,6 +1304,45 @@
         "奶昔",
         "账户信息"
       ]
+    },
+    {
+      "id": "file:src/utils/failure-policy.js",
+      "type": "file",
+      "label": "failure-policy.js",
+      "title": "src/utils/failure-policy.js",
+      "description": "按凭据代次持久化登录暂停、每日执行上限和三日双路径离线证据；手动启用恢复。",
+      "path": "src/utils/failure-policy.js",
+      "layer": "utils",
+      "tags": [
+        "故障保护",
+        "回归"
+      ]
+    },
+    {
+      "id": "file:test/failure-policy.test.js",
+      "type": "file",
+      "label": "failure-policy.test.js",
+      "title": "test/failure-policy.test.js",
+      "description": "凭据更新、跨日与重启、代理失效、HTTP 可达及并发核验保护回归。",
+      "path": "test/failure-policy.test.js",
+      "layer": "tests",
+      "tags": [
+        "故障保护",
+        "回归"
+      ]
+    },
+    {
+      "id": "file:test/kafan-login.test.js",
+      "type": "file",
+      "label": "kafan-login.test.js",
+      "title": "test/kafan-login.test.js",
+      "description": "卡饭真实登录页与安全挑战/网络错误区分回归。",
+      "path": "test/kafan-login.test.js",
+      "layer": "tests",
+      "tags": [
+        "故障保护",
+        "回归"
+      ]
     }
   ],
   "edges": [
@@ -2420,6 +2459,24 @@
     {
       "source": "file:test/naixi-account.test.js",
       "target": "file:src/utils/naixi-account.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/runner.js",
+      "target": "file:src/utils/failure-policy.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/server.js",
+      "target": "file:src/utils/failure-policy.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/failure-policy.test.js",
+      "target": "file:src/utils/failure-policy.js",
       "type": "imports",
       "label": "导入"
     }

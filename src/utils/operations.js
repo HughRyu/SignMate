@@ -9,11 +9,12 @@ export function createOperations(state = runtimeState, now = Date.now) {
       active.set(run.runId, run);
       return run;
     },
-    finish(run, result) {
+    finish(run, result, { record = true } = {}) {
       active.delete(run.runId);
       const endedAt = new Date(now()).toISOString();
       const previous = state.read().runs?.[run.siteKey] || {};
       const details = { ...result.details, ...run, endedAt, durationMs: Math.max(0, now() - Date.parse(run.startedAt)), retries: result.details?.retries || 0 };
+      if (!record) return { ...result, details };
       state.update("runs", run.siteKey, {
         ...previous, ...run, endedAt, durationMs: details.durationMs, retries: details.retries, success: result.success === true,
         consecutiveFailures: result.success ? 0 : (previous.consecutiveFailures || 0) + 1,

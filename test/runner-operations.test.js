@@ -18,12 +18,26 @@ test("unknown drivers, offline exits and successful runs all retain operation me
       { key: "denied", driver: "fixture", proxy_mode: "auto", proxy_last_mode: "offline", direct: { ok: false, reachable: true, status: 403 } },
       { key: "success", driver: "fixture", proxy_mode: "off" },
     ]) {
-      const result = await runSingle(site, {}, { source: "schedule" });
+      const result = await runSingle(site, {}, { source: "manual-batch" });
       assert.equal(result.success, ["success", "denied"].includes(site.key));
-      assert.equal(result.details.source, "schedule");
+      assert.equal(result.details.source, "manual-batch");
       assert.ok(result.details.runId);
       assert.ok(result.details.endedAt);
       assert.ok(result.details.durationMs >= 0);
     }
+    let release;
+    registerDriver("waiting", class {
+      async runWithRetry() { await new Promise(resolve => { release = resolve; }); return { success: true }; }
+      formatResult() { return "done"; }
+    });
+    const waitSite = { key: "wait", driver: "waiting", proxy_mode: "off" };
+    const first = runSingle(waitSite, {});
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal((await runSingle(waitSite, {})).skipped, true);
+    release(); await first;
+    const { runtimeState } = await import("../src/utils/runtime-state.js");
+    const before = JSON.stringify(runtimeState.read().runs.success);
+    await runSingle({ key: "success", driver: "fixture", proxy_mode: "off" }, {}, { diagnostic: true });
+    assert.equal(JSON.stringify(runtimeState.read().runs.success), before);
   } finally { rmSync(dir, { recursive: true }); }
 });

@@ -11075,3 +11075,13 @@ input.is-saved-field:focus {
 #tab-sites .site-card .site-card-header { height: 28px !important; min-height: 28px !important; max-height: 28px !important; flex-shrink: 0; }
 #tab-sites .site-card .site-card-name { min-width: 0; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
 #tab-sites .site-card .site-card-actions { margin-bottom: 0 !important; }
+
+/* Login and operational notices share one fixed row, including healthy cards. */
+#tab-sites .site-card .site-health-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  height: 30px; min-height: 30px; flex: 0 0 30px; margin: 0;
+  font-size: 11px; line-height: 13px; min-width: 0;
+}
+#tab-sites .site-health-summary > span { min-width: 0; overflow-wrap: anywhere; }
+#tab-sites .site-health-alert { color: #b45309; text-align: right; }
+.process-health-summary { margin: 12px 0; padding: 10px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }

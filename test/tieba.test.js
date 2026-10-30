@@ -11,6 +11,13 @@ function driver(payload, status = 200) {
   return d;
 }
 
+test("only explicit logged-out identity confirms expired credentials", async () => {
+  assert.equal((await driver({ no: 1, data: { is_login: 0, tbs: "test" } }).validateLogin("test")).failureType, "auth_expired");
+  assert.equal((await driver({ no: 1 }).validateLogin("test")).failureType, "unconfirmed");
+  assert.equal((await driver({ no: 0, data: { uid: 123 } }).validateLogin("test")).failureType, "unconfirmed");
+  assert.equal((await driver("<title>安全验证</title>").validateLogin("test")).failureType, "challenge");
+});
+
 test("mobile account identity and tbs establish login without legacy tbs endpoint", async () => {
   const d = driver({ no: 0, data: { uid: 123, tbs: "test", like_forum: [] } });
   assert.equal((await d.validateLogin("test")).ok, true);

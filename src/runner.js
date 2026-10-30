@@ -1,4 +1,5 @@
 import { credentialGeneration } from "./utils/session-verification.js";
+import { failurePolicy, confirmedAuthFailure } from "./utils/failure-policy.js";
 // ============================================================
 // runner — Driver 加载与签到执行引擎
 // ============================================================
@@ -436,6 +437,7 @@ export function loadConfig() {
     return {
       key,
       ...site,
+      ...(runtimeState.read().failurePolicy?.[key]?.offline?.disabledAt ? { enabled: false } : {}),
       ...(runtimeState.read().siteProxy?.[key] || {}),
       // 站点代理模式必须按站点配置/自动判断执行，不能因全局代理开关关闭而静默改成 off。
       // 全局开关只影响“未明确配置代理策略”的默认状态；proxy:on 和 proxy:auto 的已保存判断都应生效。
@@ -524,21 +526,49 @@ function rememberProxyMode(siteConfig, mode, directOk = null) {
  * @param {object} secrets     全局凭据
  * @returns {Promise<{success: boolean, message: string, site: string}>}
  */
+const runningSites = new Set();
 export async function runSingle(siteConfig, secrets, options = {}) {
-  const run = operations.begin(siteConfig, options.source || "manual");
+  const key = siteConfig.key || siteConfig.driver;
+  const automatic = !!options.source && options.source !== "manual";
+  if (options.source === "schedule") {
+    const current = loadConfig();
+    const freshSite = current.sites.find(site => (site.key || site.driver) === key);
+    if (!freshSite) return { skipped: true, success: false, siteKey: key, message: "站点已移除" };
+    siteConfig = freshSite;
+    secrets = current.secrets;
+  }
+  const blocked = siteConfig.enabled === false ? "站点已禁用" : failurePolicy.gate(key, secrets[key], automatic);
+  if (blocked || runningSites.has(key)) return { skipped: true, success: false, siteKey: key, site: siteConfig.note || key, message: blocked || "站点正在执行" };
+  runningSites.add(key);
+  let run;
   try {
+    failurePolicy.start(key, secrets[key], automatic);
+    run = operations.begin(siteConfig, options.source || "manual");
     const result = await executeSingle(siteConfig, secrets);
-    const key = siteConfig.key || siteConfig.driver;
+    if (options.diagnostic || result.details?.dryRun === true) return operations.finish(run, result, { record: false });
+    failurePolicy.record(key, secrets[key], result);
+    if (!result.success && siteConfig.base_url && !confirmedAuthFailure(result) && result.details?.failureType !== "challenge") {
+      await failurePolicy.checkOffline(siteConfig, secrets[key], loadConfig().proxy);
+    }
+    const policy = failurePolicy.status(key, secrets[key]);
+    if (policy.autoDisabled || policy.authPaused) {
+      result.message += policy.autoDisabled ? "；连续三天不可达，已自动禁用" : "；连续三次确认登录失效，已暂停自动执行";
+      if (result.formatted) result.formatted += `\n🛑 ${policy.autoDisabled ? "站点已自动禁用" : "请更新 Cookie 后恢复自动执行"}`;
+    }
     const current = runtimeState.read().verification?.[key];
-    if (current?.generation === credentialGeneration(secrets[key]) && ["unsupported", "unconfirmed", "unverified"].includes(current.status)) {
+    if (current?.generation === credentialGeneration(secrets[key]) && (["unsupported", "unconfirmed", "unverified"].includes(current.status) || (current.status === "invalid" && result.success))) {
       runtimeState.update("verification", key, { ...current, status: result.success ? "execution_succeeded" : "unconfirmed", checkedAt: new Date().toISOString() });
     }
     return operations.finish(run, result);
   } catch (error) {
-    return operations.finish(run, { success: false, site: siteConfig.note || siteConfig.driver,
+    if (!run) throw error;
+    const result = { success: false, site: siteConfig.note || siteConfig.driver,
       siteKey: siteConfig.key || siteConfig.driver, kind: siteConfig.kind || "signin",
-      message: error?.message || "执行异常" });
-  }
+      message: error?.message || "执行异常" };
+    if (options.diagnostic) return operations.finish(run, result, { record: false });
+    failurePolicy.record(key, secrets[key], result);
+    return operations.finish(run, result);
+  } finally { runningSites.delete(key); }
 }
 
 async function executeSingle(siteConfig, secrets) {
@@ -600,6 +630,7 @@ export async function runAll(options = {}) {
   const candidates = sites.filter(s => {
     if (s.enabled === false) return false;
     const key = String(s.key || s.driver || "");
+    if (failurePolicy.gate(key, secrets[key], true)) return false;
     if (skipKeys.has(key)) return false;
     if (onlyKeys && !onlyKeys.has(key) && !onlyKeys.has(String(s.driver || "")) && !onlyKeys.has(String(s.note || ""))) return false;
     const currentKind = siteKind(s);
@@ -672,7 +703,8 @@ export async function runAll(options = {}) {
           result.details = { ...(result.details || {}), scheduleMode: runScheduleMode };
           result.scheduleMode = runScheduleMode;
         }
-        results.push(result);
+        if (!result.skipped) results.push(result);
+        else skipKeys.add(site.key || site.driver);
       } catch (err) {
         const siteName = site.note || site.key || site.driver || "未知站点";
         const message = `执行异常：${err?.message || String(err)}`;
