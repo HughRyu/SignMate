@@ -171,6 +171,23 @@ try {
   assert.equal(enabledResponse.status, 200);
   assert.equal(failurePolicy.status("fixture", { cookie: "fixture=new" }).autoDisabled, false);
   assert.equal(loadConfig().sites.find(s => s.key === "fixture").enabled, true);
+  // Simulate restarting with a disabled independent site, then enabling it.
+  const { default: cron } = await import("node-cron");
+  const { startScheduler } = await import("../src/scheduler.js");
+  const callbacks = new Map(), originalSchedule = cron.schedule;
+  try {
+    cron.schedule = (expression, callback) => { callbacks.set(expression, callback); return {}; };
+    startScheduler([{ ...fixtureSite, enabled: false, schedule: "5 2 * * *" }], config.secrets);
+  } finally { cron.schedule = originalSchedule; }
+  assert.equal(typeof callbacks.get("5 2 * * *"), "function");
+  await callbacks.get("5 2 * * *")();
+  assert.equal(calls, 5);
+  await fetch(`${base}/api/sites/fixture/enabled`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: false }) });
+  await callbacks.get("5 2 * * *")();
+  assert.equal(calls, 5);
+  await fetch(`${base}/api/sites/fixture/enabled`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: true }) });
+  await callbacks.get("5 2 * * *")();
+  assert.equal(calls, 6);
   assert.deepEqual(errors, []);
   console.log("[check:service] health, API and browser UI passed");
 } finally {

@@ -145,7 +145,9 @@ async function main() {
   logger.info(`[配置] 共 ${sites.length} 个站点，已启用 ${enabledSites.length} 个`);
 
   // 注册定时任务
-  const taskCount = startScheduler(enabledSites, secrets);
+  // Register configured independent jobs even when disabled; runSingle checks
+  // the current switch so re-enabling after a restart resumes without restart.
+  const taskCount = startScheduler(sites, secrets);
 
   // 启动 Web 管理面板
   const server = await startServer();

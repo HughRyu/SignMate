@@ -3,7 +3,7 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.39",
+    "version": "0.1.40",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
@@ -772,7 +772,7 @@
       "type": "file",
       "label": "scheduler.js",
       "title": "src/scheduler.js",
-      "description": "项目核心组件",
+      "description": "项目核心组件；每轮批量读取当前启用列表，启动时为禁用站点保留独立 Cron 注册，重新启用自动恢复。",
       "path": "src/scheduler.js",
       "layer": "core",
       "tags": [

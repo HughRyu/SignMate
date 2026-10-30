@@ -405,14 +405,20 @@ async function checkDynamicBatchSchedule(enabledSites) {
 export function startScheduler(enabledSites, secrets) {
   let taskCount = 0;
   cron.schedule("* * * * *", async () => {
-    try { await checkDynamicBatchSchedule(enabledSites); }
+    try {
+      const { loadConfig } = await import("./runner.js");
+      await checkDynamicBatchSchedule(loadConfig().sites.filter(site => site.enabled !== false));
+    }
     catch (err) { logger.warn(`[动态批量调度] ${err.message}`); }
   });
   taskCount++;
   logger.info("[调度] 动态批量调度已启用（支持每天重新随机）");
 
   cron.schedule("0 23 * * *", async () => {
-    try { await retryTodayFailures(enabledSites); }
+    try {
+      const { loadConfig } = await import("./runner.js");
+      await retryTodayFailures(loadConfig().sites.filter(site => site.enabled !== false));
+    }
     catch (err) { logger.warn(`[失败补跑] ${err.message}`); }
   });
   taskCount++;
