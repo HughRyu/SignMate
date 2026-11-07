@@ -23,3 +23,13 @@ test("network/challenge failures do not invalidate cookies", () => {
   assert.equal(classifySessionResult({ message: "安全验证" }), "challenge");
   assert.equal(classifySessionResult({ message: "Cookie 已失效" }), "invalid");
 });
+
+test("new forum adapters retain read-only verification queue support", async () => {
+  const data = {};
+  const state = { read: () => data, update: (section, key, value) => { (data[section] ||= {})[key] = value; } };
+  const queue = createVerificationQueue({ state, probe: async () => "verified" });
+  for (const driver of ["sb-signin", "piggo"]) {
+    await queue.enqueue({key: driver, driver}, {[driver]: {cookie: "fixture"}});
+    assert.equal(data.verification[driver].status, "verified");
+  }
+});

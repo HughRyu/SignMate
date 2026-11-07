@@ -1,13 +1,13 @@
 {
   "name": "signmate",
-  "version": "0.1.40",
+  "version": "0.1.41",
   "private": true,
   "description": "SignMate 签伴 - 多站点签到与保活管理",
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
     "start:dev": "node --watch src/index.js",
-    "check": "node --check src/server.js && node --check src/runner.js && node --check src/scheduler.js && node --check src/index.js && node --check src/web/app.js && node --check src/utils/site-http.js && node --check src/drivers/v2ex-utils.js && node --check src/drivers/v2ex.js && node --check src/drivers/pcbeta.js && node --check src/drivers/tieba.js && node --check src/drivers/forum-visit.js",
+    "check": "node --check src/server.js && node --check src/runner.js && node --check src/scheduler.js && node --check src/index.js && node --check src/web/app.js && node --check src/utils/site-http.js && node --check src/drivers/v2ex-utils.js && node --check src/drivers/v2ex.js && node --check src/drivers/pcbeta.js && node --check src/drivers/tieba.js && node --check src/drivers/forum-visit.js && node --check src/drivers/sb-signin.js && node --check src/drivers/piggo.js",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "test": "npm run check && node --test test/*.test.js && npm run test:feng && npm run test:naixi",
     "test:v2ex": "node --test test/v2ex.test.js test/v2ex-page.test.js test/v2ex-driver.test.js test/v2ex-http.test.js",

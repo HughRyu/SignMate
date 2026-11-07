@@ -53,7 +53,7 @@ try {
       const metrics = await card.locator(".aggregate-metrics").innerText();
       assert.doesNotMatch(await card.innerHTML(), /LinuxFixture|ForumFixture|PrivateFixture|PrivatePT|private@example/);
       if (key === "linux-sb") assert.match(metrics, /烧饼 0/);
-      if (key === "sb-sb") assert.match(metrics, /注册天数 52/);
+      if (key === "sb-sb") assert.match(metrics, /1056/);
       assert.equal(await card.locator(".metric-chip").count(), Math.min(key === "linux-sb" ? 2 : 4, sites.data.find(site => site.key === key).cardMetricLimit));
       await card.locator(".aggregate-metrics").click();
       await page.locator("#cardMetricPicker").waitFor();

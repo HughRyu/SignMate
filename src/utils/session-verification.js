@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { runtimeState } from "./runtime-state.js";
 import ForumVisitDriver from "../drivers/forum-visit.js";
 import TiebaDriver from "../drivers/tieba.js";
+import PiggoDriver from "../drivers/piggo.js";
 
 export const credentialGeneration = credential => createHash("sha256").update(JSON.stringify(credential || {})).digest("hex");
 export function classifySessionResult(result) {
@@ -30,7 +31,7 @@ export function createVerificationQueue({ state = runtimeState, resolveSite = as
         if (state.read().verification?.[key]?.generation !== generation) return;
         let status = "unconfirmed";
         try {
-          if (!["forum-visit", "tieba"].includes(site.driver)) status = "unsupported";
+          if (!["forum-visit", "sb-signin", "piggo", "tieba"].includes(site.driver)) status = "unsupported";
           else if (site.enabled === false) status = "disabled";
           else status = await probe(await resolveSite(site), secrets);
         } catch { /* Never store exception text which may contain credentials. */ }
@@ -46,10 +47,11 @@ export function createVerificationQueue({ state = runtimeState, resolveSite = as
 
 async function safeProbe(site, secrets) {
   if (site.site_offline) return "unconfirmed";
-  if (site.driver === "forum-visit") {
+  if (["forum-visit", "sb-signin"].includes(site.driver)) {
     // This driver performs only GET requests, never签到/回帖/领奖.
     return classifySessionResult(await new ForumVisitDriver({ ...site, timeout: 10000, verify_only: true }, secrets).signIn());
   }
+  if (site.driver === "piggo") return classifySessionResult(await new PiggoDriver({ ...site, timeout: 10000 }, secrets).signIn());
   if (site.driver === "tieba") {
     const driver = new TiebaDriver({ ...site, timeout: 10000 }, secrets);
     const cookie = driver.getCookie();

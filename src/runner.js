@@ -105,6 +105,10 @@ function stripUserCapabilityFields(sitesRaw = {}) {
 
 function mergeSiteWithBuiltin(key, override = {}) {
   const { kind: _kind, signin_mode: _signinMode, enforced_kind: _enforcedKind, ...userConfig } = override || {};
+  if (key === "piggo-me" && (!userConfig.driver || ["nexusphp", "piggo"].includes(userConfig.driver))) {
+    for (const field of ["verification_type", "verification_auto", "signin_blocked_by_verification", "verification_note"]) delete userConfig[field];
+  }
+  if ((key === "sb-sb" && userConfig.driver === "forum-visit") || (key === "piggo-me" && userConfig.driver === "nexusphp")) delete userConfig.driver;
   return { ...(BUILTIN_SITES[key] || {}), ...userConfig };
 }
 

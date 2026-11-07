@@ -3,15 +3,15 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.40",
+    "version": "0.1.41",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
   },
   "summary": {
     "title": "SignMate 项目知识图",
-    "description": "中文架构图；包含持久化故障保护、凭据暂停、三日离线禁用、统一卡片状态及部署回滚。",
-    "totalFiles": 103
+    "description": "中文架构图；包含持久化故障保护、凭据暂停、三日离线禁用、统一卡片状态及部署回滚。 新增烧饼真实签到与 Piggo Cookie-only 新版会话验证，Linux SB 保持保活。",
+    "totalFiles": 107
   },
   "nodes": [
     {
@@ -1343,6 +1343,54 @@
         "故障保护",
         "回归"
       ]
+    },
+    {
+      "id": "file:src/drivers/sb-signin.js",
+      "type": "file",
+      "label": "sb-signin.js",
+      "title": "src/drivers/sb-signin.js",
+      "description": "烧饼真实表单签到，正常 Cap 验证、空留言、单次提交及结果确认",
+      "path": "src/drivers/sb-signin.js",
+      "layer": "drivers",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:src/drivers/piggo.js",
+      "type": "file",
+      "label": "piggo.js",
+      "title": "src/drivers/piggo.js",
+      "description": "Piggo 新版 Cookie-only 只读签名账户请求，拒绝伪成功",
+      "path": "src/drivers/piggo.js",
+      "layer": "drivers",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:test/new-forums.test.js",
+      "type": "file",
+      "label": "new-forums.test.js",
+      "title": "test/new-forums.test.js",
+      "description": "论坛签到判定及 Piggo 会话回归测试",
+      "path": "test/new-forums.test.js",
+      "layer": "tests",
+      "tags": [
+        "源码"
+      ]
+    },
+    {
+      "id": "file:scripts/check-new-forums.js",
+      "type": "file",
+      "label": "check-new-forums.js",
+      "title": "scripts/check-new-forums.js",
+      "description": "隔离浏览器签到流程回归，不访问真实站点",
+      "path": "scripts/check-new-forums.js",
+      "layer": "scripts",
+      "tags": [
+        "源码"
+      ]
     }
   ],
   "edges": [
@@ -2477,6 +2525,42 @@
     {
       "source": "file:test/failure-policy.test.js",
       "target": "file:src/utils/failure-policy.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/sb-signin.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/index.js",
+      "target": "file:src/drivers/piggo.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/drivers/sb-signin.js",
+      "target": "file:src/drivers/forum-visit.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/new-forums.test.js",
+      "target": "file:src/drivers/piggo.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/new-forums.test.js",
+      "target": "file:src/drivers/sb-signin.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:scripts/check-new-forums.js",
+      "target": "file:src/drivers/sb-signin.js",
       "type": "imports",
       "label": "导入"
     }

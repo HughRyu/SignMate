@@ -18,11 +18,11 @@ test("LINUX SB requires logged-in identity plus account navigation without login
   assert.equal(classifyForumPage(html + '<script>window._cf_chl_opt = {};</script>', 'https://linux.sb/'), 'challenge');
 });
 
-test("both catalogs enforce visit semantics and require account evidence", () => {
+test("forum authentication requires account evidence; only Linux SB remains visit-only", () => {
   for (const key of ["linux-sb", "sb-sb"]) {
     const site = sites[key];
-    assert.equal(site.kind, "visit");
-    assert.equal(site.enforced_kind, "visit");
+    assert.equal(site.kind, key === "linux-sb" ? "visit" : "signin");
+    assert.equal(site.enforced_kind, site.kind);
     const url = site.base_url;
     assert.equal(classifyForumPage('<a href="/logout/">退出</a>', url), "authenticated");
     assert.equal(classifyForumPage('<form action="/user/logout"></form>', url), "authenticated");

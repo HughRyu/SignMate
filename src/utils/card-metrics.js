@@ -1,5 +1,6 @@
 // Shared policy for all built-in and custom site summary preferences.
 const LABELS = {
+  longestStreak: "最长连续签到",
   username: "用户名", userName: "用户名", nickname: "昵称", userId: "用户 ID", uid: "用户 ID", email: "邮箱",
   levelTitle: "等级", level: "等级", userGroup: "用户组", trustLevel: "信任等级", fengLevel: "威锋等级", pcevaLevel: "等级",
   totalPoints: "总积分", points: "积分", pointsGain: "本次积分增加", todayPoints: "今日积分", totalCoins: "站点货币",

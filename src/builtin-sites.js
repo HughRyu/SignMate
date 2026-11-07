@@ -10,9 +10,9 @@ export const BUILTIN_SITES = {
     "retry": 1, "retry_delay_ms": 10000, "timeout": 30000
   },
   "sb-sb": {
-    "enabled": true, "driver": "forum-visit", "schedule": "auto",
+    "enabled": true, "driver": "sb-signin", "schedule": "auto",
     "note": "烧饼论坛", "base_url": "https://sb.sb/",
-    "kind": "visit", "enforced_kind": "visit", "signin_mode": "api",
+    "kind": "signin", "enforced_kind": "signin", "signin_mode": "playwright",
     "category": "forum", "proxy": "auto", "notify": true,
     "retry": 1, "retry_delay_ms": 10000, "timeout": 30000
   },
@@ -357,7 +357,7 @@ export const BUILTIN_SITES = {
   },
   "piggo-me": {
     "enabled": true,
-    "driver": "nexusphp",
+    "driver": "piggo",
     "schedule": "auto",
     "note": "Piggo",
     "notify": true,
@@ -368,11 +368,11 @@ export const BUILTIN_SITES = {
     "category": "pt",
     "kind": "visit",
     "login_keyword": "Piggo",
-    "verification_type": "SafeLine 雷池 WAF",
+    "verification_type": "新版 Cookie 会话验证",
     "verification_auto": false,
-    "signin_blocked_by_verification": true,
+    "signin_blocked_by_verification": false,
     "proxy": "auto",
-    "signin_mode": "playwright"
+    "signin_mode": "api"
   },
   "pttime-org": {
     "enabled": true,
