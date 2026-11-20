@@ -3,6 +3,7 @@ import { runtimeState } from "./runtime-state.js";
 import ForumVisitDriver from "../drivers/forum-visit.js";
 import TiebaDriver from "../drivers/tieba.js";
 import PiggoDriver from "../drivers/piggo.js";
+import FengDriver from "../drivers/feng.js";
 
 export const credentialGeneration = credential => createHash("sha256").update(JSON.stringify(credential || {})).digest("hex");
 export function classifySessionResult(result) {
@@ -31,7 +32,7 @@ export function createVerificationQueue({ state = runtimeState, resolveSite = as
         if (state.read().verification?.[key]?.generation !== generation) return;
         let status = "unconfirmed";
         try {
-          if (!["forum-visit", "sb-signin", "piggo", "tieba"].includes(site.driver)) status = "unsupported";
+          if (!["forum-visit", "sb-signin", "piggo", "feng", "tieba"].includes(site.driver)) status = "unsupported";
           else if (site.enabled === false) status = "disabled";
           else status = await probe(await resolveSite(site), secrets);
         } catch { /* Never store exception text which may contain credentials. */ }
@@ -52,6 +53,7 @@ async function safeProbe(site, secrets) {
     return classifySessionResult(await new ForumVisitDriver({ ...site, timeout: 10000, verify_only: true }, secrets).signIn());
   }
   if (site.driver === "piggo") return classifySessionResult(await new PiggoDriver({ ...site, timeout: 10000 }, secrets).signIn());
+  if (site.driver === "feng") return classifySessionResult(await new FengDriver({ ...site, timeout: 10000 }, secrets).verifySession());
   if (site.driver === "tieba") {
     const driver = new TiebaDriver({ ...site, timeout: 10000 }, secrets);
     const cookie = driver.getCookie();

@@ -3,15 +3,15 @@
   "project": {
     "name": "SignMate",
     "packageName": "signmate",
-    "version": "0.1.41",
+    "version": "0.1.42",
     "root": ".",
     "description": "SignMate 签伴 - 多站点签到与保活管理",
     "language": "zh"
   },
   "summary": {
     "title": "SignMate 项目知识图",
-    "description": "中文架构图；包含持久化故障保护、凭据暂停、三日离线禁用、统一卡片状态及部署回滚。 新增烧饼真实签到与 Piggo Cookie-only 新版会话验证，Linux SB 保持保活。",
-    "totalFiles": 107
+    "description": "中文架构图；包含持久化故障保护、凭据暂停、三日离线禁用、统一卡片状态、烧饼真实签到、Piggo Cookie-only 新版验证及威锋只读登录态检查。",
+    "totalFiles": 108
   },
   "nodes": [
     {
@@ -1391,6 +1391,18 @@
       "tags": [
         "源码"
       ]
+    },
+    {
+      "id": "file:test/feng-driver.test.js",
+      "type": "file",
+      "label": "feng-driver.test.js",
+      "title": "test/feng-driver.test.js",
+      "description": "威锋 API 错误分类、只读会话验证及 HTML 暂态响应回归测试",
+      "path": "test/feng-driver.test.js",
+      "layer": "tests",
+      "tags": [
+        "测试"
+      ]
     }
   ],
   "edges": [
@@ -2561,6 +2573,24 @@
     {
       "source": "file:scripts/check-new-forums.js",
       "target": "file:src/drivers/sb-signin.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:src/utils/session-verification.js",
+      "target": "file:src/drivers/feng.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/feng-driver.test.js",
+      "target": "file:src/drivers/feng.js",
+      "type": "imports",
+      "label": "导入"
+    },
+    {
+      "source": "file:test/feng-driver.test.js",
+      "target": "file:src/utils/session-verification.js",
       "type": "imports",
       "label": "导入"
     }

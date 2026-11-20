@@ -90,6 +90,48 @@ function isApiOk(payload = {}) {
   return code === "0" || message === "请求成功" || message.toLowerCase() === "success";
 }
 
+function authExpiredMessage(message = "") {
+  return /未登录|请先登录|先登录|登录已过期|登录态失效|登录状态失效|(?:access.?token|token).{0,12}(?:无效|过期)|(?:invalid|expired).{0,12}(?:access.?token|token)|身份验证失败/i.test(String(message));
+}
+
+function verificationMessage(message = "") {
+  return /验证码|安全验证|人机验证|访问频繁|稍后再试|captcha|challenge|bot detection/i.test(String(message));
+}
+
+function safeApiMessage(message = "") {
+  const raw = String(message);
+  if (/[<>]/.test(raw)) return "";
+  const value = raw.replace(/\s+/g, " ").trim();
+  if (!value) return "";
+  return value
+    .replace(/\b(access.?token|token|cookie|authorization|session)\b\s*[:=]\s*[^\s,;]+/ig, "$1=[redacted]")
+    .slice(0, 120);
+}
+
+export function classifyFengApiResponse(response = {}) {
+  const message = String(response.data?.status?.message || "");
+  const text = String(response.text || "").slice(0, 4000);
+  if (authExpiredMessage(message) || response.status === 401 || String(response.data?.status?.code ?? "") === "401") return "auth_expired";
+  if (verificationMessage(message) || response.status === 403 || response.status === 429
+      || /captcha|challenge|安全验证|人机验证|访问频繁/i.test(text)) return "challenge";
+  if (response.ok && response.data && isApiOk(response.data)) return "verified";
+  return "unconfirmed";
+}
+
+function apiFailureSummary(response = {}) {
+  const classification = classifyFengApiResponse(response);
+  if (classification === "auth_expired") return { message: "威锋登录凭据已失效，请重新同步 Cookie", failureType: "auth_expired" };
+  if (classification === "challenge") return { message: "威锋接口要求安全验证或暂时限制访问", failureType: "challenge" };
+  if (!response.data && (/html/i.test(response.contentType || "") || /^\s*<!?html\b/i.test(response.text || ""))) {
+    return { message: `威锋接口返回网页而非 JSON（HTTP ${response.status || 0}），可能是站点防护页或上游网络响应；尚不能判定 Cookie 失效`, failureType: "unconfirmed" };
+  }
+  const message = safeApiMessage(response.data?.status?.message);
+  return {
+    message: message ? `威锋接口暂不可用：${message}` : `威锋接口暂不可用（HTTP ${response.status || 0}），账号状态未确认`,
+    failureType: "unconfirmed",
+  };
+}
+
 export default class FengDriver extends BaseDriver {
   getAccount() {
     const key = this.siteConfig.key || "feng-com";
@@ -140,7 +182,17 @@ export default class FengDriver extends BaseDriver {
     const text = await res.text();
     let data = null;
     try { data = JSON.parse(text); } catch { /* keep raw text for error message */ }
-    return { ok: res.ok, status: res.status, data, text };
+    return { ok: res.ok, status: res.status, contentType: res.headers.get("content-type") || "", data, text };
+  }
+
+  // CookieCloud verification must be read-only: this endpoint never signs in.
+  async verifySession() {
+    if (!this.getAccount()) return { success: false, message: "威锋 Cookie 中未找到有效登录凭据", details: { failureType: "auth_expired" } };
+    const response = await this.api("/v1/user/experience");
+    const status = classifyFengApiResponse(response);
+    if (status === "verified") return { success: true, message: "威锋登录态有效" };
+    const summary = apiFailureSummary(response);
+    return { success: false, message: summary.message, details: { failureType: summary.failureType, status: response.status } };
   }
 
   async getUserHomeInfo(uid) {
@@ -163,12 +215,11 @@ export default class FengDriver extends BaseDriver {
     const username = beforeData.userName || account.profile?.userName || "-";
     const beforeOk = before.ok && isApiOk(before.data);
     if (!beforeOk) {
-      const msg = before.data?.status?.message || before.text || `HTTP ${before.status}`;
+      const failure = apiFailureSummary(before);
       return {
-        success: false,
-        message: `威锋登录态无效或接口访问失败：${msg}`,
-        details: { signTime, username, status: before.status },
-        steps: [{ label: "读取账号状态", ok: false, status: before.status, detail: msg }],
+        success: false, message: failure.message,
+        details: { signTime, username, status: before.status, failureType: failure.failureType },
+        steps: [{ label: "读取账号状态", ok: false, status: before.status, detail: failure.message }],
       };
     }
 
@@ -191,7 +242,8 @@ export default class FengDriver extends BaseDriver {
     logger.info("[威锋] 步骤 2/3：调用签到接口");
     const signed = await this.api("/v1/attendance/userSignIn", { method: "POST" });
     const signOk = signed.ok && isApiOk(signed.data);
-    const signMessage = signed.data?.status?.message || signed.text || `HTTP ${signed.status}`;
+    const signMessage = signed.data?.status?.message ? safeApiMessage(signed.data.status.message) : "";
+    const signFailure = apiFailureSummary(signed);
 
     logger.info("[威锋] 步骤 3/3：复查签到状态");
     const after = await this.api("/v1/user/experience");
@@ -208,7 +260,7 @@ export default class FengDriver extends BaseDriver {
       success,
       message: success
         ? `连续签到 ${afterDays ?? "-"} 天${Number.isFinite(expGain) ? `；经验 +${expGain}` : ""}`
-        : `签到失败：${signMessage}`,
+        : signMessage ? `签到失败：${signMessage}` : signFailure.message,
       details: {
         signTime,
         ...fengDetails(afterMerged, account, {
@@ -227,7 +279,7 @@ export default class FengDriver extends BaseDriver {
       },
       steps: [
         { label: "读取账号状态", ok: true, status: before.status, detail: `经验 ${beforeExp ?? "-"}` },
-        { label: "调用签到接口", ok: signOk, status: signed.status, detail: signMessage },
+        { label: "调用签到接口", ok: signOk, status: signed.status, detail: signOk ? signMessage || "接口已接受签到" : signMessage || signFailure.message },
         { label: "复查签到状态", ok: signedAfter, status: after.status, detail: `连续 ${afterDays ?? "-"} 天；经验 ${afterExp ?? "-"}` },
       ],
     };

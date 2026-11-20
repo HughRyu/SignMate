@@ -28,7 +28,7 @@ test("new forum adapters retain read-only verification queue support", async () 
   const data = {};
   const state = { read: () => data, update: (section, key, value) => { (data[section] ||= {})[key] = value; } };
   const queue = createVerificationQueue({ state, probe: async () => "verified" });
-  for (const driver of ["sb-signin", "piggo"]) {
+  for (const driver of ["sb-signin", "piggo", "feng"]) {
     await queue.enqueue({key: driver, driver}, {[driver]: {cookie: "fixture"}});
     assert.equal(data.verification[driver].status, "verified");
   }
